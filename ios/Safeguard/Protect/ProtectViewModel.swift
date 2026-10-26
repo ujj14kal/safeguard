@@ -55,6 +55,35 @@ final class ProtectViewModel: ObservableObject {
 
     var unsafeCause: UnsafeCause? { safety.unsafeCause }
 
+    /// Pipeline config (immutable, safe to read cross-queue): the HUD
+    /// overlay colours boxes with the same thresholds that scored them.
+    var threatConfig: ThreatConfig { pipeline.config }
+
+    /// Any tracked person red right now (too close, or alerting).
+    var hasRedBox: Bool {
+        let config = pipeline.config
+        return debugTracks.contains { track in
+            let score = debugScores[track.id] ?? 0
+            return PersonBoxLevel.level(
+                alert: score >= config.alertThreshold,
+                height: Double(track.box.height),
+                config: config
+            ) == .tooClose
+        }
+    }
+
+    /// HUD status pill content.
+    var hudStatus: HudStatus {
+        HudStatus.resolve(
+            asking: safety.state == .asking,
+            safe: safety.state == .safe,
+            listeningWindow: safety.state == .listening,
+            alert: threatAlert,
+            proximity: proximity,
+            listenerLive: listenerLive
+        )
+    }
+
     init() {
         self.phraseMatcher = CodePhraseMatcher(config: safetyConfig)
         self.speechMatcher = SpeechMatcher(config: speechConfig)

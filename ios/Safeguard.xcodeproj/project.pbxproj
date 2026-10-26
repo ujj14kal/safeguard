@@ -28,7 +28,6 @@
 		A10000000000000000000072 /* DetectedPerson.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000031 /* DetectedPerson.swift */; };
 		A10000000000000000000073 /* PersonDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000032 /* PersonDetector.swift */; };
 		A10000000000000000000074 /* Tracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000033 /* Tracker.swift */; };
-		A10000000000000000000075 /* DebugBoxOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000034 /* DebugBoxOverlay.swift */; };
 		B20000000000000000000009 /* TestHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000006 /* TestHelpers.swift */; };
 		B2000000000000000000000A /* TrackerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000007 /* TrackerTests.swift */; };
 		B2000000000000000000000B /* PersonDetectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000008 /* PersonDetectorTests.swift */; };
@@ -75,6 +74,10 @@
 		A10000000000000000000092 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000091 /* OnboardingView.swift */; };
 		B2000000000000000000003B /* DS.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000023 /* DS.swift */; };
 		B2000000000000000000003C /* ThemeContrastTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000093 /* ThemeContrastTests.swift */; };
+		A10000000000000000000095 /* BoxMapping.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000094 /* BoxMapping.swift */; };
+		B2000000000000000000003D /* BoxMapping.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000094 /* BoxMapping.swift */; };
+		A10000000000000000000097 /* PersonBoxOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000096 /* PersonBoxOverlay.swift */; };
+		B2000000000000000000003E /* BoxMappingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000098 /* BoxMappingTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -101,7 +104,6 @@
 		A10000000000000000000031 /* DetectedPerson.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetectedPerson.swift; sourceTree = "<group>"; };
 		A10000000000000000000032 /* PersonDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonDetector.swift; sourceTree = "<group>"; };
 		A10000000000000000000033 /* Tracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tracker.swift; sourceTree = "<group>"; };
-		A10000000000000000000034 /* DebugBoxOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugBoxOverlay.swift; sourceTree = "<group>"; };
 		B20000000000000000000005 /* SafeguardTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SafeguardTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B20000000000000000000006 /* TestHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestHelpers.swift; sourceTree = "<group>"; };
 		B20000000000000000000007 /* TrackerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackerTests.swift; sourceTree = "<group>"; };
@@ -132,6 +134,9 @@
 		A1000000000000000000008F /* ConversationListener.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationListener.swift; sourceTree = "<group>"; };
 		A10000000000000000000091 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		A10000000000000000000093 /* ThemeContrastTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeContrastTests.swift; sourceTree = "<group>"; };
+		A10000000000000000000094 /* BoxMapping.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoxMapping.swift; sourceTree = "<group>"; };
+		A10000000000000000000096 /* PersonBoxOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonBoxOverlay.swift; sourceTree = "<group>"; };
+		A10000000000000000000098 /* BoxMappingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoxMappingTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -212,9 +217,10 @@
 				A1000000000000000000002C /* ProtectionState.swift */,
 				A1000000000000000000002D /* ProtectView.swift */,
 				A1000000000000000000002E /* ProtectViewModel.swift */,
-				A10000000000000000000034 /* DebugBoxOverlay.swift */,
 				A1000000000000000000007E /* SafetyStateMachine.swift */,
 				A10000000000000000000081 /* CheckInSpeaker.swift */,
+				A10000000000000000000094 /* BoxMapping.swift */,
+				A10000000000000000000096 /* PersonBoxOverlay.swift */,
 			);
 			path = Protect;
 			sourceTree = "<group>";
@@ -274,6 +280,7 @@
 				A1000000000000000000008D /* TranscriptWindowTests.swift */,
 				A1000000000000000000008E /* VerifySpeechTests.swift */,
 				A10000000000000000000093 /* ThemeContrastTests.swift */,
+				A10000000000000000000098 /* BoxMappingTests.swift */,
 			);
 			path = SafeguardTests;
 			sourceTree = "<group>";
@@ -416,7 +423,6 @@
 				A10000000000000000000072 /* DetectedPerson.swift in Sources */,
 				A10000000000000000000073 /* PersonDetector.swift in Sources */,
 				A10000000000000000000074 /* Tracker.swift in Sources */,
-				A10000000000000000000075 /* DebugBoxOverlay.swift in Sources */,
 				A10000000000000000000076 /* ThreatConfig.swift in Sources */,
 				A10000000000000000000077 /* BodyPose.swift in Sources */,
 				A10000000000000000000078 /* FeatureExtractor.swift in Sources */,
@@ -433,6 +439,8 @@
 				A1000000000000000000008B /* ListeningSession.swift in Sources */,
 				A10000000000000000000090 /* ConversationListener.swift in Sources */,
 				A10000000000000000000092 /* OnboardingView.swift in Sources */,
+				A10000000000000000000095 /* BoxMapping.swift in Sources */,
+				A10000000000000000000097 /* PersonBoxOverlay.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -470,6 +478,8 @@
 				B2000000000000000000003A /* VerifySpeechTests.swift in Sources */,
 				B2000000000000000000003B /* DS.swift in Sources */,
 				B2000000000000000000003C /* ThemeContrastTests.swift in Sources */,
+				B2000000000000000000003D /* BoxMapping.swift in Sources */,
+				B2000000000000000000003E /* BoxMappingTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
