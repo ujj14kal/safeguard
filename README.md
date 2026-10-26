@@ -76,4 +76,7 @@ CLI alternative: `DEVELOPMENT_TEAM=<TeamID> ./scripts/build.sh device`.
 Phase 1 done: Xcode project, DesignSystem, `FrameSource` + phone camera +
 Replay + glasses stub, camera preview, Protect tab with shield ring,
 Preview-states screen (debug), backend `/health`, build scripts.
-Next: Phase 2 (person detector + tracker).
+Phase 2 done: `PersonDetector` (Vision human rectangles) + greedy-IoU
+`Tracker` with stable IDs, 15 XCTest tests (synthetic boxes/frames),
+detection loop + debug overlay in the app, `scripts/test.sh`.
+Next: Phase 3 (feature extractor + threat scorer).

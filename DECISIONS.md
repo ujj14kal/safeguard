@@ -2,6 +2,28 @@
 
 Log of every deviation from the project brief, with reasons. Newest first.
 
+## Phase 2
+
+1. **Hostless test target**: `SafeguardTests` has no app host and compiles the
+   Detection sources directly (no `import Safeguard`), so the same files run
+   under `xcodebuild test` and under a macOS SwiftPM harness.
+2. **Detector orientation** defaults to `.up`; chest-mount framing is tuned
+   against real footage in Phase 8.
+3. **Result type**: `VNDetectHumanRectanglesRequest.results` is
+   `[VNHumanObservation]` (confirmed via the compiler); mapped straight to
+   `DetectedPerson`, no cast.
+4. **Detection at 5 Hz** in the view model (Vision cost); the tracker coasts
+   between detections. Debug overlay maps boxes through the aspect-fill
+   transform using the published frame size.
+5. **No positive-path detector test**: asserting "finds a real person" needs
+   footage fixtures, which the repo forbids committing; covered by the
+   Phase 8 replay tuning instead. Unit tests assert blanks/noise find nobody
+   and never throw.
+6. **Environment**: `xcodebuild test` impossible here (still no iOS
+   platform/runtime); ran the verbatim, hash-verified suite via SwiftPM on
+   macOS instead — 15/15 pass. `scripts/test.sh` runs it under Xcode once
+   the platform is installed.
+
 ## Phase 1
 
 1. **Display-only states**: `ProtectionState` enum drives the shield ring and
