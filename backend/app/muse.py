@@ -28,6 +28,17 @@ Reply with STRICT JSON only, no other text:
 "confidence": 0.0-1.0, "reason": "one short sentence"}"""
 
 
+SPEECH_SYSTEM_PROMPT = """You are a safety analyst reviewing a short REPORTED-SPEECH snippet overheard near the wearer. \
+Classify what was SAID only: threats, coercion, harassment, or distress. NEVER consider or mention the appearance, \
+identity, age, ethnicity, gender presentation, or clothing of any speaker — if the only thing notable is who \
+someone seems to be, severity is low. Downgrade to low when the snippet is a joke, a TV/radio in the background, \
+a quotation ("she said ..."), or not directed at the wearer.
+
+Reply with STRICT JSON only, no other text:
+{"severity": "low|medium|high", "categories": ["threat|coercion|pursuit|proposition|abuse|distress"],
+"directed_at_wearer": true|false, "reason": "one short sentence"}"""
+
+
 class MuseError(Exception):
     pass
 
@@ -139,6 +150,42 @@ class MuseClient:
         return parse_verdict(response.text), latency
 
 
+    def verify_speech(self, snippet: str, on_device: dict) -> tuple[dict, float]:
+        """Judge one reported-speech snippet. Returns (verdict dict, latency s)."""
+        if not self.api_key:
+            raise MuseError("META_MODEL_API_KEY is not set")
+        body = {
+            "model": self.model,
+            "messages": [
+                {"role": "system", "content": SPEECH_SYSTEM_PROMPT},
+                {
+                    "role": "user",
+                    "content": "On-device matcher (may be noisy): "
+                    + json.dumps(on_device)
+                    + "\nReported speech:\n"
+                    + snippet,
+                },
+            ],
+            "response_format": {"type": "json_object"},
+        }
+        started = time.monotonic()
+        try:
+            response = httpx.post(
+                f"{self.base_url}/chat/completions",
+                headers={"Authorization": f"Bearer {self.api_key}"},
+                json=body,
+                timeout=self.timeout_s,
+            )
+        except httpx.TimeoutException as exc:
+            raise MuseError(f"Muse call timed out after {self.timeout_s}s") from exc
+        except httpx.HTTPError as exc:
+            raise MuseError(f"Muse HTTP error: {exc}") from exc
+        latency = time.monotonic() - started
+        if response.status_code != 200:
+            raise MuseError(f"Muse status {response.status_code}: {response.text[:200]}")
+        return parse_speech_verdict(response.text), latency
+
+
 def parse_verdict(raw_body: str) -> dict:
     """Extract and strictly validate the verdict JSON. Raises MuseError."""
     try:
@@ -171,5 +218,41 @@ def parse_verdict(raw_body: str) -> dict:
         "threat_level": level,
         "behaviours_observed": behaviours,
         "confidence": float(confidence),
+        "reason": reason,
+    }
+
+
+def parse_speech_verdict(raw_body: str) -> dict:
+    """Extract and strictly validate a speech verdict. Raises MuseError."""
+    try:
+        envelope = json.loads(raw_body)
+        content = envelope["choices"][0]["message"]["content"]
+        verdict = json.loads(content)
+    except (KeyError, IndexError, json.JSONDecodeError, TypeError) as exc:
+        raise MuseError(f"Muse returned unparsable JSON: {exc}") from exc
+    if not isinstance(verdict, dict):
+        raise MuseError("Muse speech verdict is not a JSON object")
+    severity = verdict.get("severity")
+    categories = verdict.get("categories")
+    directed = verdict.get("directed_at_wearer")
+    reason = verdict.get("reason")
+    if severity not in ("low", "medium", "high"):
+        raise MuseError(f"bad severity: {severity!r}")
+    if not isinstance(categories, list) or not all(
+        isinstance(c, str) for c in categories
+    ):
+        raise MuseError(f"bad categories: {categories!r}")
+    if not isinstance(directed, bool):
+        raise MuseError(f"bad directed_at_wearer: {directed!r}")
+    if not isinstance(reason, str) or not reason:
+        raise MuseError("bad reason: must be a non-empty string")
+    # Same appearance guard as /verify: speech/behaviour only, never looks.
+    term = mentions_appearance(" ".join(categories + [reason]))
+    if term:
+        raise MuseError(f"verdict mentions appearance ({term!r}); refusing to use it")
+    return {
+        "severity": severity,
+        "categories": categories,
+        "directed_at_wearer": directed,
         "reason": reason,
     }

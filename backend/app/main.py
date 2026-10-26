@@ -1,6 +1,7 @@
 """Safeguard backend.
 
 Phase 1: health check. Phase 4: POST /verify (SAM 2 + Muse, with fallback).
+Phase 5: POST /verify-speech (Muse judges a text snippet, never audio).
 Phase 6 adds the incident/alert/stream endpoints. No API keys in code: all
 configuration comes from environment variables (see /.env.example).
 """
@@ -118,6 +119,71 @@ def verify(request: VerifyRequest) -> VerifyResponse:
         sam2_latency_ms=round(sam2_latency * 1000, 1) if sam2_latency is not None else None,
         muse_latency_ms=round(muse_latency * 1000, 1),
     )
+
+
+class SpeechVerifyRequest(BaseModel):
+    # Short TEXT snippet (trigger sentence + a little context). Never audio.
+    snippet: str = Field(min_length=1, max_length=2000)
+    on_device: dict = Field(default_factory=dict)
+
+
+class SpeechVerifyResponse(BaseModel):
+    severity: str
+    categories: list[str]
+    directed_at_wearer: bool
+    reason: str
+
+
+@app.post("/verify-speech", response_model=SpeechVerifyResponse)
+def verify_speech(request: SpeechVerifyRequest) -> SpeechVerifyResponse:
+    # One shared Muse budget for /verify and /verify-speech: a chatty
+    # crowd must not starve movement verification (or vice versa).
+    if not _muse_limiter.allow():
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Muse rate limit exceeded (20 calls/min)",
+        )
+    try:
+        verdict, muse_latency = _muse_client.verify_speech(
+            request.snippet, request.on_device
+        )
+    except MuseError as exc:
+        logger.warning("Muse speech call failed: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"verification unavailable: {exc}",
+        )
+    log_speech_call(muse_latency, verdict)
+    return SpeechVerifyResponse(
+        severity=verdict["severity"],
+        categories=verdict["categories"],
+        directed_at_wearer=verdict["directed_at_wearer"],
+        reason=verdict["reason"],
+    )
+
+
+def log_speech_call(muse_latency: float, verdict: dict) -> None:
+    """Log counts, latency and severity — NEVER the transcript snippet."""
+    day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    _daily_counts[day] += 1
+    record = {
+        "ts": datetime.now(timezone.utc).isoformat(),
+        "day": day,
+        "day_count": _daily_counts[day],
+        "endpoint": "verify-speech",
+        "muse_latency_ms": round(muse_latency * 1000, 1),
+        "severity": verdict["severity"],
+        "category_count": len(verdict["categories"]),
+        "directed_at_wearer": verdict["directed_at_wearer"],
+    }
+    line = json.dumps(record)
+    logger.info(line)
+    try:
+        os.makedirs(os.path.dirname(SETTINGS.verify_log_path) or ".", exist_ok=True)
+        with open(SETTINGS.verify_log_path, "a") as handle:
+            handle.write(line + "\n")
+    except OSError as exc:
+        logger.warning("could not write verify log: %s", exc)
 
 
 def log_call(
