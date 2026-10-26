@@ -262,6 +262,78 @@ final class SafetyStateMachineTests: XCTestCase {
         XCTAssertEqual(machine.state, .monitoring)
     }
 
+    // MARK: - Listening window (Part C)
+
+    func testWindowSilentUntilItEnds() {
+        var machine = protecting()
+        machine.noteMovementAlert(score: 0.6, at: 100)
+        machine.tick(at: 105.9)
+        XCTAssertEqual(machine.state, .listening)
+        XCTAssertFalse(machine.takeAskSpeechDue(), "no TTS call during the window")
+        machine.tick(at: 106)
+        XCTAssertEqual(machine.state, .asking)
+        XCTAssertTrue(machine.takeAskSpeechDue())
+    }
+
+    func testWindowLastsConfiguredTime() {
+        var config = SafetyConfig()
+        config.listeningWindowSeconds = 10
+        var machine = SafetyStateMachine(config: config)
+        machine.startProtecting(at: 100)
+        machine.noteMovementAlert(score: 0.6, at: 100)
+        machine.tick(at: 109.9)
+        XCTAssertEqual(machine.state, .listening)
+        machine.tick(at: 110)
+        XCTAssertEqual(machine.state, .asking)
+    }
+
+    func testSkipScoreBoundary() {
+        XCTAssertEqual(SafetyConfig().listeningSkipScore, 0.80)
+        var machine = protecting()
+        machine.noteMovementAlert(score: 0.79, at: 100)
+        XCTAssertEqual(machine.state, .listening)
+        machine = protecting()
+        machine.noteMovementAlert(score: 0.80, at: 100)
+        XCTAssertEqual(machine.state, .asking)
+    }
+
+    func testWindowDoesNotStartAskClock() {
+        var machine = protecting()
+        machine.noteMovementAlert(score: 0.6, at: 100)
+        machine.tick(at: 106) // window ends, asking begins
+        // TTS hasn't started: even far past window + 10 s, no timeout.
+        machine.tick(at: 120)
+        XCTAssertEqual(machine.state, .asking)
+        machine.noteAskSpeechStarted(at: 120)
+        machine.tick(at: 129.9)
+        XCTAssertEqual(machine.state, .asking)
+        machine.tick(at: 130)
+        XCTAssertEqual(machine.state, .unsafe)
+    }
+
+    func testWindowRespectsCooldown() {
+        var machine = protecting()
+        machine.noteMovementAlert(score: 0.6, at: 100)
+        machine.tick(at: 106)
+        machine.noteReply(.safePhrase, at: 107) // safe until 167
+        machine.noteMovementAlert(score: 0.9, at: 110)
+        XCTAssertEqual(machine.state, .safe, "no window during cooldown")
+        machine.tick(at: 167)
+        XCTAssertEqual(machine.state, .monitoring)
+        machine.noteMovementAlert(score: 0.6, at: 168)
+        XCTAssertEqual(machine.state, .listening, "window works after cooldown")
+    }
+
+    func testSpeechSuspicionAlsoWaitsWindow() {
+        var machine = protecting()
+        machine.noteSpeech(severity: 0.9, at: 100)
+        XCTAssertEqual(machine.state, .listening)
+        machine.tick(at: 105.9)
+        XCTAssertEqual(machine.state, .listening)
+        machine.tick(at: 106)
+        XCTAssertEqual(machine.state, .asking)
+    }
+
     // MARK: - Code phrases
 
     func testCodePhraseExact() {

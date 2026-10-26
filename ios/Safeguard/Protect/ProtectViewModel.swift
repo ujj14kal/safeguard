@@ -349,17 +349,27 @@ final class ProtectViewModel: ObservableObject {
         }
     }
 
+    /// Calm cue text while the listening window runs (nil otherwise).
+    /// The view announces it via VoiceOver once, on appear.
+    var listeningCue: String? {
+        safety.state == .listening ? safetyConfig.listeningCueText : nil
+    }
+
     private func announce(_ state: ProtectionState) {
         // Asking needs no announcement: the TTS question is the signal.
-        // Listening's cue announces itself when it appears (Part C).
+        // Listening's cue announces itself when it appears.
         switch state {
+        case .suspected:
+            // One light haptic on entering the window; the app is otherwise
+            // silent (no TTS, no tones) until the question.
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
         case .safe:
             UIAccessibility.post(notification: .announcement, argument: "You're safe")
             UINotificationFeedbackGenerator().notificationOccurred(.success)
         case .unsafe:
             UIAccessibility.post(notification: .announcement, argument: "SOS. Help is on the way.")
             UINotificationFeedbackGenerator().notificationOccurred(.error)
-        case .idle, .monitoring, .suspected, .asking:
+        case .idle, .monitoring, .asking:
             break
         }
     }

@@ -37,6 +37,9 @@ struct ProtectView: View {
                         }
                     }
                     previewSection
+                    if let cue = model.listeningCue {
+                        listeningCue(cue)
+                    }
                     if model.state == .asking {
                         checkInSection
                     }
@@ -89,6 +92,19 @@ struct ProtectView: View {
         }
         .frame(height: 260)
         .clipShape(RoundedRectangle(cornerRadius: DS.cornerRadius))
+    }
+
+    /// Calm stay-quiet cue: large text (not colour alone), announced by
+    /// VoiceOver once when it appears. A recommendation, never a requirement.
+    private func listeningCue(_ text: String) -> some View {
+        Text(text)
+            .font(.system(.title3, design: .rounded, weight: .semibold))
+            .multilineTextAlignment(.center)
+            .padding()
+            .onAppear {
+                UIAccessibility.post(notification: .announcement, argument: text)
+            }
+            .accessibilityAddTraits(.isHeader)
     }
 
     /// The spoken question's on-screen equivalent: answer by button,

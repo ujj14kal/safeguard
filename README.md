@@ -88,6 +88,11 @@ rules, enforced in code, not just policy:
 
 Recording laws differ by country: check yours before switching this on.
 
+Staying quiet when you feel uneasy is a recommendation, not a requirement:
+it helps the microphone hear your surroundings instead of you, but it is
+not always possible or safe. If you need help right away, say your unsafe
+phrase at any time — it works even mid-sentence, with the toggle on or off.
+
 ## App icon and launch screen
 
 The icon, launch logo and splash are generated from `design/logo-source.png`:
