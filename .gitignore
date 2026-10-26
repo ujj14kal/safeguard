@@ -1,0 +1,61 @@
+# Safeguard .gitignore — this repo is PUBLIC, so secrets must never be committed.
+# Belt and braces with the pre-commit hook (scripts/pre-commit.sh).
+
+# Environment & secrets — NEVER commit these
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+secrets/
+*secret*.json
+
+# Xcode
+DerivedData/
+build/
+*.xcuserstate
+xcuserdata/
+*.xccheckout
+*.moved-aside
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+
+# Python backend
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Model weights & checkpoints (SAM 2 etc.) — large, fetch separately
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.onnx
+checkpoints/
+weights/
+
+# Recorded test videos & fixtures (Replay mode uses local files, never committed)
+*.mp4
+*.mov
+*.m4v
+TestVideos/
+Recordings/
+
+# Real contacts / PII — repo uses FAKE numbers only (fictional +1-555-01xx range)
+*contacts*.json
+*contacts*.csv
+real-contacts*
+
+# Tunnel URLs / incident links (never commit real ones)
+.tunnel-url
+tunnel*.log
+
+# macOS
+.DS_Store
