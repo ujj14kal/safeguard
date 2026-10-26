@@ -39,13 +39,22 @@ public struct ThreatScorer: Sendable {
             : 0
         // Presence alone (persistent + facing + isolated + near the path) must
         // never alert: require somebody closing in, or a track that reappeared.
+        // A strong speech signal bypasses the cap: words can threaten where
+        // bodies stand still.
         let closingIn = max(features.trend, features.speed, features.cornering)
-        if closingIn < config.motionMin && !features.reappearing {
+        let strongSpeech = features.speech >= config.reasonThreshold
+        if closingIn < config.motionMin, !features.reappearing, !strongSpeech {
             value = min(value, config.staticScoreCap)
         }
-        let reasons = parts
+        // Speech is additive (never normalized in): silent speech leaves
+        // every Phase 3 value bit-for-bit identical.
+        value = min(1, value + features.speech * config.weightSpeech)
+        var reasons = parts
             .filter { $0.value >= config.reasonThreshold }
             .map(\.reason)
+        if strongSpeech {
+            reasons.append("threatening speech")
+        }
         return ThreatScore(
             value: value,
             alert: value >= config.alertThreshold,

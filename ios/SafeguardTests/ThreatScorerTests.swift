@@ -198,6 +198,54 @@ final class ThreatScorerTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(config.minTrendSamples, 2)
     }
 
+    // MARK: - Speech signal (additive; silent speech changes nothing)
+
+    func testSilentSpeechLeavesValueIdentical() {
+        let scorer = ThreatScorer()
+        let base = scorer.score(PersonFeatures(trend: 0.8, persistence: 0.7))
+        let silent = scorer.score(PersonFeatures(trend: 0.8, persistence: 0.7, speech: 0))
+        XCTAssertEqual(base.value, silent.value)
+        XCTAssertEqual(base.reasons, silent.reasons)
+        XCTAssertFalse(silent.reasons.contains("threatening speech"))
+    }
+
+    func testSpeechAddsBonus() {
+        let config = ThreatConfig()
+        let scorer = ThreatScorer(config: config)
+        let scored = scorer.score(PersonFeatures(speech: 1.0))
+        XCTAssertEqual(scored.value, config.weightSpeech, accuracy: 1e-9)
+        XCTAssertEqual(scored.reasons, ["threatening speech"])
+        XCTAssertFalse(scored.alert, "speech alone (0.30) must not alert")
+    }
+
+    func testSpeechPushesMovementOverThreshold() {
+        // Trend 1.0 scores 0.20 alone; full speech adds 0.30 -> 0.50 alert.
+        let scored = ThreatScorer().score(PersonFeatures(trend: 1.0, speech: 1.0))
+        XCTAssertEqual(scored.value, 0.5, accuracy: 1e-9)
+        XCTAssertTrue(scored.alert)
+    }
+
+    func testStrongSpeechBypassesStaticCap() {
+        let config = ThreatConfig()
+        let scorer = ThreatScorer(config: config)
+        let presenceOnly = PersonFeatures(
+            persistence: 1, facing: 1, isolation: 1, blocking: 1
+        )
+        XCTAssertLessThanOrEqual(scorer.score(presenceOnly).value, config.staticScoreCap)
+        var withSpeech = presenceOnly
+        withSpeech.speech = 0.6
+        let scored = scorer.score(withSpeech)
+        XCTAssertGreaterThan(scored.value, config.staticScoreCap)
+        XCTAssertTrue(scored.alert)
+        XCTAssertTrue(scored.reasons.contains("threatening speech"))
+    }
+
+    func testWeakSpeechEarnsNoReason() {
+        let scored = ThreatScorer().score(PersonFeatures(speech: 0.3))
+        XCTAssertFalse(scored.reasons.contains("threatening speech"))
+        XCTAssertEqual(scored.value, 0.3 * ThreatConfig().weightSpeech, accuracy: 1e-9)
+    }
+
     func testConfigIsSane() {
         let config = ThreatConfig()
         let weights = [

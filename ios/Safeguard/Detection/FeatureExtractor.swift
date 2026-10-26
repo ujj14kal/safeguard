@@ -21,6 +21,9 @@ public struct PersonFeatures: Sendable, Equatable {
     public var blocking: Double
     /// Intercept course: approaching + near centre + stable bearing.
     public var cornering: Double
+    /// Latest speech severity (global, not per-track): threatening or
+    /// harassing talk near the wearer. Stamped by the extractor while fresh.
+    public var speech: Double
 
     public init(
         trend: Double = 0,
@@ -30,7 +33,8 @@ public struct PersonFeatures: Sendable, Equatable {
         facing: Double = 0,
         isolation: Double = 0,
         blocking: Double = 0,
-        cornering: Double = 0
+        cornering: Double = 0,
+        speech: Double = 0
     ) {
         self.trend = trend
         self.speed = speed
@@ -40,6 +44,7 @@ public struct PersonFeatures: Sendable, Equatable {
         self.isolation = isolation
         self.blocking = blocking
         self.cornering = cornering
+        self.speech = speech
     }
 }
 
@@ -57,12 +62,26 @@ public final class FeatureExtractor {
 
     private var histories: [Int: [Sample]] = [:]
 
+    /// Latest speech severity + when it was reported. Speech is global
+    /// (the mic hears the scene, not one track), so one value is stamped
+    /// onto every track's features while fresh.
+    private var speechSeverity = 0.0
+    private var speechAt: TimeInterval = -.infinity
+
     public init(config: ThreatConfig = ThreatConfig()) {
         self.config = config
     }
 
     public func reset() {
         histories = [:]
+        speechSeverity = 0
+        speechAt = -.infinity
+    }
+
+    /// Report the listener's latest speech severity (0...1, clamped).
+    public func setSpeech(severity: Double, at time: TimeInterval) {
+        speechSeverity = clamp01(severity)
+        speechAt = time
     }
 
     /// Record one detection tick. Pass matched (live) tracks only; gaps in a
@@ -88,6 +107,9 @@ public final class FeatureExtractor {
     public func features(for trackID: Int, at time: TimeInterval) -> PersonFeatures? {
         guard let samples = histories[trackID], !samples.isEmpty else { return nil }
         var features = PersonFeatures()
+        if time - speechAt <= config.speechWindowSeconds {
+            features.speech = speechSeverity
+        }
 
         let approach = window(samples, time, config.approachWindow)
         let enoughHistory = hasEnoughHistory(approach)

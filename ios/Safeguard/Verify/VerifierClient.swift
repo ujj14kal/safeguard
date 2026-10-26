@@ -12,10 +12,12 @@ public struct VerifyFeatureSummary: Sendable, Equatable, Codable {
     public var isolation: Double
     public var blocking: Double
     public var cornering: Double
+    public var speech: Double
 
     enum CodingKeys: String, CodingKey {
         case trackID = "track_id"
         case score, reasons, trend, speed, persistence, facing, isolation, blocking, cornering
+        case speech
     }
 
     public init(track: Track, features: PersonFeatures, score: Double, reasons: [String]) {
@@ -29,6 +31,7 @@ public struct VerifyFeatureSummary: Sendable, Equatable, Codable {
         self.isolation = features.isolation
         self.blocking = features.blocking
         self.cornering = features.cornering
+        self.speech = features.speech
     }
 }
 
@@ -58,6 +61,14 @@ public struct VerifyPayload: Sendable {
             ]
         }
     }
+}
+
+/// Parsed /verify-speech verdict (text in, text out — never audio).
+public struct SpeechVerifyResult: Sendable, Equatable {
+    public var severity: String
+    public var categories: [String]
+    public var directedAtWearer: Bool
+    public var reason: String
 }
 
 /// Parsed /verify verdict.
@@ -302,6 +313,58 @@ public final class VerifierClient: @unchecked Sendable {
             path: parsed.path,
             sam2LatencyMs: parsed.sam2_latency_ms,
             museLatencyMs: parsed.muse_latency_ms
+        )
+    }
+
+    private struct SpeechRequestBody: Encodable {
+        var snippet: String
+        var on_device: OnDevice
+
+        struct OnDevice: Encodable {
+            var severity: Double
+            var category: String
+        }
+    }
+
+    private struct SpeechResponseBody: Decodable {
+        var severity: String
+        var categories: [String]
+        var directed_at_wearer: Bool
+        var reason: String
+    }
+
+    /// POST /verify-speech: judges a short TEXT snippet. Never sends audio.
+    public func verifySpeech(
+        snippet: String, onDeviceSeverity: Double, onDeviceCategory: String
+    ) async throws -> SpeechVerifyResult {
+        var request = URLRequest(
+            url: config.baseURL.appendingPathComponent("verify-speech"),
+            timeoutInterval: config.timeout
+        )
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(SpeechRequestBody(
+            snippet: snippet,
+            on_device: .init(severity: onDeviceSeverity, category: onDeviceCategory)
+        ))
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse else {
+            throw VerifierError.invalidResponse("not an HTTP response")
+        }
+        guard (200...299).contains(http.statusCode) else {
+            throw VerifierError.serverStatus(http.statusCode)
+        }
+        let parsed: SpeechResponseBody
+        do {
+            parsed = try JSONDecoder().decode(SpeechResponseBody.self, from: data)
+        } catch {
+            throw VerifierError.invalidResponse(error.localizedDescription)
+        }
+        return SpeechVerifyResult(
+            severity: parsed.severity,
+            categories: parsed.categories,
+            directedAtWearer: parsed.directed_at_wearer,
+            reason: parsed.reason
         )
     }
 }

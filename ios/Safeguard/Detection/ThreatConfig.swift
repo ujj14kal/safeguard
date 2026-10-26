@@ -96,6 +96,15 @@ public struct ThreatConfig: Sendable {
     public var weightBlocking: Double = 0.10
     public var weightCornering: Double = 0.10
 
+    // MARK: - Speech signal (Part B)
+
+    /// Speech is ADDITIVE, not normalized: value = base + speech * weight
+    /// (capped at 1). Silent speech contributes exactly 0, so all Phase 3
+    /// tuning and thresholds hold unchanged. GUESS — tune on real clips.
+    public var weightSpeech: Double = 0.30
+    /// Seconds a speech severity stays fresh after the listener reports it.
+    public var speechWindowSeconds: TimeInterval = 20
+
     /// Score at or above this raises an alert. Tuned so slow following
     /// (~0.59 synthetic) clears with margin while crowds (~0.29) stay out.
     /// Crossing this threshold (rising edge only) also triggers one backend

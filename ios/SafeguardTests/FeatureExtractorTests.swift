@@ -302,4 +302,33 @@ final class FeatureExtractorTests: XCTestCase {
         extractor.reset()
         XCTAssertNil(extractor.features(for: 1, at: 0))
     }
+
+    // MARK: - Speech stamping (global signal, fresh only)
+
+    func testSpeechStampsWhileFresh() {
+        let extractor = FeatureExtractor()
+        feed(extractor, id: 1, samples: [(0, box(cx: 0.5, h: 0.25))])
+        extractor.setSpeech(severity: 0.9, at: 0)
+        XCTAssertEqual(extractor.features(for: 1, at: 0)?.speech ?? -1, 0.9, accuracy: 1e-9)
+        XCTAssertEqual(
+            extractor.features(for: 1, at: 20)?.speech ?? -1, 0.9, accuracy: 1e-9
+        )
+    }
+
+    func testSpeechExpiresAfterWindow() {
+        let extractor = FeatureExtractor()
+        feed(extractor, id: 1, samples: [(0, box(cx: 0.5, h: 0.25))])
+        extractor.setSpeech(severity: 0.9, at: 0)
+        XCTAssertEqual(extractor.features(for: 1, at: 20.1)?.speech ?? -1, 0)
+    }
+
+    func testSpeechClampedAndReset() {
+        let extractor = FeatureExtractor()
+        feed(extractor, id: 1, samples: [(0, box(cx: 0.5, h: 0.25))])
+        extractor.setSpeech(severity: 9, at: 0)
+        XCTAssertEqual(extractor.features(for: 1, at: 0)?.speech ?? -1, 1.0, accuracy: 1e-9)
+        extractor.reset()
+        feed(extractor, id: 1, samples: [(1, box(cx: 0.5, h: 0.25))])
+        XCTAssertEqual(extractor.features(for: 1, at: 1)?.speech ?? -1, 0)
+    }
 }
