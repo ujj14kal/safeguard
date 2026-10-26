@@ -161,4 +161,13 @@ see DECISIONS.md). The app calls /verify only above the on-device score
 threshold. Backend tests: `cd backend && .venv/bin/python -m pytest
 tests/ -q` (15 passed, 1 skipped; the skipped e2e needs a real SAM 2
 checkpoint + `SAM2_MODE=sam2`). 69/69 iOS tests pass on the Simulator.
-Next: Phase 5 (audio loop + state machine + check-in screen).
+Phase 5 done: `SafetyStateMachine` + spoken check-in (10 s clock, cooldown,
+always-on unsafe phrase, code phrases), opt-in conversation listener
+(on-device matcher + 20 s window + `POST /verify-speech`), silent
+stay-quiet window, full-screen HUD (boxes, pill, dots, red glow, SOS
+scrim), forced-dark theme with contrast tests, button styles, wake-word
+voice commands (stop confirmation, dim, toasts). 214/214 iOS tests pass
+on the Simulator; backend `cd backend && .venv/bin/python -m pytest`
+(51 passed, 1 skipped). See DECISIONS.md for what is still unverified
+on a real iPhone (speech accuracy, HUD feel, voice commands end to end).
+Next: Phase 6 (the four escalation tracks).

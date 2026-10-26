@@ -2,6 +2,112 @@
 
 Log of every deviation from the project brief, with reasons. Newest first.
 
+## Phase 5 (2026-10-27): voice check-in, listener, window, HUD, commands
+
+Shipped in small commits (A core, A wiring, B backend, B speech core,
+B listener, C, D2, D1, D3, D4 — D2 landed before D1 because the HUD needs
+the tokens). 214 iOS tests + 51 backend tests (+1 skipped) green.
+
+Part A — `SafetyStateMachine` (pure, timestamped): Idle→Monitoring→
+(listening window)→Asking→{Safe,Unsafe,NoReply→Unsafe}, driven by scorer
+alerts, Muse verdicts, speech severity, replies and ticks. Asking speaks
+"Are you safe?" quietly via AVSpeechSynthesizer; the 10 s clock starts
+when the audio starts (the speaker reports back even on failure/cancel).
+Verify failures show a reason (unreachable / no key / rate limit / server
+error) and never suppress: the machine gets no input from them.
+
+Part B — conversation listener (opt-in, default OFF) + `POST
+/verify-speech` (Muse judges a text snippet, never audio; same rate
+limit, timeout, strict JSON, appearance guard and no-transcript logging
+as /verify). On-device matcher (threat/coercion/pursuit/proposition/
+abuse/distress, severities, quotation/negation/benign-frame guards),
+20 s in-memory window, gapless recognition restarts, deaf-never-active
+states. Speech feeds the scorer (additive) and the machine (strong only,
+never straight to Unsafe).
+
+Part C — the 6 s silent stay-quiet window with the calm cue (large text,
+VoiceOver once, one light haptic), skip rules, early end by tap/unsafe
+phrase, and the onboarding tip.
+
+Part D — full-screen camera HUD (corner brackets, status pill, mic +
+backend dots, red edge glow, SOS scrim, voice hints), forced-dark theme
+with contrast-tested tokens, button styles, restyled idle/tabs, preview
+states for everything, and wake-word voice commands sharing the one
+audio engine + recognizer, with stop confirmation, dim mode and toasts.
+
+Deviations and judgment calls:
+
+1. **No volume-button capture**: it needs private API. The non-verbal
+   answer is a double tap (ends the window early; answers "I'm OK" when
+   asked) plus on-screen buttons, which also serve accessibility.
+2. **Safe phrase ignored during the window**: nothing was asked yet, so
+   the question is still asked. Unsafe works, tap ends the window early.
+3. **Muse `low` never yanks a question**: it cancels movement-only
+   suspicion in the window, but Asking always finishes its check-in.
+   Unsafe is terminal until Stop (Phase 6 owns what follows SOS).
+4. **No-key detection via /health**: the client cannot see 503 bodies
+   without breaking the pinned `serverStatus(Int)` error shape, so
+   /health now reports `muse_configured` and a 5xx from a keyless
+   backend reads as "no API key". Unknown verdict strings are dropped.
+5. **Speech is additive in the scorer** (`value = base + speech * 0.30`,
+   capped at 1; weight a guess), not a normalized weight: silent speech
+   leaves every Phase 3 value bit-for-bit identical, so no retuning and
+   no existing expectation changed. Cap bypass + "threatening speech"
+   reason at `reasonThreshold` (0.5).
+6. **Backend speech `medium` (0.6) feeds only the scorer**: below the
+   0.7 strong threshold, so per the brief only `high` triggers the
+   check-in directly; medium + any movement can still alert.
+7. **The mic is never paused for TTS**: pausing would deafen the unsafe
+   phrase, which must work at ANY time. The app "ignores itself"
+   instead — our spoken texts match no code phrase and no threat
+   pattern (tested) — and voice commands are gated on `speakingNow`.
+8. **SFSpeechRecognizer only** (on-device enforced, no server fallback):
+   one uniform, testable path; the iOS 26 SpeechAnalyzer option stays
+   open. Final transcripts only (no partials).
+9. **One recognition task teed in code**: matcher, commands and code
+   phrases all read the same final-transcript stream — literally one
+   engine and one recognizer, no double mic tap.
+10. **Distress is never negation-discounted** ("don't touch me" is
+    danger, not safety); quotation discounts ×0.3; benign frames cancel
+    ("come with me if you want to live"). Accepted gap, documented in a
+    test: benign invitations ("come with me to the shops") match
+    on-device and rely on Muse's downgrade.
+11. **The listener runs app-foreground-wide (idle included)** so
+    "Safeguard, start protecting" can be heard; idle transcripts feed
+    commands only (no phrases, no window, no scan, no backend call).
+    Costs always-on mic compute in the foreground; iOS suspends it in
+    the background and interruptions auto-resume.
+12. **Code phrases need no opt-in** (disclosed at onboarding): with the
+    toggle off, transcripts are scanned for phrases/commands and
+    dropped immediately; no window is ever built.
+13. **Restart swaps are new-before-old** with generation-tagged tasks:
+    stale-task errors are ignored, stale results still count (they
+    cover pre-swap audio). /verify and /verify-speech share one 20/min
+    Muse budget so neither starves the other.
+14. **"Call 112" uses `telprompt://`** (always asks first — no
+    pocket-dialled emergencies); "call 112" WITHOUT the wake word is
+    distress (→ check-in), with it is the command. "Share my location"
+    answers "not available yet" (Phase 6 hook).
+15. **Per-box colours map thresholds directly** (no holds): a box must
+    never disagree with its person; the global level keeps its holds.
+    Dim lifts on suspected/asking/unsafe, so the overlay can never hide
+    the question or the SOS. A wake-worded transcript during a pending
+    stop cancels the stop and runs as a command.
+16. **The splash and launch screen stay white**: the cross-fade goes
+    white → dark. Making the splash dark is a one-line option (re-point
+    the `LaunchBackground` colorset at the dark background).
+17. Test-target notes: `DS.swift` joined the test target (contrast tests
+    read the token hexes); pure speech/safety/HUD files compile into
+    both targets per the established pattern.
+
+Honest status: the suites above are green on the Simulator, but Muse
+(incl. /verify-speech) has still never been called live (no key).
+Speech-recognition accuracy in noise, accents and several speakers, the
+HUD feel, TTS timing and end-to-end voice commands are unverified until
+iPhone testing (the Simulator runs here had no usable mic; the listener
+is covered by pure tests + code review only). All speech/scoring
+thresholds are starter guesses for Phase 8 replay tuning.
+
 ## Phase 4 review fixes + brand assets (2026-10-27)
 
 Found by reviewing the real Phase 4 code, probing it, and running it:
