@@ -1,6 +1,7 @@
 import AVFoundation
 import CoreImage
 import SwiftUI
+import UIKit
 
 /// Protect tab model: owns the active FrameSource, runs the detect-then-track
 /// pipeline on a serial queue, keeps the screen awake while protecting
@@ -19,6 +20,9 @@ final class ProtectViewModel: ObservableObject {
     @Published var debugFrameSize: CGSize = .zero
     @Published var debugScores: [Int: Double] = [:]
     @Published var personCount = 0
+    @Published var proximity: Proximity = .clear
+    @Published var threatAlert = false
+    @Published var lastVerifyResult: String?
 
     // CIContext is Sendable; shared for off-main replay frame conversion.
     fileprivate nonisolated static let ciContext = CIContext()
@@ -44,6 +48,18 @@ final class ProtectViewModel: ObservableObject {
     private var fpsTimer: Timer?
 
     var isProtecting: Bool { state == .monitoring }
+
+    /// Big status text. The scorer alert wins over proximity text; the ring
+    /// itself always shows proximity while protecting (never the alert).
+    var displayTitle: String {
+        if isProtecting, threatAlert {
+            return "Something seems off"
+        }
+        if isProtecting, proximity != .clear {
+            return proximity.title
+        }
+        return state.title
+    }
 
     func startCamera() async {
         errorMessage = nil
@@ -93,6 +109,9 @@ final class ProtectViewModel: ObservableObject {
         state = .idle
         statusLine = "Not protecting"
         debugScores = [:]
+        proximity = .clear
+        threatAlert = false
+        lastVerifyResult = nil
         detectionQueue.sync { pipeline.reset() }
         UIApplication.shared.isIdleTimerDisabled = false
         fpsTimer?.invalidate()
@@ -108,6 +127,9 @@ final class ProtectViewModel: ObservableObject {
         personCount = 0
         debugTracks = []
         debugScores = [:]
+        proximity = .clear
+        threatAlert = false
+        lastVerifyResult = nil
         detectionQueue.sync { pipeline.reset() }
         fpsTimer?.invalidate()
         fpsTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
@@ -132,12 +154,33 @@ final class ProtectViewModel: ObservableObject {
         }
     }
 
-    fileprivate func publishDetection(tracks: [Track], frameSize: CGSize, scores: [Int: Double]) {
+    fileprivate func publishDetection(
+        tracks: [Track], frameSize: CGSize, scores: [Int: Double], proximity level: Proximity
+    ) {
         guard isProtecting else { return }
         debugTracks = tracks
         debugFrameSize = frameSize
         debugScores = scores
         personCount = tracks.count
+        threatAlert = scores.values.contains { $0 >= pipeline.config.alertThreshold }
+        if level != proximity {
+            let rising = level > proximity
+            proximity = level
+            if rising {
+                UIImpactFeedbackGenerator(style: level == .tooClose ? .medium : .light)
+                    .impactOccurred()
+            }
+            UIAccessibility.post(notification: .announcement, argument: level.announcement)
+        }
+    }
+
+    fileprivate func publishVerification(_ result: VerifyResult?) {
+        guard isProtecting else { return }
+        if let result {
+            lastVerifyResult = "Verify: \(result.threatLevel) via \(result.path) (\(result.reason))"
+        } else {
+            lastVerifyResult = "Verify failed"
+        }
     }
 
     private func handleSourceError(_ message: String) {
@@ -154,6 +197,10 @@ private final class DetectionPipeline {
     let tracker = IoUTracker()
     let extractor: FeatureExtractor
     let scorer: ThreatScorer
+    var proximityTracker: ProximityTracker
+    let verifier = VerifierClient()
+    var verifierGate: VerifierGate
+    let frameBuffer = FrameBuffer()
     var lastDetect = Date.distantPast
     let detectInterval: TimeInterval = 0.2
 
@@ -162,11 +209,16 @@ private final class DetectionPipeline {
         self.detector = PersonDetector(poseMatchDistance: config.poseMatchDistance)
         self.extractor = FeatureExtractor(config: config)
         self.scorer = ThreatScorer(config: config)
+        self.proximityTracker = ProximityTracker(config: config)
+        self.verifierGate = VerifierGate(config: config)
     }
 
     func reset() {
         tracker.reset()
         extractor.reset()
+        proximityTracker.reset()
+        verifierGate.reset()
+        frameBuffer.clear()
     }
 
     func handleFrame(_ frame: SafeguardFrame, isReplay: Bool, owner: ProtectViewModel) {
@@ -178,22 +230,58 @@ private final class DetectionPipeline {
         let now = Date()
         guard now.timeIntervalSince(lastDetect) >= detectInterval else { return }
         lastDetect = now
+        let nowSeconds = ProcessInfo.processInfo.systemUptime
+        frameBuffer.append(pixelBuffer: frame.pixelBuffer, at: nowSeconds)
         guard let people = try? detector.detect(in: frame.pixelBuffer) else { return }
         let tracks = tracker.update(detections: people)
         let live = tracks.filter { $0.missed == 0 }
-        let nowSeconds = ProcessInfo.processInfo.systemUptime
         extractor.update(tracks: live, at: nowSeconds)
         var scores: [Int: Double] = [:]
+        var scored: [(track: Track, features: PersonFeatures, score: ThreatScore)] = []
         for track in live {
             if let features = extractor.features(for: track.id, at: nowSeconds) {
-                scores[track.id] = scorer.score(features).value
+                let score = scorer.score(features)
+                scores[track.id] = score.value
+                scored.append((track, features, score))
             }
         }
+        let maxScore = scores.values.max() ?? 0
+        if verifierGate.consume(maxScore: maxScore) {
+            let snapshot = frameBuffer.snapshot()
+            let top = scored.sorted { $0.score.value > $1.score.value }.prefix(3)
+            let payload = VerifyPayload(
+                frames: snapshot.frames,
+                boxes: live.map { Self.boxPixels($0.box, in: snapshot.size) },
+                features: top.map {
+                    VerifyFeatureSummary(
+                        track: $0.track, features: $0.features,
+                        score: $0.score.value, reasons: $0.score.reasons
+                    )
+                }
+            )
+            Task { [verifier] in
+                let result = try? await verifier.verify(payload)
+                await owner.publishVerification(result)
+            }
+        }
+        let nearest = live.map { Double($0.box.height) }.max()
+        let level = proximityTracker.update(nearestHeight: nearest, at: nowSeconds)
         let size = CGSize(
             width: CVPixelBufferGetWidth(frame.pixelBuffer),
             height: CVPixelBufferGetHeight(frame.pixelBuffer)
         )
-        Task { await owner.publishDetection(tracks: live, frameSize: size, scores: scores) }
+        Task {
+            await owner.publishDetection(
+                tracks: live, frameSize: size, scores: scores, proximity: level
+            )
+        }
+    }
+
+    private static func boxPixels(_ box: CGRect, in size: CGSize) -> [Double] {
+        [
+            Double(box.minX) * size.width, Double(box.minY) * size.height,
+            Double(box.maxX) * size.width, Double(box.maxY) * size.height,
+        ]
     }
 
     nonisolated private static func makeImage(from pixelBuffer: CVPixelBuffer) -> UIImage? {

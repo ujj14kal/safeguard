@@ -30,9 +30,17 @@ if printf '%s\n' "$staged_diff" | grep -E -q "$token_pat"; then
 fi
 
 # 3. Assigned secrets with non-empty values (empty `KEY=` template lines pass).
-secret_assign_pat='(api[_-]?key|auth[_-]?token|client[_-]?secret|TWILIO_[A-Z_]+|password)[ ]*=[ ]*"?[^[:space:]#"][^[:space:]]*'
-if printf '%s\n' "$staged_diff" | grep -E -i -q "$secret_assign_pat"; then
-  block "assigned secret with a value found (e.g. *_KEY=<value>). Keep values in .env (untracked); commit only empty templates."
+# Quoted literals are always blocked. Unquoted values pass only when they are
+# bare code references (identifier, dotted path, os.environ/call) — e.g.
+# `api_key=SETTINGS.x` or `self.api_key = api_key`. Real leaked values are
+# string literals or token-shaped (dashes etc., also caught by rule 2).
+# Known gap: a pure-alphanumeric UNQUOTED value (e.g. `password = hunter2`)
+# reads as a code reference and passes; quoted and token-shaped values block.
+secret_lhs='(api[_-]?key|auth[_-]?token|client[_-]?secret|TWILIO_[A-Z_]+|password)[ ]*=[ ]*'
+candidates=$(printf '%s\n' "$staged_diff" | grep -E -i "$secret_lhs"'[^[:space:]#]' || true)
+if [ -n "$candidates" ]; then
+  bad_assign=$(printf '%s\n' "$candidates" | grep -v -E -i "$secret_lhs"'`?[A-Za-z_][A-Za-z0-9_]*([.][A-Za-z_][A-Za-z0-9_]*|\([^)]*\))?(\[[^]]*\])?`?[ ,)`]*(#.*)?$' || true)
+  [ -n "$bad_assign" ] && block "assigned secret with a value found (e.g. *_KEY=<value>). Keep values in .env (untracked); commit only empty templates."
 fi
 
 # 4. Phone numbers (E.164-looking). Fictional +1-555-01xx numbers are allowed

@@ -98,4 +98,11 @@ facing score, `FeatureExtractor` (trend, speed, persistence, facing,
 isolation, blocking, cornering over explicit second-based windows),
 `ThreatScorer` with reasons, pose attached in the detector, scores on the
 debug overlay. 45/45 tests pass on the iOS Simulator.
-Next: Phase 4 (backend /verify with SAM 2 + Muse).
+Phase 4 done: display-only proximity colours on the shield (clear/near/
+tooClose with holds + hysteresis) and backend `POST /verify` (SAM 2 +
+Muse with `muse-only` default after the CPU spike ran 3x over budget;
+see DECISIONS.md). The app calls /verify only above the on-device score
+threshold. Backend tests: `cd backend && .venv/bin/python -m pytest
+tests/ -q` (15 passed, 1 skipped; the skipped e2e needs a real SAM 2
+checkpoint + `SAM2_MODE=sam2`). 69/69 iOS tests pass on the Simulator.
+Next: Phase 5 (audio loop + state machine + check-in screen).

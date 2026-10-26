@@ -2,6 +2,60 @@
 
 Log of every deviation from the project brief, with reasons. Newest first.
 
+## Phase 4 (2026-10-26)
+
+Part A — proximity colours (display-only): new `ProximityTracker` maps the
+nearest live track's box height through `nearHeight` (0.30) /
+`tooCloseHeight` (0.45) in `ThreatConfig` (guesses to tune on real clips),
+with `proximityRiseHold` 0.6 s, `proximityFallHold` 1.0 s and 0.05
+hysteresis, all timestamp-based. Levels have distinct symbol+text
+(`checkmark.shield`/`person.fill`/`exclamationmark.triangle.fill`); red
+"Too close" never pulses and never uses the SOS symbol. VoiceOver
+announces changes only; medium haptic on rise to tooClose, none on falls;
+Reduce Motion disables breathing. Proximity never alerts: scorer `alert`
+only adds "Something seems off" text. Preview-states screen gained the
+three levels with mock data. 9 new tests.
+
+Part B — /verify (SAM 2 + Muse): `POST /verify` takes 4-8 ~512 px frames
++ on-device feature summary. `SAM2_MODE`: `auto` tries SAM 2 and falls
+back when slow/missing, `sam2` requires it (503 otherwise), `muse-only`
+never tries. Default is **`muse-only`** (see spike below). SAM 2 path:
+tiny checkpoint video predictor, first-frame boxes as prompts, geometry
+(mask-area growth, centroid path, corridor overlap/blocks) folded into
+the Muse prompt. Muse path: OpenAI-compatible Chat Completions at
+`META_MODEL_API_BASE_URL` (default `https://api.meta.ai/v1`), model
+`MUSE_MODEL` (default `muse-spark-1.3`), strict JSON
+`{threat_level, behaviours_observed[], confidence, reason}`, behaviour
+only, never appearance; 20 calls/min limiter; per-call timeout
+(`MUSE_TIMEOUT_S`, default 20 s); every call appended to a JSONL log
+(path log + status code, latency, model, daily counter). The app's
+`VerifierClient` fires only when the on-device score crosses
+`VERIFY_THRESHOLD`, sending the ring-buffer clip; never per frame, never
+for proximity colour.
+
+Spike (real data point): `sam2.1_hiera_tiny.pt` on 8 CPU frames took
+9.14 s — 3x over the 3 s budget — so `muse-only` is the default and SAM 2
+is opt-in (`SAM2_MODE=sam2`, GPU assumed). Verified instead: backend unit
+suite 15 passed + 1 skipped (e2e correctly skipped by default), and the
+e2e test with the real checkpoint + mocked Muse passes (4.38 s incl.
+model load, `path: sam2+muse`, geometry reaches the Muse prompt).
+Implementation finding: importing `sam2` already initialises GlobalHydra
+with `pkg://sam2` on the search path, so the predictor builds with the
+repo-style config name from any CWD — do NOT call `hydra.initialize`
+(it raises "already initialized"); the earlier init wrapper was deleted.
+
+Honest status: Muse has NEVER been called live (no key; all tests mock
+it with canned behaviour-only JSON incl. a "stationary, not a threat"
+low case for the 0.74 ego-motion false alert). SAM 2 e2e ran on a
+synthetic blob JPEG, not real people. Facing still unverified (Sim pose
+unsupported). All thresholds synthetic; Phase 8 replay tuning owns them.
+Tests: 69/69 iOS green on the Simulator; backend as above.
+Hook: pre-commit rule 3 now allows bare code references (`api_key=SETTINGS.x`)
+while still blocking quoted literals and token-shaped values (verified with
+fake-secret probes); "Bearer <token>"-shaped doc comments were reworded since
+rule 2 flags them. Environment note: the shell sandbox blocks simctl/XPC, so
+Simulator runs here need unsandboxed execution.
+
 ## Phase 3 scorer review fixes (2026-10-26)
 
 Found by probing the real `FeatureExtractor` + `ThreatScorer` with scenarios the

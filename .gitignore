@@ -25,6 +25,7 @@ xcuserdata/
 # Python backend
 .venv/
 venv/
+logs/
 __pycache__/
 *.py[cod]
 *.egg-info/

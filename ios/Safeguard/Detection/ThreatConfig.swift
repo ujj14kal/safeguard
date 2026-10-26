@@ -72,6 +72,20 @@ public struct ThreatConfig: Sendable {
     /// Max centre distance (normalized) for pose-to-detection fallback matching.
     public var poseMatchDistance: Double = 0.25
 
+    // MARK: - Proximity display (DISPLAY ONLY; never triggers alerts)
+
+    /// Normalized upper-body box heights for the proximity levels. GUESSES —
+    /// tune on real clips (Phase 8). Do not hard-code heights elsewhere.
+    public var nearHeight: Double = 0.30
+    public var tooCloseHeight: Double = 0.45
+    /// Seconds the condition must hold before the level rises (box jitter
+    /// and people stepping into view must not flash colours).
+    public var proximityRiseHold: TimeInterval = 0.6
+    /// Seconds below (threshold - hysteresis) before the level falls.
+    public var proximityFallHold: TimeInterval = 1.0
+    /// Hysteresis margin (normalized height) for falling.
+    public var proximityHysteresis: Double = 0.05
+
     // MARK: - Scoring weights (normalized internally; need not sum to 1)
 
     public var weightTrend: Double = 0.20
@@ -84,7 +98,12 @@ public struct ThreatConfig: Sendable {
 
     /// Score at or above this raises an alert. Tuned so slow following
     /// (~0.59 synthetic) clears with margin while crowds (~0.29) stay out.
+    /// Crossing this threshold (rising edge only) also triggers one backend
+    /// /verify call — never per frame, never from proximity.
     public var alertThreshold: Double = 0.50
+    /// The verify gate re-arms only after the score falls this far below
+    /// the threshold.
+    public var verifyRearmMargin: Double = 0.10
     /// Feature value at or above this earns a human-readable reason.
     public var reasonThreshold: Double = 0.5
 

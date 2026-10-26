@@ -43,6 +43,26 @@
                         title: "Cab", subtitle: "Finding nearest ride…",
                         systemImage: "car.fill", status: .starting
                     )
+
+                    Text("Proximity (mock data)")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.top, DS.Spacing.small)
+                    ForEach(Proximity.allCases, id: \.self) { level in
+                        HStack(spacing: DS.Spacing.medium) {
+                            ShieldRingView(state: .monitoring, proximity: level, size: 72)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(level.title).font(.headline)
+                                Text(level.symbolName).font(.footnote).foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                        }
+                        .padding()
+                        .background(
+                            Color(.secondarySystemGroupedBackground),
+                            in: RoundedRectangle(cornerRadius: DS.cornerRadius)
+                        )
+                    }
                 }
                 .padding()
             }

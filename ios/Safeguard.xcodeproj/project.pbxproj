@@ -44,6 +44,16 @@
 		B20000000000000000000015 /* BodyPose.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000038 /* BodyPose.swift */; };
 		B20000000000000000000016 /* FeatureExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000039 /* FeatureExtractor.swift */; };
 		B20000000000000000000017 /* ThreatScorer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000003A /* ThreatScorer.swift */; };
+		A1000000000000000000007A /* ProximityTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000003B /* ProximityTracker.swift */; };
+		B2000000000000000000001B /* ProximityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000000000000000000001A /* ProximityTests.swift */; };
+		B2000000000000000000001C /* ProximityTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000003B /* ProximityTracker.swift */; };
+		A1000000000000000000007B /* VerifierGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000003C /* VerifierGate.swift */; };
+		A1000000000000000000007C /* FrameBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000003D /* FrameBuffer.swift */; };
+		A1000000000000000000007D /* VerifierClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000003E /* VerifierClient.swift */; };
+		B2000000000000000000001E /* VerifierTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000000000000000000001D /* VerifierTests.swift */; };
+		B2000000000000000000001F /* VerifierGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000003C /* VerifierGate.swift */; };
+		B20000000000000000000020 /* FrameBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000003D /* FrameBuffer.swift */; };
+		B20000000000000000000021 /* VerifierClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000003E /* VerifierClient.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -80,6 +90,12 @@
 		A1000000000000000000003A /* ThreatScorer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThreatScorer.swift; sourceTree = "<group>"; };
 		B20000000000000000000018 /* FeatureExtractorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureExtractorTests.swift; sourceTree = "<group>"; };
 		B20000000000000000000019 /* ThreatScorerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThreatScorerTests.swift; sourceTree = "<group>"; };
+		A1000000000000000000003B /* ProximityTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProximityTracker.swift; sourceTree = "<group>"; };
+		B2000000000000000000001A /* ProximityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProximityTests.swift; sourceTree = "<group>"; };
+		A1000000000000000000003C /* VerifierGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerifierGate.swift; sourceTree = "<group>"; };
+		A1000000000000000000003D /* FrameBuffer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameBuffer.swift; sourceTree = "<group>"; };
+		A1000000000000000000003E /* VerifierClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerifierClient.swift; sourceTree = "<group>"; };
+		B2000000000000000000001D /* VerifierTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerifierTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -113,6 +129,7 @@
 				A10000000000000000000016 /* Tabs */,
 				A10000000000000000000017 /* Debug */,
 				A10000000000000000000019 /* Detection */,
+				A1000000000000000000001A /* Verify */,
 				A10000000000000000000018 /* Supporting */,
 				A10000000000000000000037 /* Assets.xcassets */,
 			);
@@ -196,6 +213,7 @@
 				A10000000000000000000038 /* BodyPose.swift */,
 				A10000000000000000000039 /* FeatureExtractor.swift */,
 				A1000000000000000000003A /* ThreatScorer.swift */,
+				A1000000000000000000003B /* ProximityTracker.swift */,
 			);
 			path = Detection;
 			sourceTree = "<group>";
@@ -208,8 +226,20 @@
 				B20000000000000000000008 /* PersonDetectorTests.swift */,
 				B20000000000000000000018 /* FeatureExtractorTests.swift */,
 				B20000000000000000000019 /* ThreatScorerTests.swift */,
+				B2000000000000000000001A /* ProximityTests.swift */,
+				B2000000000000000000001D /* VerifierTests.swift */,
 			);
 			path = SafeguardTests;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */		A1000000000000000000001A /* Verify */ = {
+			isa = PBXGroup;
+			children = (
+				A1000000000000000000003C /* VerifierGate.swift */,
+				A1000000000000000000003D /* FrameBuffer.swift */,
+				A1000000000000000000003E /* VerifierClient.swift */,
+			);
+			path = Verify;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -333,6 +363,10 @@
 				A10000000000000000000077 /* BodyPose.swift in Sources */,
 				A10000000000000000000078 /* FeatureExtractor.swift in Sources */,
 				A10000000000000000000079 /* ThreatScorer.swift in Sources */,
+				A1000000000000000000007A /* ProximityTracker.swift in Sources */,
+				A1000000000000000000007B /* VerifierGate.swift in Sources */,
+				A1000000000000000000007C /* FrameBuffer.swift in Sources */,
+				A1000000000000000000007D /* VerifierClient.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -352,6 +386,12 @@
 				B20000000000000000000015 /* BodyPose.swift in Sources */,
 				B20000000000000000000016 /* FeatureExtractor.swift in Sources */,
 				B20000000000000000000017 /* ThreatScorer.swift in Sources */,
+				B2000000000000000000001B /* ProximityTests.swift in Sources */,
+				B2000000000000000000001C /* ProximityTracker.swift in Sources */,
+				B2000000000000000000001E /* VerifierTests.swift in Sources */,
+				B2000000000000000000001F /* VerifierGate.swift in Sources */,
+				B20000000000000000000020 /* FrameBuffer.swift in Sources */,
+				B20000000000000000000021 /* VerifierClient.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

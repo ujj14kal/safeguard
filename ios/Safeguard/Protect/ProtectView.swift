@@ -8,14 +8,19 @@ struct ProtectView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: DS.Spacing.large) {
-                    ShieldRingView(state: model.state)
+                    ShieldRingView(state: model.state, proximity: model.proximity)
                         .padding(.top, DS.Spacing.medium)
                     VStack(spacing: DS.Spacing.small) {
-                        Text(model.state.title)
+                        Text(model.displayTitle)
                             .font(.system(.title2, design: .rounded, weight: .bold))
                         Text(model.statusLine)
                             .font(.footnote)
                             .foregroundStyle(.secondary)
+                        if let verify = model.lastVerifyResult {
+                            Text(verify)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                     previewSection
                     controlsSection
