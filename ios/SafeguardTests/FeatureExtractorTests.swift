@@ -226,6 +226,70 @@ final class FeatureExtractorTests: XCTestCase {
         XCTAssertEqual(features?.cornering ?? -1, 0)
     }
 
+    // MARK: - Minimum history (new tracks must not read box jitter as approach)
+
+    func testNewTrackWithTwoSamplesHasNoTrendOrSpeed() {
+        // Probe case: two samples, height 0.30 -> 0.32. Used to give trend 1.0
+        // and speed 0.83, i.e. an alert half a second after someone appears.
+        let extractor = FeatureExtractor()
+        let features = feed(extractor, id: 1, samples: [
+            (0.0, box(cx: 0.5, h: 0.30)), (0.2, box(cx: 0.5, h: 0.32)),
+        ])
+        XCTAssertEqual(features?.trend ?? -1, 0)
+        XCTAssertEqual(features?.speed ?? -1, 0)
+        XCTAssertEqual(features?.cornering ?? -1, 0)
+    }
+
+    func testTrendNeedsMinimumSamplesAndSpan() {
+        let config = ThreatConfig()
+        // 5 samples spanning 0.8 s: below both minimums, even though steep.
+        let tooShort = feed(
+            FeatureExtractor(), id: 1, samples: ramp(from: 0.20, to: 0.30, over: 0.8)
+        )
+        XCTAssertLessThan(0.8, config.minTrendSpan)
+        XCTAssertEqual(tooShort?.trend ?? -1, 0)
+        // 6 samples spanning exactly 1.0 s: enough, and the growth counts.
+        let enough = feed(
+            FeatureExtractor(), id: 1, samples: ramp(from: 0.20, to: 0.35, over: 1.0)
+        )
+        XCTAssertGreaterThan(enough?.trend ?? 0, 0.9)
+        XCTAssertGreaterThan(enough?.speed ?? 0, 0.9)
+    }
+
+    // MARK: - Persistence from timestamps, not sample count
+
+    func testPersistenceIsIndependentOfDetectionRate() {
+        // Same 3.6 s of presence, sampled at 2.5 Hz and at 5 Hz. Counting
+        // samples x 0.2 s used to make the slower device look half as persistent.
+        let slow = feed(
+            FeatureExtractor(), id: 1,
+            samples: (0..<10).map { (Double($0) * 0.4, box(cx: 0.5, h: 0.25)) }
+        )
+        let fast = feed(
+            FeatureExtractor(), id: 1,
+            samples: (0..<19).map { (Double($0) * 0.2, box(cx: 0.5, h: 0.25)) }
+        )
+        let config = ThreatConfig()
+        let expected = (3.6 + config.detectionPeriod) / config.persistenceTime
+        XCTAssertEqual(slow?.persistence ?? -1, expected, accuracy: 1e-9)
+        XCTAssertEqual(fast?.persistence ?? -1, expected, accuracy: 1e-9)
+    }
+
+    func testLongGapIsNotCountedAsPresence() {
+        // Two 1 s runs separated by 5 s of absence: only the matched time
+        // counts (plus the reappearing bonus), not the empty gap between.
+        let extractor = FeatureExtractor()
+        var samples = (0..<6).map { (Double($0) * 0.2, box(cx: 0.5, h: 0.25)) }
+        samples += (0..<6).map { (6.0 + Double($0) * 0.2, box(cx: 0.5, h: 0.25)) }
+        let features = feed(extractor, id: 1, samples: samples)
+        let config = ThreatConfig()
+        let matched = (1.0 + 1.0 + config.detectionPeriod) / config.persistenceTime
+        XCTAssertEqual(features?.reappearing, true)
+        XCTAssertEqual(
+            features?.persistence ?? -1, matched + config.reappearBonus, accuracy: 1e-9
+        )
+    }
+
     // MARK: - Housekeeping
 
     func testNoSamplesReturnsNil() {

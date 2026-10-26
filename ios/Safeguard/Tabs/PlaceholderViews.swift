@@ -34,7 +34,7 @@ struct SettingsView: View {
         NavigationStack {
             Form {
                 Section("About") {
-                    LabeledContent("Version", value: "0.1.0 (Phase 1)")
+                    LabeledContent("Version", value: "0.3.0 (Phase 3)")
                 }
                 #if DEBUG
                     Section("Debug") {

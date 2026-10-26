@@ -2,6 +2,35 @@
 
 Log of every deviation from the project brief, with reasons. Newest first.
 
+## Phase 3 scorer review fixes (2026-10-26)
+
+Found by probing the real `FeatureExtractor` + `ThreatScorer` with scenarios the
+Phase 3 tests did not cover (alert threshold 0.50):
+
+1. **Minimum history for trend/speed/cornering**: a new track with 2 samples
+   (height 0.30 -> 0.32) scored 0.66 and alerted half a second after someone
+   appeared, because a two-point slope turns box jitter into "fast approach".
+   Slopes now need `minTrendSamples` (6) over `minTrendSpan` (1.0 s). Now 0.21.
+2. **Persistence from timestamps**: it was `sample count x 0.2 s`, so a device
+   detecting at 2.5 Hz looked half as persistent (0.67 vs 1.0 for the same 8 s).
+   Now the matched seconds come from sample timestamps (gaps longer than
+   `reappearMinGap` are not presence); the latest sample is credited one
+   nominal period, so results at 5 Hz are unchanged.
+3. **Static-presence cap**: a stranger standing still, facing you, alone, near
+   your path, scored 0.49-0.50 with zero threatening behaviour. If
+   trend/speed/cornering are all below `motionMin` (0.15) and the track has not
+   reappeared, the score is capped at `staticScoreCap` (0.35, margin 0.15 below
+   threshold). Trade-off: someone who stays beside you at a constant distance
+   with no approach and no reappearance can no longer alert on presence alone.
+4. **Still open (not fixed)**: ego-motion. When *you* walk toward someone
+   standing still, their box grows and scores 0.74 (alert). Needs scene-relative
+   growth (compare against other tracks) or a motion estimate; only real
+   footage can validate it. Also a forward-facing chest/glasses camera cannot
+   see a person following from behind, so "following" in demos must be someone
+   in view (ahead, beside, or crossing); say so in the pitch.
+5. Version label now 0.3.0 (Phase 3). Tests: 53 pass on the iOS 26.5 Simulator
+   (45 before, 8 new).
+
 ## Phase 3
 
 1. **Upper-body boxes kept (now explicit)**: `upperBodyOnly = true` is set

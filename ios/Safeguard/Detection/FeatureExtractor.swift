@@ -90,7 +90,9 @@ public final class FeatureExtractor {
         var features = PersonFeatures()
 
         let approach = window(samples, time, config.approachWindow)
-        if let slope = slope(of: approach.map { ($0.time, Double($0.box.height)) }),
+        let enoughHistory = hasEnoughHistory(approach)
+        if enoughHistory,
+           let slope = slope(of: approach.map { ($0.time, Double($0.box.height)) }),
            let medianH = median(approach.map { Double($0.box.height) }), medianH > 0
         {
             let growth = slope * config.approachWindow / medianH
@@ -99,9 +101,7 @@ public final class FeatureExtractor {
         }
 
         let presence = window(samples, time, config.persistenceWindow)
-        features.persistence = clamp01(
-            Double(presence.count) * config.detectionPeriod / config.persistenceTime
-        )
+        features.persistence = clamp01(matchedSeconds(presence) / config.persistenceTime)
         features.reappearing = hasGap(presence, longerThan: config.reappearMinGap)
         if features.reappearing {
             features.persistence = min(1, features.persistence + config.reappearBonus)
@@ -128,7 +128,8 @@ public final class FeatureExtractor {
             features.blocking = Double(blocked.count) / Double(corridor.count)
         }
 
-        if let lateral = slope(of: approach.map { ($0.time, Double($0.box.midX)) }),
+        if enoughHistory,
+           let lateral = slope(of: approach.map { ($0.time, Double($0.box.midX)) }),
            let lastX = approach.last.map({ Double($0.box.midX) })
         {
             let steadiness = clamp01(1 - abs(lateral) / config.interceptMaxDrift)
@@ -152,6 +153,31 @@ public final class FeatureExtractor {
 
     private func window(_ samples: [Sample], _ time: TimeInterval, _ span: TimeInterval) -> [Sample] {
         samples.filter { $0.time > time - span }
+    }
+
+    /// Enough matched samples, over enough time, for a slope to mean motion
+    /// rather than box jitter. Samples are in time order.
+    private func hasEnoughHistory(_ samples: [Sample]) -> Bool {
+        guard samples.count >= config.minTrendSamples,
+              let first = samples.first, let last = samples.last
+        else {
+            return false
+        }
+        return last.time - first.time >= config.minTrendSpan
+    }
+
+    /// Seconds the track was actually matched, from sample timestamps (not a
+    /// count times a nominal period, which under-counts when detection runs
+    /// slower than 5 Hz). Gaps longer than `reappearMinGap` were not presence.
+    /// The latest sample is credited one nominal period.
+    private func matchedSeconds(_ samples: [Sample]) -> TimeInterval {
+        guard !samples.isEmpty else { return 0 }
+        let times = samples.map(\.time).sorted()
+        let continuous = zip(times, times.dropFirst())
+            .map { $1 - $0 }
+            .filter { $0 <= config.reappearMinGap }
+            .reduce(0, +)
+        return continuous + config.detectionPeriod
     }
 
     /// Least-squares slope, or nil with fewer than 2 samples or no time span.

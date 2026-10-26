@@ -135,6 +135,69 @@ final class ThreatScorerTests: XCTestCase {
         XCTAssertTrue(reasons.contains("facing you"))
     }
 
+    // MARK: - Guards found by probing real-world cases
+
+    func testStationaryFacingPersonDoesNotAlert() {
+        // A stranger standing still in front of you, alone, facing you, for 8 s,
+        // with ordinary box jitter. Presence-only features used to score
+        // 0.49-0.50 against the 0.50 threshold. It must now clear by a margin.
+        let config = ThreatConfig()
+        var ticks: [(Double, [DetectedPerson])] = []
+        for step in 0..<40 {
+            let t = Double(step) * 0.2
+            let h = 0.35 + 0.004 * sin(t * 7)
+            ticks.append((t, [person(cx: 0.5 + 0.003 * cos(t * 5), h: h, pose: frontalPose())]))
+        }
+        let score = run(ticks: ticks).values.first
+        XCTAssertEqual(score?.alert, false)
+        XCTAssertLessThanOrEqual(score?.value ?? 1, config.alertThreshold - 0.10)
+    }
+
+    func testNewPersonAppearingDoesNotAlertDuringFirstSecond() {
+        // Probe case: someone steps into the middle of view. Every prefix up
+        // to the minimum history must stay quiet.
+        let config = ThreatConfig()
+        for count in 2...5 {
+            var ticks: [(Double, [DetectedPerson])] = []
+            for step in 0..<count {
+                let t = Double(step) * 0.2
+                ticks.append((t, [person(cx: 0.5, h: 0.30 + 0.015 * Double(step), pose: frontalPose())]))
+            }
+            let score = run(ticks: ticks).values.first
+            XCTAssertEqual(score?.alert, false, "alerted with \(count) samples")
+            XCTAssertLessThanOrEqual(score?.value ?? 1, config.staticScoreCap)
+        }
+    }
+
+    func testStaticCapAppliesOnlyWithoutClosingInOrReappearing() {
+        let config = ThreatConfig()
+        let scorer = ThreatScorer(config: config)
+        let presenceOnly = PersonFeatures(
+            persistence: 1, facing: 1, isolation: 1, blocking: 1
+        )
+        XCTAssertLessThanOrEqual(scorer.score(presenceOnly).value, config.staticScoreCap)
+        XCTAssertFalse(scorer.score(presenceOnly).alert)
+
+        // Same features plus reappearing: the cap no longer applies.
+        var reappeared = presenceOnly
+        reappeared.reappearing = true
+        XCTAssertGreaterThan(scorer.score(reappeared).value, config.staticScoreCap)
+
+        // Same features plus a real closing-in signal: not capped, and it alerts.
+        var closing = presenceOnly
+        closing.trend = 0.4
+        closing.speed = 0.4
+        XCTAssertGreaterThan(scorer.score(closing).value, config.staticScoreCap)
+        XCTAssertTrue(scorer.score(closing).alert)
+    }
+
+    func testCapKeepsSafetyMarginBelowThreshold() {
+        let config = ThreatConfig()
+        XCTAssertLessThanOrEqual(config.staticScoreCap, config.alertThreshold - 0.10)
+        XCTAssertGreaterThan(config.motionMin, 0)
+        XCTAssertGreaterThanOrEqual(config.minTrendSamples, 2)
+    }
+
     func testConfigIsSane() {
         let config = ThreatConfig()
         let weights = [

@@ -16,8 +16,19 @@ public struct ThreatConfig: Sendable {
     public var persistenceWindow: TimeInterval = 10
     /// Window for corridor blocking fraction.
     public var corridorWindow: TimeInterval = 4
-    /// Nominal detection period (5 Hz). Used to convert sample counts to seconds.
+    /// Nominal detection period (5 Hz): the dwell credited to the latest
+    /// sample when measuring presence. Elapsed time itself comes from sample
+    /// timestamps, so a slower real detection rate is not under-counted.
     public var detectionPeriod: TimeInterval = 0.2
+
+    // MARK: - Minimum evidence
+
+    /// Trend, speed and lateral drift are least-squares slopes. With only a
+    /// couple of samples, ordinary box jitter reads as a fast approach, so a
+    /// new track needs at least this many matched samples in the window...
+    public var minTrendSamples: Int = 6
+    /// ...spanning at least this many seconds, before they count.
+    public var minTrendSpan: TimeInterval = 1.0
 
     // MARK: - Distance trend / approach speed (box height, upper-body boxes)
 
@@ -76,4 +87,15 @@ public struct ThreatConfig: Sendable {
     public var alertThreshold: Double = 0.50
     /// Feature value at or above this earns a human-readable reason.
     public var reasonThreshold: Double = 0.5
+
+    // MARK: - Static-presence guard
+
+    /// If the strongest of trend/speed/cornering is below this, nobody is
+    /// closing in on the user.
+    public var motionMin: Double = 0.15
+    /// With nobody closing in (and no reappearing), the score is capped here:
+    /// presence alone — a stranger standing still, facing you, alone, near
+    /// your path — scored 0.49-0.50 against the 0.50 threshold with zero
+    /// threatening behaviour. Keep this well below `alertThreshold`.
+    public var staticScoreCap: Double = 0.35
 }

@@ -34,9 +34,15 @@ public struct ThreatScorer: Sendable {
             ("cutting you off", features.cornering, config.weightCornering),
         ]
         let totalWeight = parts.map(\.weight).reduce(0, +)
-        let value = totalWeight > 0
+        var value = totalWeight > 0
             ? parts.map { $0.value * $0.weight }.reduce(0, +) / totalWeight
             : 0
+        // Presence alone (persistent + facing + isolated + near the path) must
+        // never alert: require somebody closing in, or a track that reappeared.
+        let closingIn = max(features.trend, features.speed, features.cornering)
+        if closingIn < config.motionMin && !features.reappearing {
+            value = min(value, config.staticScoreCap)
+        }
         let reasons = parts
             .filter { $0.value >= config.reasonThreshold }
             .map(\.reason)
