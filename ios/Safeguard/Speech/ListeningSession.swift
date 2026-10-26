@@ -86,3 +86,26 @@ public struct ListeningSession: Sendable {
         }
     }
 }
+
+/// Partial transcripts grow word by word, so the same code phrase matches on
+/// every later partial of an utterance. This acts on it once, and remembers
+/// it so the utterance's final transcript does not act on it again.
+public struct PartialReplyGate: Sendable {
+    private var handled: UserReply?
+
+    public init() {}
+
+    /// The reply to act on now, or nil when there is none or it was already
+    /// acted on in this utterance.
+    public mutating func consume(_ reply: UserReply?) -> UserReply? {
+        guard let reply, reply != handled else { return nil }
+        handled = reply
+        return reply
+    }
+
+    /// The utterance ended: returns what the partials already acted on.
+    public mutating func finishUtterance() -> UserReply? {
+        defer { handled = nil }
+        return handled
+    }
+}

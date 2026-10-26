@@ -59,6 +59,7 @@ final class ProtectViewModel: ObservableObject {
     /// True while the app itself is speaking: voice commands are ignored
     /// then (code phrases and the threat matcher stay live).
     private var speakingNow = false
+    private var partialGate = PartialReplyGate()
 
     var unsafeCause: UnsafeCause? { safety.unsafeCause }
 
@@ -455,7 +456,17 @@ final class ProtectViewModel: ObservableObject {
     /// (consumed, never scanned further), then the stop-confirmation
     /// answer, then voice commands (never while speaking, never in the
     /// silent window), then — only when opted in — the threat matcher.
+    /// Partial text: code phrases only, and each phrase once per utterance.
+    fileprivate func handlePartial(_ text: String) {
+        guard isProtecting else { return }
+        guard let reply = partialGate.consume(phraseMatcher.match(text)) else { return }
+        safety.noteReply(reply, at: Self.now)
+        drainAskSpeech()
+        syncProtectionState()
+    }
+
     fileprivate func handleTranscript(_ text: String) {
+        let alreadyHandled = partialGate.finishUtterance()
         if !isProtecting {
             if !speakingNow, let command = commandParser.parse(text) {
                 runCommand(command)
@@ -463,6 +474,8 @@ final class ProtectViewModel: ObservableObject {
             return
         }
         if let reply = phraseMatcher.match(text) {
+            // Already acted on from the partials of this utterance.
+            if alreadyHandled == reply { return }
             safety.noteReply(reply, at: Self.now)
             drainAskSpeech()
             syncProtectionState()
@@ -648,6 +661,10 @@ final class ProtectViewModel: ObservableObject {
 extension ProtectViewModel: ConversationListenerDelegate {
     func listener(_ listener: ConversationListener, didTranscribe text: String) {
         handleTranscript(text)
+    }
+
+    func listener(_ listener: ConversationListener, didHearPartial text: String) {
+        handlePartial(text)
     }
 }
 

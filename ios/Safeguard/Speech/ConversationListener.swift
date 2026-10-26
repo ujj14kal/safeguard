@@ -1,10 +1,12 @@
 import AVFoundation
 import Speech
 
-/// Transcripts are final-only: the delegate gets one callback per finished
-/// utterance. Times are the view model's clock (system uptime at delivery).
+/// Final transcripts arrive once per finished utterance. Partial transcripts
+/// (the growing text of the utterance in progress) arrive too, so the code
+/// phrases are heard within a word or two instead of after a pause.
 protocol ConversationListenerDelegate: AnyObject {
     func listener(_ listener: ConversationListener, didTranscribe text: String)
+    func listener(_ listener: ConversationListener, didHearPartial text: String)
 }
 
 /// The ONE audio engine + speech recognizer for everything voice. It only
@@ -150,7 +152,9 @@ final class ConversationListener: ObservableObject {
         guard let recognizer else { return }
         let request = SFSpeechAudioBufferRecognitionRequest()
         request.requiresOnDeviceRecognition = true
-        request.shouldReportPartialResults = false
+        // Partials keep the safety-critical code phrases low-latency; the
+        // threat scan still only sees final text.
+        request.shouldReportPartialResults = true
         requestBox.request = request
         let generation = session.generation
         task = recognizer.recognitionTask(with: request) { [weak self] result, error in
@@ -173,10 +177,14 @@ final class ConversationListener: ObservableObject {
             goDeaf("Recognition failed (\(error.localizedDescription))")
             return
         }
-        guard let result, result.isFinal else { return }
+        guard let result else { return }
         let text = result.bestTranscription.formattedString
         guard !text.isEmpty else { return }
-        delegate?.listener(self, didTranscribe: text)
+        if result.isFinal {
+            delegate?.listener(self, didTranscribe: text)
+        } else {
+            delegate?.listener(self, didHearPartial: text)
+        }
     }
 
     private func restartIfDue() {
@@ -191,10 +199,10 @@ final class ConversationListener: ObservableObject {
     /// reaches exactly one request.
     private func swapRequest() {
         let oldRequest = requestBox.request
-        let oldTask = task
         startRequest()
+        // endAudio (not cancel): the old task must finish and deliver its
+        // final result, or the last stretch of speech would be lost.
         oldRequest?.endAudio()
-        oldTask?.cancel()
     }
 
     private func handleInterruption(_ note: Notification) {

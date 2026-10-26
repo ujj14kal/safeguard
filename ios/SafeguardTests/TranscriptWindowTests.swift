@@ -144,3 +144,33 @@ final class ListeningSessionTests: XCTestCase {
         XCTAssertEqual(session.state, .idle)
     }
 }
+
+/// Partials make the code phrases fast; the gate keeps them to one action
+/// per utterance.
+final class PartialReplyGateTests: XCTestCase {
+    func testPhraseActsOnceAcrossGrowingPartials() {
+        var gate = PartialReplyGate()
+        XCTAssertNil(gate.consume(nil))
+        XCTAssertEqual(gate.consume(.unsafePhrase), .unsafePhrase)
+        XCTAssertNil(gate.consume(.unsafePhrase))
+    }
+
+    func testFinalSeesWhatPartialsAlreadyHandled() {
+        var gate = PartialReplyGate()
+        _ = gate.consume(.safePhrase)
+        XCTAssertEqual(gate.finishUtterance(), .safePhrase)
+        // New utterance: the same phrase acts again.
+        XCTAssertEqual(gate.consume(.safePhrase), .safePhrase)
+    }
+
+    func testFinalWithoutPartialsHandlesNothingEarly() {
+        var gate = PartialReplyGate()
+        XCTAssertNil(gate.finishUtterance())
+    }
+
+    func testUnsafeAfterSafeInSameUtteranceStillActs() {
+        var gate = PartialReplyGate()
+        XCTAssertEqual(gate.consume(.safePhrase), .safePhrase)
+        XCTAssertEqual(gate.consume(.unsafePhrase), .unsafePhrase)
+    }
+}
