@@ -29,4 +29,4 @@ xcodebuild -project ios/Safeguard.xcodeproj -scheme Safeguard \
 
 APP="$(find build/DerivedData -name Safeguard.app -maxdepth 6 | head -1)"
 xcrun simctl install "$UDID" "$APP"
-xcrun simctl launch "$UDID" com.safeguard.app
+xcrun simctl launch "$UDID" io.github.ujj14kal.safeguard

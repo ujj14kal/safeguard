@@ -2,6 +2,14 @@
 
 Log of every deviation from the project brief, with reasons. Newest first.
 
+## Bundle ID (2026-10-26)
+
+1. **Unique bundle ID**: changed `com.safeguard.app` to
+   `io.github.ujj14kal.safeguard` (project file, README, `run-sim.sh`, debug
+   hook comments). Apple refused to register `com.safeguard.app` to a personal
+   team because it is already taken. First device build succeeded with this ID
+   and installed on the iPhone; launching needs the developer profile trusted.
+
 ## Phase 1 review fixes (2026-10-26)
 
 1. **Camera orientation**: `PhoneCameraSource` now sets the video connection's

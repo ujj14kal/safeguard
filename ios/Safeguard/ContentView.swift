@@ -27,7 +27,7 @@ struct ContentView: View {
         .onAppear {
             #if DEBUG
                 // Headless screenshot hook (Simulator):
-                // defaults write com.safeguard.app debugInitialTab settings
+                // defaults write io.github.ujj14kal.safeguard debugInitialTab settings
                 if UserDefaults.standard.string(forKey: "debugInitialTab") == "settings" {
                     selection = .settings
                 }

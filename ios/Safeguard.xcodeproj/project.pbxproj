@@ -297,7 +297,7 @@
 				INFOPLIST_FILE = "Safeguard/Supporting/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.safeguard.app";
+				PRODUCT_BUNDLE_IDENTIFIER = "io.github.ujj14kal.safeguard";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
@@ -315,7 +315,7 @@
 				INFOPLIST_FILE = "Safeguard/Supporting/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.safeguard.app";
+				PRODUCT_BUNDLE_IDENTIFIER = "io.github.ujj14kal.safeguard";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;

@@ -53,7 +53,7 @@ struct SettingsView: View {
                 }
                 .onAppear {
                     // Headless screenshot hook (Simulator):
-                    // defaults write com.safeguard.app debugInitialRoute preview-states
+                    // defaults write io.github.ujj14kal.safeguard debugInitialRoute preview-states
                     if UserDefaults.standard.string(forKey: "debugInitialRoute") == "preview-states",
                        !debugRouteShown
                     {

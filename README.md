@@ -64,8 +64,8 @@ no camera). Debug builds include a Preview-states screen
 cards. Headless screenshot hooks (debug builds only):
 
 ```sh
-defaults write com.safeguard.app debugInitialTab settings
-defaults write com.safeguard.app debugInitialRoute preview-states
+defaults write io.github.ujj14kal.safeguard debugInitialTab settings
+defaults write io.github.ujj14kal.safeguard debugInitialRoute preview-states
 ```
 
 ## Run on your iPhone
