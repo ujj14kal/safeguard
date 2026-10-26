@@ -23,6 +23,17 @@ final class ProtectViewModel: ObservableObject {
     @Published var proximity: Proximity = .clear
     @Published var threatAlert = false
     @Published var lastVerifyResult: String?
+    @Published var verifyFailure: VerifyFailure?
+    @Published var backendStatus: BackendStatus?
+
+    /// Safety state machine + check-in config. MainActor-owned; the pipeline
+    /// feeds it via the published callbacks below (movement alerts), and the
+    /// UI feeds replies and taps. Timers advance on the 1 s tick.
+    private(set) var safety = SafetyStateMachine()
+    private let safetyConfig = SafetyConfig()
+    private let speaker: CheckInSpeaking = CheckInSpeaker()
+
+    var unsafeCause: UnsafeCause? { safety.unsafeCause }
 
     // CIContext is Sendable; shared for off-main replay frame conversion.
     fileprivate nonisolated static let ciContext = CIContext()
@@ -47,18 +58,34 @@ final class ProtectViewModel: ObservableObject {
     private var lastFpsSample = 0
     private var fpsTimer: Timer?
 
-    var isProtecting: Bool { state == .monitoring }
+    /// Protecting in every safety state except idle: the camera keeps
+    /// running through the check-in and the SOS (Phase 6 escalates).
+    var isProtecting: Bool { state != .idle }
 
-    /// Big status text. The scorer alert wins over proximity text; the ring
-    /// itself always shows proximity while protecting (never the alert).
+    /// Big status text. The safety state wins; inside Monitoring the scorer
+    /// alert wins over proximity text. The ring itself always shows
+    /// proximity while protecting (never the alert).
     var displayTitle: String {
-        if isProtecting, threatAlert {
+        switch state {
+        case .asking:
+            return "Are you safe?"
+        case .safe:
+            return "You're safe"
+        case .unsafe:
+            return "SOS"
+        case .suspected:
             return "Something seems off"
+        case .monitoring:
+            if threatAlert {
+                return "Something seems off"
+            }
+            if proximity != .clear {
+                return proximity.title
+            }
+            return state.title
+        case .idle:
+            return state.title
         }
-        if isProtecting, proximity != .clear {
-            return proximity.title
-        }
-        return state.title
     }
 
     func startCamera() async {
@@ -112,6 +139,10 @@ final class ProtectViewModel: ObservableObject {
         proximity = .clear
         threatAlert = false
         lastVerifyResult = nil
+        verifyFailure = nil
+        backendStatus = nil
+        safety.stopProtecting()
+        speaker.stop()
         detectionQueue.sync { pipeline.reset() }
         UIApplication.shared.isIdleTimerDisabled = false
         fpsTimer?.invalidate()
@@ -130,6 +161,9 @@ final class ProtectViewModel: ObservableObject {
         proximity = .clear
         threatAlert = false
         lastVerifyResult = nil
+        verifyFailure = nil
+        safety.startProtecting(at: Self.now)
+        refreshBackendStatus()
         detectionQueue.sync { pipeline.reset() }
         fpsTimer?.invalidate()
         fpsTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
@@ -144,6 +178,9 @@ final class ProtectViewModel: ObservableObject {
         let base = usingReplay ? "Replay mode: \(replayName ?? "video")" : "Monitoring with phone camera"
         let people = personCount == 1 ? "1 person" : "\(personCount) people"
         statusLine = "\(base) • \(fps) fps • \(people)"
+        safety.tick(at: Self.now)
+        drainAskSpeech()
+        syncProtectionState()
     }
 
     fileprivate func publishReplayFrame(_ image: UIImage?) {
@@ -163,6 +200,11 @@ final class ProtectViewModel: ObservableObject {
         debugScores = scores
         personCount = tracks.count
         threatAlert = scores.values.contains { $0 >= pipeline.config.alertThreshold }
+        if threatAlert, let maxScore = scores.values.max() {
+            safety.noteMovementAlert(score: maxScore, at: Self.now)
+            drainAskSpeech()
+            syncProtectionState()
+        }
         if level != proximity {
             let rising = level > proximity
             proximity = level
@@ -174,12 +216,104 @@ final class ProtectViewModel: ObservableObject {
         }
     }
 
-    fileprivate func publishVerification(_ result: VerifyResult?) {
+    fileprivate func publishVerification(_ result: VerifyResult) {
         guard isProtecting else { return }
-        if let result {
-            lastVerifyResult = "Verify: \(result.threatLevel) via \(result.path) (\(result.reason))"
-        } else {
-            lastVerifyResult = "Verify failed"
+        lastVerifyResult = "Verify: \(result.threatLevel) via \(result.path) (\(result.reason))"
+        verifyFailure = nil
+        // Unknown levels are dropped: a strict contract beats a guess.
+        if let level = MuseVerdictLevel(rawValue: result.threatLevel) {
+            safety.noteMuseVerdict(level, at: Self.now)
+            drainAskSpeech()
+            syncProtectionState()
+        }
+    }
+
+    fileprivate func publishVerifyFailure(_ error: Error) {
+        guard isProtecting else { return }
+        let failure = VerifyFailure.classify(
+            error, museConfigured: backendStatus?.museConfigured
+        )
+        verifyFailure = failure
+        lastVerifyResult = failure.message
+        // Deliberately no machine input: the on-device result stands.
+    }
+
+    // MARK: - Check-in replies (voice phrases, double tap, buttons)
+
+    func answerSafe() {
+        safety.noteReply(.safePhrase, at: Self.now)
+        syncProtectionState()
+    }
+
+    func answerUnsafe() {
+        safety.noteReply(.unsafePhrase, at: Self.now)
+        syncProtectionState()
+    }
+
+    func tapCheckIn() {
+        safety.noteReply(.tap, at: Self.now)
+        drainAskSpeech()
+        syncProtectionState()
+    }
+
+    // MARK: - Safety plumbing
+
+    private static var now: TimeInterval { ProcessInfo.processInfo.systemUptime }
+
+    private func refreshBackendStatus() {
+        Task {
+            backendStatus = await VerifierClient().fetchStatus()
+        }
+    }
+
+    /// Speaks the pending question, if any. The 10 s clock starts when the
+    /// audio starts (the speaker reports back even on failure/cancel).
+    private func drainAskSpeech() {
+        guard safety.takeAskSpeechDue() else { return }
+        speaker.speakAsk(
+            phrase: safetyConfig.askPhrase, volume: safetyConfig.askVolume
+        ) { [weak self] in
+            Task { @MainActor [weak self] in
+                self?.safety.noteAskSpeechStarted(at: Self.now)
+            }
+        }
+    }
+
+    /// Drives the ring/display state from the machine, announcing changes.
+    private func syncProtectionState() {
+        let mapped: ProtectionState
+        switch safety.state {
+        case .idle:
+            mapped = .idle
+        case .monitoring:
+            mapped = .monitoring
+        case .listening:
+            mapped = .suspected
+        case .asking:
+            mapped = .asking
+        case .safe:
+            mapped = .safe
+        case .unsafe:
+            mapped = .unsafe
+        }
+        if mapped != state {
+            state = mapped
+            announce(mapped)
+        }
+    }
+
+    private func announce(_ state: ProtectionState) {
+        // Asking needs no announcement: the TTS question is the signal.
+        // Listening's cue announces itself when it appears (Part C).
+        switch state {
+        case .safe:
+            UIAccessibility.post(notification: .announcement, argument: "You're safe")
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+        case .unsafe:
+            UIAccessibility.post(notification: .announcement, argument: "SOS. Help is on the way.")
+            UINotificationFeedbackGenerator().notificationOccurred(.error)
+        case .idle, .monitoring, .suspected, .asking:
+            break
         }
     }
 
@@ -264,8 +398,12 @@ private final class DetectionPipeline {
                 }
             )
             Task { [verifier] in
-                let result = try? await verifier.verify(payload)
-                await owner.publishVerification(result)
+                do {
+                    let result = try await verifier.verify(payload)
+                    await owner.publishVerification(result)
+                } catch {
+                    await owner.publishVerifyFailure(error)
+                }
             }
         }
         let nearest = live.map { Double($0.box.height) }.max()

@@ -33,6 +33,13 @@ def valid_request(**overrides):
     return body
 
 
+def test_health_reports_muse_key_presence(client, monkeypatch):
+    assert client.get("/health").json() == {"status": "ok", "muse_configured": True}
+    monkeypatch.setenv("META_MODEL_API_KEY", "")
+    monkeypatch.setattr(main, "SETTINGS", Settings())
+    assert client.get("/health").json() == {"status": "ok", "muse_configured": False}
+
+
 def test_fallback_path_without_checkpoint(client, mock_muse):
     response = client.post("/verify", json=valid_request())
     assert response.status_code == 200

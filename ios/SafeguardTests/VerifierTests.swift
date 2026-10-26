@@ -229,6 +229,74 @@ final class VerifierTests: XCTestCase {
         XCTAssertEqual(capture.request?.url?.host, "second.test")
     }
 
+    // MARK: - Failure reasons (never a bare "Verify failed")
+
+    func testClassifyUnreachable() {
+        for code: URLError.Code in [
+            .cannotConnectToHost, .notConnectedToInternet, .timedOut, .dnsLookupFailed,
+        ] {
+            let failure = VerifyFailure.classify(URLError(code), museConfigured: true)
+            XCTAssertEqual(failure.kind, .unreachable, "\(code)")
+            XCTAssertTrue(failure.message.contains("unreachable"))
+        }
+    }
+
+    func testClassifyRateLimit() {
+        let failure = VerifyFailure.classify(
+            VerifierError.serverStatus(429), museConfigured: true
+        )
+        XCTAssertEqual(failure.kind, .rateLimit)
+        XCTAssertTrue(failure.message.contains("rate-limited"))
+    }
+
+    func testClassifyNoKeyNeedsUnconfiguredBackend() {
+        let noKey = VerifyFailure.classify(
+            VerifierError.serverStatus(503), museConfigured: false
+        )
+        XCTAssertEqual(noKey.kind, .noKey)
+        XCTAssertTrue(noKey.message.contains("no API key"))
+        // Same 503 with a configured backend is a real server error.
+        let server = VerifyFailure.classify(
+            VerifierError.serverStatus(503), museConfigured: true
+        )
+        XCTAssertEqual(server.kind, .serverError)
+        let unknown = VerifyFailure.classify(
+            VerifierError.serverStatus(503), museConfigured: nil
+        )
+        XCTAssertEqual(unknown.kind, .serverError)
+    }
+
+    func testClassifyBadResponse() {
+        let failure = VerifyFailure.classify(
+            VerifierError.invalidResponse("truncated"), museConfigured: true
+        )
+        XCTAssertEqual(failure.kind, .serverError)
+    }
+
+    func testFetchStatusParsesKeyFlag() async {
+        let config = VerifierConfig(baseURL: URL(string: "http://example.test:9")!)
+        let (session, capture) = stubSession(
+            status: 200, body: "{\"status\": \"ok\", \"muse_configured\": false}"
+        )
+        let status = await VerifierClient(config: config, session: session).fetchStatus()
+        XCTAssertEqual(status, BackendStatus(reachable: true, museConfigured: false))
+        XCTAssertEqual(capture.request?.url?.path, "/health")
+    }
+
+    func testFetchStatusToleratesOldBackend() async {
+        let config = VerifierConfig(baseURL: URL(string: "http://example.test:9")!)
+        let (session, _) = stubSession(status: 200, body: "{\"status\": \"ok\"}")
+        let status = await VerifierClient(config: config, session: session).fetchStatus()
+        XCTAssertEqual(status, BackendStatus(reachable: true, museConfigured: nil))
+    }
+
+    func testFetchStatusUnreachable() async {
+        let config = VerifierConfig(baseURL: URL(string: "http://example.test:9")!)
+        let (session, _) = stubSession(status: 503, body: "{}")
+        let status = await VerifierClient(config: config, session: session).fetchStatus()
+        XCTAssertEqual(status, BackendStatus(reachable: false, museConfigured: nil))
+    }
+
     func testHealthCheck() async {
         let config = VerifierConfig(baseURL: URL(string: "http://example.test:9")!)
         let (okSession, capture) = stubSession(status: 200, body: "{\"status\": \"ok\"}")

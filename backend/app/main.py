@@ -61,7 +61,9 @@ class VerifyResponse(BaseModel):
 
 @app.get("/health")
 def health() -> dict:
-    return {"status": "ok"}
+    # muse_configured tells the app whether a 5xx means "no API key" (setup
+    # problem) rather than a crash. The key itself never leaves the backend.
+    return {"status": "ok", "muse_configured": bool(SETTINGS.meta_model_api_key)}
 
 
 @app.post("/verify", response_model=VerifyResponse)

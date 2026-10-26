@@ -125,6 +125,84 @@ public enum VerifierError: Error, Equatable {
     case invalidResponse(String)
 }
 
+/// Why a /verify (or /verify-speech) call failed, in words the wearer can
+/// act on. A failure never suppresses an alert: the on-device result stands
+/// and this reason is shown instead of a bare "Verify failed".
+public struct VerifyFailure: Sendable, Equatable {
+    public enum Kind: String, Sendable, Equatable {
+        case unreachable
+        case noKey
+        case rateLimit
+        case serverError
+    }
+
+    public var kind: Kind
+    /// Raw detail for logs (status code or system message), not for display.
+    public var detail: String
+
+    public init(kind: Kind, detail: String) {
+        self.kind = kind
+        self.detail = detail
+    }
+
+    public var message: String {
+        switch kind {
+        case .unreachable:
+            "Verification is offline: backend unreachable. On-device protection only."
+        case .noKey:
+            "Verification unavailable: the backend has no API key."
+        case .rateLimit:
+            "Verification rate-limited: too many checks in a minute."
+        case .serverError:
+            "Verification server error (\(detail)). On-device protection only."
+        }
+    }
+
+    /// `museConfigured` is the last known /health status: a 5xx from a
+    /// backend that reports no key is a setup problem, not a crash.
+    public static func classify(_ error: Error, museConfigured: Bool?) -> VerifyFailure {
+        if let urlError = error as? URLError,
+           Self.unreachableCodes.contains(urlError.code)
+        {
+            return VerifyFailure(kind: .unreachable, detail: urlError.code.rawValue.description)
+        }
+        if let verifierError = error as? VerifierError {
+            switch verifierError {
+            case .serverStatus(429):
+                return VerifyFailure(kind: .rateLimit, detail: "429")
+            case let .serverStatus(code):
+                if code >= 500, museConfigured == false {
+                    return VerifyFailure(kind: .noKey, detail: "\(code)")
+                }
+                return VerifyFailure(kind: .serverError, detail: "\(code)")
+            case let .invalidResponse(detail):
+                return VerifyFailure(kind: .serverError, detail: detail)
+            }
+        }
+        return VerifyFailure(kind: .serverError, detail: "\(error)")
+    }
+
+    private static let unreachableCodes: Set<URLError.Code> = [
+        .cannotFindHost, .cannotConnectToHost, .networkConnectionLost,
+        .notConnectedToInternet, .timedOut, .dnsLookupFailed,
+        .cannotLoadFromNetwork, .secureConnectionFailed,
+    ]
+}
+
+/// What GET /health reported the last time it was asked.
+public struct BackendStatus: Sendable, Equatable {
+    /// The backend answered 200.
+    public var reachable: Bool
+    /// Whether the backend has a Muse API key. Nil when unknown (older
+    /// backend, or /health itself unreachable).
+    public var museConfigured: Bool?
+
+    public init(reachable: Bool, museConfigured: Bool? = nil) {
+        self.reachable = reachable
+        self.museConfigured = museConfigured
+    }
+}
+
 /// POSTs one /verify call. URLSession is thread-safe; config is immutable.
 public final class VerifierClient: @unchecked Sendable {
     private let fixedConfig: VerifierConfig?
@@ -141,15 +219,29 @@ public final class VerifierClient: @unchecked Sendable {
 
     /// GET /health. False on any failure (unreachable, ATS, wrong URL, non-200).
     public func checkHealth(timeout: TimeInterval = 5) async -> Bool {
+        await fetchStatus(timeout: timeout).reachable
+    }
+
+    /// GET /health with the Muse-key flag. Drives the HUD backend dot and
+    /// the no-key failure reason. Old backends omit the flag (nil), which
+    /// still counts as reachable.
+    public func fetchStatus(timeout: TimeInterval = 5) async -> BackendStatus {
         let request = URLRequest(
             url: config.baseURL.appendingPathComponent("health"), timeoutInterval: timeout
         )
-        guard let (_, response) = try? await session.data(for: request),
-              let http = response as? HTTPURLResponse
+        guard let (data, response) = try? await session.data(for: request),
+              let http = response as? HTTPURLResponse,
+              http.statusCode == 200
         else {
-            return false
+            return BackendStatus(reachable: false)
         }
-        return http.statusCode == 200
+        let configured = (try? JSONDecoder().decode(HealthBody.self, from: data))?
+            .muse_configured
+        return BackendStatus(reachable: true, museConfigured: configured)
+    }
+
+    private struct HealthBody: Decodable {
+        var muse_configured: Bool?
     }
 
     private struct RequestBody: Encodable {
