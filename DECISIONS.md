@@ -2,6 +2,26 @@
 
 Log of every deviation from the project brief, with reasons. Newest first.
 
+## Phase 1 review fixes (2026-10-26)
+
+1. **Camera orientation**: `PhoneCameraSource` now sets the video connection's
+   `videoRotationAngle` to 90, so frame buffers are upright portrait. Needed
+   before Phase 2: Vision would otherwise receive sideways landscape buffers.
+2. **Camera failures stop protection**: runtime errors and interruptions
+   (call, other app, backgrounding) are reported to the delegate, so the app
+   never shows "Protecting" while no frames arrive.
+3. **Replay hardening**: a clip with no frames now fails with a message
+   instead of looping hot; replay frames are dropped (not queued) while the
+   previous one is still converting, and frame counting uses a lock-based
+   counter instead of a Task per frame. This supersedes Phase 1 item 4.
+4. **Info.plist**: added the standard bundle keys (`$(PRODUCT_BUNDLE_IDENTIFIER)`,
+   version keys from `MARKETING_VERSION`/`CURRENT_PROJECT_VERSION`, single-scene
+   manifest) because `GENERATE_INFOPLIST_FILE = NO`.
+5. **Backend deps**: `requirements.txt` has version bounds.
+6. **Honest status**: README no longer says Phase 1 is "done"; it is written
+   and typechecked but not yet built with `xcodebuild` or run on a Simulator
+   or device. Hook install and the GitHub noreply commit email are documented.
+
 ## Phase 1
 
 1. **Display-only states**: `ProtectionState` enum drives the shield ring and

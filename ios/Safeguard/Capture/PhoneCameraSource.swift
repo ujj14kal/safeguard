@@ -1,4 +1,4 @@
-import AVFoundation
+@preconcurrency import AVFoundation
 
 /// World-facing phone camera source. First-person use: phone in a chest or
 /// collar mount. Frames are BGRA pixel buffers delivered on a capture queue.
@@ -10,6 +10,9 @@ final class PhoneCameraSource: NSObject, FrameSource {
     private let session = AVCaptureSession()
     private let output = AVCaptureVideoDataOutput()
     private let queue = DispatchQueue(label: "app.safeguard.camera", qos: .userInitiated)
+    private var observers: [any NSObjectProtocol] = []
+
+    deinit { removeObservers() }
 
     /// Exposed so SwiftUI can attach an AVCaptureVideoPreviewLayer.
     var captureSession: AVCaptureSession { session }
@@ -60,11 +63,56 @@ final class PhoneCameraSource: NSObject, FrameSource {
         }
         session.addOutput(output)
 
-        queue.async { [weak self] in self?.session.startRunning() }
+        // Deliver upright portrait buffers. Without this the back camera hands
+        // Vision landscape buffers even though the app is portrait-only, and
+        // detection would see people sideways. (The preview layer hides this.)
+        if let connection = output.connection(with: .video),
+           connection.isVideoRotationAngleSupported(90)
+        {
+            connection.videoRotationAngle = 90
+        }
+
+        addObservers()
+        let session = session
+        queue.async { session.startRunning() }
     }
 
     func stop() {
-        queue.async { [weak self] in self?.session.stopRunning() }
+        removeObservers()
+        let session = session
+        queue.async { session.stopRunning() }
+    }
+
+    /// Protection must never look active when the camera is not delivering
+    /// frames: report runtime errors and interruptions (call, other app) so the
+    /// model stops and tells the user.
+    private func addObservers() {
+        removeObservers()
+        let center = NotificationCenter.default
+        observers = [
+            center.addObserver(
+                forName: AVCaptureSession.runtimeErrorNotification, object: session, queue: nil
+            ) { [weak self] note in
+                let error = note.userInfo?[AVCaptureSessionErrorKey] as? Error
+                self?.report(.configurationFailed(error?.localizedDescription ?? "camera runtime error"))
+            },
+            center.addObserver(
+                forName: AVCaptureSession.wasInterruptedNotification, object: session, queue: nil
+            ) { [weak self] _ in
+                self?.report(.notAvailable(
+                    "The camera was interrupted, so protection stopped. Start protecting again when ready."
+                ))
+            },
+        ]
+    }
+
+    private func removeObservers() {
+        observers.forEach(NotificationCenter.default.removeObserver)
+        observers = []
+    }
+
+    private func report(_ error: FrameSourceError) {
+        delegate?.frameSource(self, didFailWith: error)
     }
 }
 

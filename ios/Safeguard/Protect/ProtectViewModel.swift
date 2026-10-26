@@ -19,8 +19,13 @@ final class ProtectViewModel: ObservableObject {
     // CIContext is Sendable; shared for off-main replay frame conversion.
     private nonisolated static let ciContext = CIContext()
 
+    // Frames arrive on a background queue. A lock-based counter avoids spawning
+    // a Task per frame, and the gate drops replay frames while the previous one
+    // is still being converted/published (no unbounded backlog at 30 fps).
+    private nonisolated let frameCounter = FrameCounter()
+    private nonisolated let replayGate = ConversionGate()
+
     private var source: (any FrameSource)?
-    private var framesReceived = 0
     private var lastFpsSample = 0
     private var fpsTimer: Timer?
 
@@ -80,7 +85,7 @@ final class ProtectViewModel: ObservableObject {
         statusLine = status
         // Foreground-only app: keep the screen awake while protecting.
         UIApplication.shared.isIdleTimerDisabled = true
-        framesReceived = 0
+        frameCounter.reset()
         lastFpsSample = 0
         fpsTimer?.invalidate()
         fpsTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
@@ -89,8 +94,9 @@ final class ProtectViewModel: ObservableObject {
     }
 
     private func tickFps() {
-        let fps = framesReceived - lastFpsSample
-        lastFpsSample = framesReceived
+        let total = frameCounter.value
+        let fps = total - lastFpsSample
+        lastFpsSample = total
         let base = usingReplay ? "Replay mode: \(replayName ?? "video")" : "Monitoring with phone camera"
         statusLine = "\(base) • \(fps) fps"
     }
@@ -99,11 +105,7 @@ final class ProtectViewModel: ObservableObject {
         if let image {
             replayImage = image
         }
-        framesReceived += 1
-    }
-
-    private func countFrame() {
-        framesReceived += 1
+        replayGate.leave()
     }
 
     private func handleSourceError(_ message: String) {
@@ -114,14 +116,12 @@ final class ProtectViewModel: ObservableObject {
 
 extension ProtectViewModel: FrameSourceDelegate {
     nonisolated func frameSource(_ source: any FrameSource, didOutput frame: SafeguardFrame) {
-        if source is VideoFileSource {
-            // Convert off-main, publish on main. Conversion is synchronous:
-            // the pixel buffer is only valid for this call.
-            let image = Self.makeImage(from: frame.pixelBuffer)
-            Task { await self.publishReplayFrame(image) }
-        } else {
-            Task { await self.countFrame() }
-        }
+        frameCounter.increment()
+        guard source is VideoFileSource, replayGate.tryEnter() else { return }
+        // Convert off-main, publish on main. Conversion is synchronous:
+        // the pixel buffer is only valid for this call.
+        let image = Self.makeImage(from: frame.pixelBuffer)
+        Task { await self.publishReplayFrame(image) }
     }
 
     nonisolated func frameSource(_ source: any FrameSource, didFailWith error: Error) {
@@ -136,4 +136,31 @@ extension ProtectViewModel: FrameSourceDelegate {
         }
         return UIImage(cgImage: cgImage)
     }
+}
+
+/// Thread-safe frame counter shared between the capture queue and the main actor.
+private final class FrameCounter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var count = 0
+
+    var value: Int { lock.withLock { count } }
+    func increment() { lock.withLock { count += 1 } }
+    func reset() { lock.withLock { count = 0 } }
+}
+
+/// Lets one replay frame be converted/published at a time; later frames are
+/// dropped until the previous one finishes.
+private final class ConversionGate: @unchecked Sendable {
+    private let lock = NSLock()
+    private var busy = false
+
+    func tryEnter() -> Bool {
+        lock.withLock {
+            if busy { return false }
+            busy = true
+            return true
+        }
+    }
+
+    func leave() { lock.withLock { busy = false } }
 }

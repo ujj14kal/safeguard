@@ -14,7 +14,16 @@ on a physical iPhone in a chest/collar mount.
 
 All API keys and tokens come from environment variables — see `.env.example`
 (copy it to `.env` locally and fill it in). Never commit `.env` files or real
-credentials; a pre-commit hook (`scripts/pre-commit.sh`) blocks them.
+credentials; a pre-commit hook (`scripts/pre-commit.sh`) blocks them. Git hooks
+are not cloned, so install it once per clone:
+
+```sh
+cp scripts/pre-commit.sh .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+```
+
+Commit with your GitHub noreply address (`git config user.email
+<id>+<username>@users.noreply.github.com`): the repo is public and commit
+metadata is public too.
 
 ## Layout
 
@@ -73,7 +82,11 @@ CLI alternative: `DEVELOPMENT_TEAM=<TeamID> ./scripts/build.sh device`.
 
 ## Status
 
-Phase 1 done: Xcode project, DesignSystem, `FrameSource` + phone camera +
-Replay + glasses stub, camera preview, Protect tab with shield ring,
-Preview-states screen (debug), backend `/health`, build scripts.
+Phase 1 written, **not yet verified in Xcode**: Xcode project, DesignSystem,
+`FrameSource` + phone camera + Replay + glasses stub, camera preview, Protect
+tab with shield ring, Preview-states screen (debug), backend `/health`, build
+scripts. All Swift sources typecheck against the iOS 26.5 SDK, but the app has
+not yet been built with `xcodebuild`, run in the Simulator, or run on a device
+(the iOS platform/Simulator runtime must be installed first — see
+Prerequisites). It becomes "done" once that run succeeds.
 Next: Phase 2 (person detector + tracker).
