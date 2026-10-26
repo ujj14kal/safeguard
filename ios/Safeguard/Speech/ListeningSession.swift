@@ -10,11 +10,15 @@ public struct ListeningSession: Sendable {
         /// Live. `generation` counts recognition requests: each restart
         /// bumps it, and audio buffers always feed exactly one request.
         case listening(generation: Int, requestStart: TimeInterval)
-        /// TTS is speaking: recognition paused, resumes after.
-        case paused(generation: Int)
         /// Interrupted or errored. Never looks active: `isLive` is false.
         case deaf(reason: String)
     }
+
+    // NOTE: there is deliberately no paused-for-TTS state. Pausing would
+    // deafen the unsafe code phrase, which must work at ANY time while
+    // protecting. The app "ignores itself" instead: our spoken texts match
+    // no code phrase and no threat pattern, and voice commands are gated
+    // on `speakingNow` in the view model.
 
     public private(set) var state: State = .idle
     private let restartInterval: TimeInterval
@@ -23,17 +27,25 @@ public struct ListeningSession: Sendable {
         self.restartInterval = config.restartIntervalSeconds
     }
 
-    /// True only while actually transcribing. Paused and deaf are not live.
+    /// True only while actually transcribing. Deaf is not live.
     public var isLive: Bool {
         if case .listening = state { return true }
         return false
+    }
+
+    /// Current recognition-request generation (nil unless listening).
+    /// The listener tags each task with its generation so a stale task's
+    /// error (e.g. from a routine restart cancel) is ignored.
+    public var generation: Int? {
+        if case let .listening(generation, _) = state { return generation }
+        return nil
     }
 
     public mutating func start(at time: TimeInterval) {
         switch state {
         case .idle, .deaf:
             state = .listening(generation: 0, requestStart: time)
-        case .listening, .paused:
+        case .listening:
             break
         }
     }
@@ -55,24 +67,10 @@ public struct ListeningSession: Sendable {
         return false
     }
 
-    /// The app started speaking: pause so we never transcribe ourselves.
-    public mutating func pauseForSpeech() {
-        if case let .listening(generation, _) = state {
-            state = .paused(generation: generation)
-        }
-    }
-
-    /// TTS finished: resume with a fresh request (same transcript stream).
-    public mutating func resumeAfterSpeech(at time: TimeInterval) {
-        if case let .paused(generation) = state {
-            state = .listening(generation: generation + 1, requestStart: time)
-        }
-    }
-
     /// Phone call, Siri, or another app took the microphone.
     public mutating func noteInterruption() {
         switch state {
-        case .listening, .paused:
+        case .listening:
             state = .deaf(reason: "Microphone interrupted")
         case .idle, .deaf:
             break
@@ -81,7 +79,7 @@ public struct ListeningSession: Sendable {
 
     public mutating func noteError(_ message: String) {
         switch state {
-        case .listening, .paused:
+        case .listening:
             state = .deaf(reason: message)
         case .idle, .deaf:
             break

@@ -90,6 +90,18 @@ final class SpeechMatcherTests: XCTestCase {
         XCTAssertNil(matcher.match("   "))
     }
 
+    func testOwnSpokenTextsMatchNothing() {
+        // The app never pauses the mic for TTS (the unsafe phrase must work
+        // at ANY time), so our own spoken texts must match no pattern and
+        // no code phrase — TTS echo can never trigger us.
+        let safety = SafetyConfig()
+        let phrases = CodePhraseMatcher(config: safety)
+        XCTAssertNil(matcher.match(safety.askPhrase))
+        XCTAssertNil(phrases.match(safety.askPhrase))
+        XCTAssertNil(matcher.match(safety.listeningCueText))
+        XCTAssertNil(phrases.match(safety.listeningCueText))
+    }
+
     // MARK: - Guards
 
     func testQuotationDiscounts() {
@@ -129,6 +141,14 @@ final class SpeechMatcherTests: XCTestCase {
         config.patterns = [SpeechPattern(phrase: "battery", category: .abuse, severity: 1.0)]
         XCTAssertNil(SpeechMatcher(config: config).match("dead battery"))
         XCTAssertNotNil(SpeechMatcher(config: config).match("battery low warning"))
+    }
+
+    func testBackendSeverityMapping() {
+        XCTAssertEqual(SpeechMatcher.backendSeverity("high"), 0.9, accuracy: 1e-9)
+        XCTAssertEqual(SpeechMatcher.backendSeverity("medium"), 0.6, accuracy: 1e-9)
+        let low = SpeechMatcher.backendSeverity("low")
+        XCTAssertLessThan(low, SafetyConfig().speechStrongThreshold)
+        XCTAssertEqual(SpeechMatcher.backendSeverity("extreme"), 0, accuracy: 1e-9)
     }
 
     func testConfigurablePatterns() {

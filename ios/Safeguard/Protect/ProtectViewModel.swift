@@ -25,6 +25,14 @@ final class ProtectViewModel: ObservableObject {
     @Published var lastVerifyResult: String?
     @Published var verifyFailure: VerifyFailure?
     @Published var backendStatus: BackendStatus?
+    @Published var listenerLive = false
+    @Published var listenerDeafReason: String?
+    @Published var lastSpeechInfo: String?
+
+    /// Conversation-listener opt-in (default OFF). On while protecting,
+    /// transcripts feed the threat matcher; off, they are scanned for code
+    /// phrases/commands and dropped, and no window is ever built.
+    @AppStorage("listenerOptIn") var listenerOptIn = false
 
     /// Safety state machine + check-in config. MainActor-owned; the pipeline
     /// feeds it via the published callbacks below (movement alerts), and the
@@ -33,7 +41,32 @@ final class ProtectViewModel: ObservableObject {
     private let safetyConfig = SafetyConfig()
     private let speaker: CheckInSpeaking = CheckInSpeaker()
 
+    /// Everything voice shares one listener (one engine, one recognizer).
+    private let listener = ConversationListener()
+    private let phraseMatcher: CodePhraseMatcher
+    private let speechConfig = SpeechConfig()
+    private let speechMatcher: SpeechMatcher
+    private var window: TranscriptWindow
+    private var speechGate: SpeechVerifyGate
+    private let speechVerifier = VerifierClient()
+    /// True while the app itself is speaking: voice commands are ignored
+    /// then (code phrases and the threat matcher stay live).
+    private var speakingNow = false
+
     var unsafeCause: UnsafeCause? { safety.unsafeCause }
+
+    init() {
+        self.phraseMatcher = CodePhraseMatcher(config: safetyConfig)
+        self.speechMatcher = SpeechMatcher(config: speechConfig)
+        self.window = TranscriptWindow(windowSeconds: speechConfig.windowSeconds)
+        self.speechGate = SpeechVerifyGate(
+            triggerSeverity: safetyConfig.speechStrongThreshold,
+            minInterval: speechConfig.speechVerifyMinInterval
+        )
+        listener.delegate = self
+        listener.$isLive.assign(to: &$listenerLive)
+        listener.$deafReason.assign(to: &$listenerDeafReason)
+    }
 
     // CIContext is Sendable; shared for off-main replay frame conversion.
     fileprivate nonisolated static let ciContext = CIContext()
@@ -141,8 +174,13 @@ final class ProtectViewModel: ObservableObject {
         lastVerifyResult = nil
         verifyFailure = nil
         backendStatus = nil
+        lastSpeechInfo = nil
         safety.stopProtecting()
         speaker.stop()
+        speakingNow = false
+        listener.stop()
+        window.clear()
+        speechGate.reset()
         detectionQueue.sync { pipeline.reset() }
         UIApplication.shared.isIdleTimerDisabled = false
         fpsTimer?.invalidate()
@@ -162,8 +200,12 @@ final class ProtectViewModel: ObservableObject {
         threatAlert = false
         lastVerifyResult = nil
         verifyFailure = nil
+        lastSpeechInfo = nil
+        window.clear()
+        speechGate.reset()
         safety.startProtecting(at: Self.now)
         refreshBackendStatus()
+        startListener()
         detectionQueue.sync { pipeline.reset() }
         fpsTimer?.invalidate()
         fpsTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
@@ -270,11 +312,16 @@ final class ProtectViewModel: ObservableObject {
     /// audio starts (the speaker reports back even on failure/cancel).
     private func drainAskSpeech() {
         guard safety.takeAskSpeechDue() else { return }
+        speakingNow = true
         speaker.speakAsk(
             phrase: safetyConfig.askPhrase, volume: safetyConfig.askVolume
         ) { [weak self] in
             Task { @MainActor [weak self] in
                 self?.safety.noteAskSpeechStarted(at: Self.now)
+            }
+        } onStopped: { [weak self] in
+            Task { @MainActor [weak self] in
+                self?.speakingNow = false
             }
         }
     }
@@ -321,6 +368,96 @@ final class ProtectViewModel: ObservableObject {
         stop()
         errorMessage = message
     }
+
+    // MARK: - Conversation listener (Part B)
+
+    private func startListener() {
+        Task {
+            guard await ConversationListener.requestPermissions() else {
+                listenerDeafReason =
+                    "Microphone or speech recognition denied: voice check-in unavailable."
+                return
+            }
+            listener.start()
+        }
+    }
+
+    /// One transcript, three consumers in fixed order: code phrases first
+    /// (consumed, never scanned further), voice commands (Part D), then —
+    /// only when opted in — the threat matcher. With the toggle off there
+    /// is no window and no backend speech call.
+    fileprivate func handleTranscript(_ text: String) {
+        guard isProtecting else { return }
+        if let reply = phraseMatcher.match(text) {
+            safety.noteReply(reply, at: Self.now)
+            drainAskSpeech()
+            syncProtectionState()
+            return
+        }
+        // Part D voice commands slot in here (wake word + command).
+        guard listenerOptIn else { return }
+        window.append(text, at: Self.now)
+        guard let found = speechMatcher.match(window.transcript) else { return }
+        noteSpeechToPipeline(severity: found.severity, at: Self.now)
+        if speechGate.consume(severity: found.severity, at: Self.now) {
+            sendSpeechSnippet(match: found)
+        }
+    }
+
+    private func noteSpeechToPipeline(severity: Double, at time: TimeInterval) {
+        detectionQueue.async { [weak self] in
+            self?.pipeline.setSpeech(severity: severity, at: time)
+        }
+    }
+
+    private func sendSpeechSnippet(match: SpeechMatch) {
+        let snippet = window.snippet(
+            matchWordIndex: match.wordIndex, maxChars: speechConfig.snippetMaxChars
+        )
+        let onDeviceSeverity = match.severity
+        let category = match.category.rawValue
+        Task {
+            do {
+                let result = try await speechVerifier.verifySpeech(
+                    snippet: snippet,
+                    onDeviceSeverity: onDeviceSeverity,
+                    onDeviceCategory: category
+                )
+                publishSpeechResult(result, onDeviceSeverity: onDeviceSeverity)
+            } catch {
+                publishSpeechFallback(severity: onDeviceSeverity, category: category)
+            }
+        }
+    }
+
+    private func publishSpeechResult(_ result: SpeechVerifyResult, onDeviceSeverity: Double) {
+        guard isProtecting else { return }
+        let severity = SpeechMatcher.backendSeverity(result.severity)
+        safety.noteSpeech(severity: severity, at: Self.now)
+        noteSpeechToPipeline(severity: severity, at: Self.now)
+        drainAskSpeech()
+        syncProtectionState()
+        lastSpeechInfo =
+            "Speech: \(result.categories.joined(separator: ",")) \(result.severity)"
+            + " (on-device \(String(format: "%.2f", onDeviceSeverity)))"
+    }
+
+    private func publishSpeechFallback(severity: Double, category: String) {
+        guard isProtecting else { return }
+        // The backend failed (unreachable, 503, timeout, rate limit): the
+        // on-device severity stands, exactly like a failed /verify.
+        safety.noteSpeech(severity: severity, at: Self.now)
+        noteSpeechToPipeline(severity: severity, at: Self.now)
+        drainAskSpeech()
+        syncProtectionState()
+        lastSpeechInfo = "Speech: \(category) on-device (verification offline)"
+    }
+}
+
+extension ProtectViewModel: ConversationListenerDelegate {
+    func listener(_ listener: ConversationListener, didTranscribe text: String) {
+        handleTranscript(text)
+    }
 }
 
 /// Detection pipeline state: frame render, throttled Vision detection, IoU
@@ -353,6 +490,12 @@ private final class DetectionPipeline {
         proximityTracker.reset()
         verifierGate.reset()
         frameBuffer.clear()
+    }
+
+    /// Latest speech severity from the conversation listener (global, not
+    /// per-track): stamped onto every track's features while fresh.
+    func setSpeech(severity: Double, at time: TimeInterval) {
+        extractor.setSpeech(severity: severity, at: time)
     }
 
     func handleFrame(_ frame: SafeguardFrame, isReplay: Bool, owner: ProtectViewModel) {

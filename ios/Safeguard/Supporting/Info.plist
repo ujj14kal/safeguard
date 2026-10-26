@@ -38,6 +38,10 @@
 	<string>Safeguard sends a few frames to your own computer on the local network to double-check a possible threat.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Safeguard watches for threatening behaviour by people nearby. Frames are analysed on-device and discarded.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Safeguard listens for your safety code phrases and, only if you opt in, for threatening speech nearby. Transcription happens on this phone; nothing is recorded.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Safeguard transcribes nearby speech on this phone to hear your code phrases and, only if you opt in, threatening talk. Audio never leaves this phone.</string>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>

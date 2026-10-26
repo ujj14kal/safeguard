@@ -214,6 +214,21 @@ final class VerifierTests: XCTestCase {
         XCTAssertFalse(reason.isEmpty, "local network permission needs a usage description")
     }
 
+    func testInfoPlistHasSpeechDescriptions() throws {
+        // Without these the app crashes on first microphone/speech use.
+        let plistURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("Safeguard/Supporting/Info.plist")
+        let data = try Data(contentsOf: plistURL)
+        let plist = try XCTUnwrap(
+            PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any]
+        )
+        for key in ["NSMicrophoneUsageDescription", "NSSpeechRecognitionUsageDescription"] {
+            let text = plist[key] as? String ?? ""
+            XCTAssertFalse(text.isEmpty, "\(key) needs a usage description")
+        }
+    }
+
     func testClientResolvesConfigOnEveryCall() async throws {
         let (session, capture) = stubSession()
         let key = VerifierConfig.backendURLDefaultsKey

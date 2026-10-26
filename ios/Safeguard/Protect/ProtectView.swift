@@ -21,6 +21,20 @@ struct ProtectView: View {
                                 .font(.footnote)
                                 .foregroundStyle(.secondary)
                         }
+                        if let speech = model.lastSpeechInfo {
+                            Text(speech)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+                        if model.listenerLive {
+                            Label("Listening", systemImage: "mic.fill")
+                                .font(.footnote)
+                                .accessibilityLabel("Microphone is listening")
+                        } else if model.isProtecting, let deaf = model.listenerDeafReason {
+                            Label(deaf, systemImage: "mic.slash.fill")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                     previewSection
                     if model.state == .asking {

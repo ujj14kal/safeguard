@@ -26,6 +26,18 @@ public struct SpeechMatcher: Sendable {
         self.config = config
     }
 
+    /// Maps a /verify-speech severity onto the 0...1 machine input.
+    /// Backend `low` lands below the strong threshold (a downgrade, not a
+    /// trigger); unknown strings map to 0 — dropped, never trusted.
+    public static func backendSeverity(_ level: String) -> Double {
+        switch level {
+        case "high": 0.9
+        case "medium": 0.6
+        case "low": 0.15
+        default: 0
+        }
+    }
+
     public func match(_ transcript: String) -> SpeechMatch? {
         let words = Self.words(in: transcript)
         guard !words.isEmpty else { return nil }

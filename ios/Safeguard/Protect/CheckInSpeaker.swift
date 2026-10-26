@@ -5,13 +5,17 @@ import AVFoundation
 /// so the machine's 10 s clock always runs even if audio is interrupted.
 protocol CheckInSpeaking: AnyObject {
     var isSpeaking: Bool { get }
-    func speakAsk(phrase: String, volume: Float, onStarted: @escaping () -> Void)
+    func speakAsk(
+        phrase: String, volume: Float,
+        onStarted: @escaping () -> Void, onStopped: @escaping () -> Void
+    )
     func stop()
 }
 
 final class CheckInSpeaker: NSObject, CheckInSpeaking, AVSpeechSynthesizerDelegate {
     private let synthesizer = AVSpeechSynthesizer()
     private var onStarted: (() -> Void)?
+    private var onStopped: (() -> Void)?
 
     override init() {
         super.init()
@@ -20,9 +24,14 @@ final class CheckInSpeaker: NSObject, CheckInSpeaking, AVSpeechSynthesizerDelega
 
     var isSpeaking: Bool { synthesizer.isSpeaking }
 
-    func speakAsk(phrase: String, volume: Float, onStarted: @escaping () -> Void) {
-        fireStarted() // never leak a previous callback
+    func speakAsk(
+        phrase: String, volume: Float,
+        onStarted: @escaping () -> Void, onStopped: @escaping () -> Void
+    ) {
+        fireStarted() // never leak previous callbacks
+        fireStopped()
         self.onStarted = onStarted
+        self.onStopped = onStopped
         let utterance = AVSpeechUtterance(string: phrase)
         utterance.volume = volume
         utterance.rate = AVSpeechUtteranceDefaultSpeechRate
@@ -32,6 +41,7 @@ final class CheckInSpeaker: NSObject, CheckInSpeaking, AVSpeechSynthesizerDelega
     func stop() {
         synthesizer.stopSpeaking(at: .immediate)
         fireStarted()
+        fireStopped()
     }
 
     func speechSynthesizer(
@@ -44,17 +54,25 @@ final class CheckInSpeaker: NSObject, CheckInSpeaking, AVSpeechSynthesizerDelega
         _ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance
     ) {
         fireStarted()
+        fireStopped()
     }
 
     func speechSynthesizer(
         _ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance
     ) {
         fireStarted()
+        fireStopped()
     }
 
     private func fireStarted() {
         let callback = onStarted
         onStarted = nil
+        callback?()
+    }
+
+    private func fireStopped() {
+        let callback = onStopped
+        onStopped = nil
         callback?()
     }
 }

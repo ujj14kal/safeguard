@@ -118,25 +118,6 @@ final class ListeningSessionTests: XCTestCase {
         XCTAssertEqual(session.state, .listening(generation: 2, requestStart: 100))
     }
 
-    func testPauseAndResume() {
-        var session = ListeningSession()
-        session.start(at: 100)
-        session.pauseForSpeech()
-        XCTAssertFalse(session.isLive, "paused is not live")
-        XCTAssertFalse(session.restartIfDue(at: 1000), "no restarts while paused")
-        session.resumeAfterSpeech(at: 110)
-        XCTAssertTrue(session.isLive)
-        XCTAssertEqual(session.state, .listening(generation: 1, requestStart: 110))
-    }
-
-    func testPauseWhenIdleIsNoOp() {
-        var session = ListeningSession()
-        session.pauseForSpeech()
-        XCTAssertEqual(session.state, .idle)
-        session.resumeAfterSpeech(at: 1)
-        XCTAssertEqual(session.state, .idle)
-    }
-
     func testErrorReportsDeaf() {
         var session = ListeningSession()
         session.start(at: 100)
@@ -150,9 +131,9 @@ final class ListeningSessionTests: XCTestCase {
     func testInterruptionReportsDeaf() {
         var session = ListeningSession()
         session.start(at: 100)
-        session.pauseForSpeech()
         session.noteInterruption()
         XCTAssertEqual(session.state, .deaf(reason: "Microphone interrupted"))
+        XCTAssertFalse(session.isLive)
     }
 
     func testStopFromDeaf() {

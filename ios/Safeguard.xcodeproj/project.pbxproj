@@ -71,6 +71,8 @@
 		B20000000000000000000038 /* SpeechMatcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000008C /* SpeechMatcherTests.swift */; };
 		B20000000000000000000039 /* TranscriptWindowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000008D /* TranscriptWindowTests.swift */; };
 		B2000000000000000000003A /* VerifySpeechTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000008E /* VerifySpeechTests.swift */; };
+		A10000000000000000000090 /* ConversationListener.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000008F /* ConversationListener.swift */; };
+		A10000000000000000000092 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000091 /* OnboardingView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -125,6 +127,8 @@
 		A1000000000000000000008C /* SpeechMatcherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechMatcherTests.swift; sourceTree = "<group>"; };
 		A1000000000000000000008D /* TranscriptWindowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptWindowTests.swift; sourceTree = "<group>"; };
 		A1000000000000000000008E /* VerifySpeechTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerifySpeechTests.swift; sourceTree = "<group>"; };
+		A1000000000000000000008F /* ConversationListener.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationListener.swift; sourceTree = "<group>"; };
+		A10000000000000000000091 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -162,6 +166,7 @@
 				A10000000000000000000018 /* Supporting */,
 				A10000000000000000000037 /* Assets.xcassets */,
 				A10000000000000000000083 /* Speech */,
+				A10000000000000000000091 /* OnboardingView.swift */,
 			);
 			path = Safeguard;
 			sourceTree = "<group>";
@@ -276,6 +281,7 @@
 				A10000000000000000000086 /* SpeechMatcher.swift */,
 				A10000000000000000000088 /* TranscriptWindow.swift */,
 				A1000000000000000000008A /* ListeningSession.swift */,
+				A1000000000000000000008F /* ConversationListener.swift */,
 			);
 			path = Speech;
 			sourceTree = "<group>";
@@ -421,6 +427,8 @@
 				A10000000000000000000087 /* SpeechMatcher.swift in Sources */,
 				A10000000000000000000089 /* TranscriptWindow.swift in Sources */,
 				A1000000000000000000008B /* ListeningSession.swift in Sources */,
+				A10000000000000000000090 /* ConversationListener.swift in Sources */,
+				A10000000000000000000092 /* OnboardingView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

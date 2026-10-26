@@ -30,6 +30,7 @@ struct SettingsView: View {
     @State private var debugRouteShown = false
     @AppStorage("debugOverlayEnabled") private var debugOverlayEnabled = false
     @AppStorage(VerifierConfig.backendURLDefaultsKey) private var backendURL = ""
+    @AppStorage("listenerOptIn") private var listenerOptIn = false
     @State private var connectionStatus: String?
     @State private var testingConnection = false
 
@@ -37,7 +38,14 @@ struct SettingsView: View {
         NavigationStack {
             Form {
                 Section("About") {
-                    LabeledContent("Version", value: "0.3.0 (Phase 3)")
+                    LabeledContent("Version", value: "0.5.0 (Phase 5)")
+                }
+                Section {
+                    Toggle("Listen for threatening speech", isOn: $listenerOptIn)
+                } header: {
+                    Text("Conversation listener")
+                } footer: {
+                    Text(OnboardingView.listenerDisclosure + " Recording laws differ by country: check yours before switching this on.")
                 }
                 #if DEBUG
                     Section("Debug") {

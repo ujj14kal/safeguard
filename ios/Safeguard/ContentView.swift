@@ -4,10 +4,19 @@ import SwiftUI
 /// Contacts/Activity/Settings are shells until Phase 7.
 struct ContentView: View {
     @State private var selection: Tab = .protect
+    @AppStorage("onboardingSeen") private var onboardingSeen = false
 
     enum Tab: Hashable {
         case protect, contacts, activity, settings
     }
+
+    #if DEBUG
+        /// Headless hooks bypass onboarding: screenshots start past it.
+        private var onboardingBypassed: Bool {
+            UserDefaults.standard.string(forKey: "debugInitialTab") != nil
+                || UserDefaults.standard.string(forKey: "debugInitialRoute") != nil
+        }
+    #endif
 
     var body: some View {
         TabView(selection: $selection) {
@@ -32,6 +41,20 @@ struct ContentView: View {
                     selection = .settings
                 }
             #endif
+        }
+        .sheet(
+            isPresented: Binding(
+                get: {
+                    #if DEBUG
+                        !onboardingSeen && !onboardingBypassed
+                    #else
+                        !onboardingSeen
+                    #endif
+                },
+                set: { if !$0 { onboardingSeen = true } }
+            )
+        ) {
+            OnboardingView(onDone: { onboardingSeen = true })
         }
     }
 }

@@ -51,7 +51,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
-curl http://127.0.0.1:8000/health   # {"status": "ok"}
+curl http://127.0.0.1:8000/health   # {"status": "ok", "muse_configured": true}
 ```
 
 ### Pointing the iPhone at the backend
@@ -68,6 +68,25 @@ iPhone on the same Wi-Fi as the Mac, then either:
 The first request asks for local-network permission. Plain `http://` is
 allowed only for local addresses (`NSAllowsLocalNetworking`); use an `https://`
 tunnel URL for anything else. The simulator can keep using `127.0.0.1`.
+
+## Conversation listener (opt-in, default OFF)
+
+When switched on (onboarding, or Settings), Safeguard transcribes speech
+near the wearer to notice threatening, harassing or coercive talk. Privacy
+rules, enforced in code, not just policy:
+
+- Transcription is on-device only (`requiresOnDeviceRecognition`); if the
+  device cannot do it on-device, the listener reports deaf instead of
+  uploading audio.
+- Raw audio is never written to disk and never sent anywhere.
+- Transcript text lives only in a ~20 s in-memory window, discarded on stop.
+- Only on a trigger, a short TEXT snippet (trigger sentence + context) goes
+  to `POST /verify-speech`; the backend logs counts/latency/severity, never
+  transcript text.
+- Your safety code phrases work without the toggle: with it off, transcripts
+  are scanned for code phrases and voice commands, then dropped immediately.
+
+Recording laws differ by country: check yours before switching this on.
 
 ## App icon and launch screen
 
@@ -106,7 +125,9 @@ defaults write io.github.ujj14kal.safeguard debugInitialRoute preview-states
 3. Connect the iPhone, select it as the run destination, Run.
 4. First time only: on the iPhone, trust your developer identity under
    Settings → General → VPN & Device Management.
-5. On first “Start protecting”, allow camera access.
+5. On first “Start protecting”, allow camera, microphone and speech
+   recognition access. The backend must be running and reachable (above);
+   without it the app continues with on-device protection only and says so.
 
 CLI alternative: `DEVELOPMENT_TEAM=<TeamID> ./scripts/build.sh device`.
 
