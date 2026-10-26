@@ -21,6 +21,11 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SOURCE = os.path.join(ROOT, "design", "logo-source.png")
 CATALOG = os.path.join(ROOT, "ios", "Safeguard", "Assets.xcassets")
 
+# Brand purple for the icon, launch logo and splash text. The supplied logo is
+# #582560; this is a bit lighter (still 8.2:1 contrast on white).
+BRAND_PURPLE = (111, 58, 124)  # #6F3A7C
+SOURCE_PURPLE_GREEN = 37       # green channel of the supplied #582560 (the darkest channel)
+
 ICON_SIZE = 1024
 ICON_SHIELD_HEIGHT = 840      # ~82% of the icon; iOS rounds the corners, so keep a margin
 LAUNCH_SHIELD_HEIGHT_PT = 220  # shown at 2x/3x, identical in the splash view
@@ -35,6 +40,18 @@ def flatten_white(rgb: np.ndarray) -> np.ndarray:
     return out
 
 
+def recolor(rgb: np.ndarray) -> np.ndarray:
+    """Re-tint the purple, keeping the anti-aliased edges.
+
+    Every pixel is white*(1-c) + purple*c. Coverage c comes from the green
+    channel (the one with the most contrast against white); the new pixel is the
+    same blend with BRAND_PURPLE, so edges stay smooth and white stays white.
+    """
+    coverage = np.clip((255 - rgb[..., 1]) / (255 - SOURCE_PURPLE_GREEN), 0, 1)[..., None]
+    purple = np.array(BRAND_PURPLE, dtype=float)
+    return np.rint(255 * (1 - coverage) + purple * coverage).astype("uint8")
+
+
 def shield_crop(image: Image.Image) -> Image.Image:
     rgb = np.asarray(image.convert("RGB")).astype(int)
     colourful = (255 - rgb).sum(axis=2) > 120
@@ -42,8 +59,8 @@ def shield_crop(image: Image.Image) -> Image.Image:
     x0, x1, y0, y1 = xs.min(), xs.max(), ys.min(), ys.max()
     box = (max(x0 - PAD, 0), max(y0 - PAD, 0),
            min(x1 + PAD + 1, image.width), min(y1 + PAD + 1, image.height))
-    cropped = np.asarray(image.convert("RGB").crop(box))
-    return Image.fromarray(flatten_white(cropped).astype("uint8"), "RGB")
+    cropped = np.asarray(image.convert("RGB").crop(box)).astype(int)
+    return Image.fromarray(recolor(flatten_white(cropped)), "RGB")
 
 
 def scaled_to_height(image: Image.Image, height: int) -> Image.Image:

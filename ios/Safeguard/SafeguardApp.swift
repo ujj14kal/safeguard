@@ -50,7 +50,7 @@ struct SplashView: View {
     /// Logo is 220 pt tall (the asset's natural size); the title sits below it.
     private static let titleOffset: CGFloat = 110 + 44
 
-    private static let brandPurple = Color(red: 88 / 255, green: 37 / 255, blue: 96 / 255)
+    private static let brandPurple = Color(red: 111 / 255, green: 58 / 255, blue: 124 / 255) // #6F3A7C, matches the icon
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var titleVisible = false

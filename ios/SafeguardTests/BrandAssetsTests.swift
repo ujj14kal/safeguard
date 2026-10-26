@@ -84,6 +84,22 @@ final class BrandAssetsTests: XCTestCase {
         XCTAssertEqual(centreY, 0.5, accuracy: 0.02)
     }
 
+    func testAppIconUsesTheBrandPurple() throws {
+        // #6F3A7C, a bit lighter than the supplied logo's #582560.
+        let icon = try loadImage(catalog.appendingPathComponent("AppIcon.appiconset/AppIcon.png"))
+        let bytes = try pixels(of: icon)
+        var sums = [Double](repeating: 0, count: 3)
+        var count = 0.0
+        for i in stride(from: 0, to: bytes.count, by: 4) where 255 - Int(bytes[i + 1]) > 190 {
+            sums[0] += Double(bytes[i]); sums[1] += Double(bytes[i + 1]); sums[2] += Double(bytes[i + 2])
+            count += 1
+        }
+        XCTAssertGreaterThan(count, 50_000, "solid purple area expected")
+        XCTAssertEqual(sums[0] / count, 111, accuracy: 3)
+        XCTAssertEqual(sums[1] / count, 58, accuracy: 3)
+        XCTAssertEqual(sums[2] / count, 124, accuracy: 3)
+    }
+
     func testAppIconContentsReferencesTheFile() throws {
         let url = catalog.appendingPathComponent("AppIcon.appiconset/Contents.json")
         let json = try XCTUnwrap(
