@@ -43,6 +43,7 @@ public struct SpeechMatcher: Sendable {
         guard !words.isEmpty else { return nil }
         let benignRanges = benignWordRanges(in: words)
         var best: SpeechMatch?
+        var hostileMatches = 0
         for pattern in config.patterns {
             let phrase = Self.words(in: pattern.phrase)
             guard !phrase.isEmpty, words.count >= phrase.count else { continue }
@@ -64,10 +65,22 @@ public struct SpeechMatcher: Sendable {
                 let candidate = SpeechMatch(
                     category: pattern.category, severity: severity, wordIndex: start
                 )
+                if pattern.category == .anger || pattern.category == .abuse {
+                    hostileMatches += 1
+                }
                 if best == nil || candidate.severity > best!.severity {
                     best = candidate
                 }
             }
+        }
+        // Sustained cussing/anger: one word is a nudge, a run is hostility.
+        if hostileMatches >= config.repeatedAngerCount,
+           (best?.severity ?? 0) < config.repeatedAngerSeverity
+        {
+            best = SpeechMatch(
+                category: .anger, severity: config.repeatedAngerSeverity,
+                wordIndex: best?.wordIndex ?? 0
+            )
         }
         return best
     }
@@ -89,9 +102,16 @@ public struct SpeechMatcher: Sendable {
         return ranges
     }
 
+    /// Same word boundaries as `SpeechText.words` (letters, marks, digits),
+    /// so Devanagari words are walked correctly.
+    private func isWordCharacter(_ c: Character) -> Bool {
+        c.unicodeScalars.allSatisfy { CharacterSet.alphanumerics.contains($0) }
+    }
+
     /// True when the matched word sits inside double quotes. Single quotes
     /// are skipped: apostrophes ("don't") would false-positive.
-    private func isQuoted(_ transcript: String, wordIndex: Int, words: [String]) -> Bool {
+    private func isQuoted(_ rawTranscript: String, wordIndex: Int, words: [String]) -> Bool {
+        let transcript = SpeechText.normalised(rawTranscript)
         // Map the word index back to a string offset by re-walking the
         // transcript with the same tokenization the matcher used.
         var seen = 0
@@ -100,15 +120,13 @@ public struct SpeechMatcher: Sendable {
         while index < transcript.endIndex {
             // Skip separators.
             while index < transcript.endIndex,
-                  !"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-                      .contains(transcript[index])
+                  !isWordCharacter(transcript[index])
             {
                 index = transcript.index(after: index)
             }
             let wordStart = index
             while index < transcript.endIndex,
-                  "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-                      .contains(transcript[index])
+                  isWordCharacter(transcript[index])
             {
                 index = transcript.index(after: index)
             }
@@ -153,9 +171,7 @@ public struct SpeechMatcher: Sendable {
     }
 
     private static func words(in text: String) -> [String] {
-        text.lowercased()
-            .components(separatedBy: CharacterSet.alphanumerics.inverted)
-            .filter { !$0.isEmpty }
+        SpeechText.words(in: text)
     }
 }
 

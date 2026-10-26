@@ -33,9 +33,12 @@ Classify what was SAID only: threats, coercion, harassment, or distress. NEVER c
 identity, age, ethnicity, gender presentation, or clothing of any speaker — if the only thing notable is who \
 someone seems to be, severity is low. Downgrade to low when the snippet is a joke, a TV/radio in the background, \
 a quotation ("she said ..."), or not directed at the wearer.
+The snippet may be English, Hindi (Devanagari) or Hinglish (Hindi in Latin letters). Judge it in its own language. \
+Cuss words and shouting at the wearer count as category "anger"; a single mild swear word alone is low, \
+sustained abuse or abuse with threats is medium or high.
 
 Reply with STRICT JSON only, no other text:
-{"severity": "low|medium|high", "categories": ["threat|coercion|pursuit|proposition|abuse|distress"],
+{"severity": "low|medium|high", "categories": ["threat|coercion|pursuit|proposition|abuse|distress|anger"],
 "directed_at_wearer": true|false, "reason": "one short sentence"}"""
 
 

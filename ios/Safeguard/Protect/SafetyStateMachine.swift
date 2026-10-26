@@ -74,8 +74,17 @@ public struct SafetyConfig: Sendable {
 
     // MARK: - Code phrases (configurable; matched on close variants)
 
-    public var safePhrases = ["open calculator"]
-    public var unsafePhrases = ["open app store"]
+    // Hindi and Hinglish variants sit beside the English ones: the Hindi
+    // recogniser may write either script ("calculator kholo", "कैलकुलेटर खोलो").
+    public var safePhrases = [
+        "open calculator", "calculator kholo", "calculator khol do",
+        "ओपन कैलकुलेटर", "कैलकुलेटर खोलो", "कैलकुलेटर खोल दो", "कैलकुलेटर खोलिए",
+    ]
+    public var unsafePhrases = [
+        "open app store", "app store kholo", "app store khol do",
+        "ओपन ऐप स्टोर", "ओपन एप स्टोर", "ऐप स्टोर खोलो", "एप स्टोर खोलो",
+        "ऐप स्टोर खोल दो", "ऐप स्टोर खोलिए", "ओपन ऐप्प स्टोर",
+    ]
 }
 
 /// Pure, timestamp-based safety state machine.
@@ -330,8 +339,6 @@ public struct CodePhraseMatcher: Sendable {
     }
 
     private static func words(in text: String) -> [String] {
-        text.lowercased()
-            .components(separatedBy: CharacterSet.alphanumerics.inverted)
-            .filter { !$0.isEmpty }
+        SpeechText.words(in: text)
     }
 }

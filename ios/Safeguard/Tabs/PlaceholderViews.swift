@@ -35,6 +35,7 @@ struct SettingsView: View {
     @AppStorage("debugOverlayEnabled") private var debugOverlayEnabled = false
     @AppStorage(VerifierConfig.backendURLDefaultsKey) private var backendURL = ""
     @AppStorage("listenerOptIn") private var listenerOptIn = false
+    @AppStorage("speechLanguage") private var speechLanguage = "auto"
     @State private var connectionStatus: String?
     @State private var testingConnection = false
 
@@ -46,6 +47,11 @@ struct SettingsView: View {
                 }
                 Section {
                     Toggle("Listen for threatening speech", isOn: $listenerOptIn)
+                    Picker("Speech language", selection: $speechLanguage) {
+                        Text("Automatic").tag("auto")
+                        Text("English (India)").tag("en")
+                        Text("हिन्दी (Hindi)").tag("hi")
+                    }
                 } header: {
                     Text("Conversation listener")
                 } footer: {

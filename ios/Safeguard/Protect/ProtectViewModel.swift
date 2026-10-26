@@ -37,6 +37,8 @@ final class ProtectViewModel: ObservableObject {
     /// transcripts feed the threat matcher; off, they are scanned for code
     /// phrases/commands and dropped, and no window is ever built.
     @AppStorage("listenerOptIn") var listenerOptIn = false
+    /// "auto" (follow the iPhone), "en" or "hi".
+    @AppStorage("speechLanguage") var speechLanguage = "auto"
 
     /// Safety state machine + check-in config. MainActor-owned; the pipeline
     /// feeds it via the published callbacks below (movement alerts), and the
@@ -447,6 +449,9 @@ final class ProtectViewModel: ObservableObject {
                     "Microphone or speech recognition denied: voice check-in unavailable."
                 return
             }
+            listener.localeIdentifier = SpeechLocale.resolve(
+                setting: speechLanguage, preferredLanguages: Locale.preferredLanguages
+            )
             listener.start()
         }
     }

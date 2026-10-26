@@ -24,6 +24,9 @@ protocol ConversationListenerDelegate: AnyObject {
 final class ConversationListener: ObservableObject {
     weak var delegate: ConversationListenerDelegate?
 
+    /// BCP-47 locale of the recogniser (see `SpeechLocale`). Set before `start`.
+    var localeIdentifier = SpeechLocale.english
+
     /// True only while actually transcribing.
     @Published private(set) var isLive = false
     /// Why the mic is deaf (permission, interruption, error). Nil when live.
@@ -71,14 +74,16 @@ final class ConversationListener: ObservableObject {
 
     func start() {
         stop()
-        guard let recognizer = SFSpeechRecognizer(), recognizer.isAvailable else {
-            goDeaf("Speech recognition unavailable")
+        guard let recognizer = SFSpeechRecognizer(locale: Locale(identifier: localeIdentifier)),
+              recognizer.isAvailable
+        else {
+            goDeaf("Speech recognition unavailable for \(localeIdentifier)")
             return
         }
         guard recognizer.supportsOnDeviceRecognition else {
             // Hard rule: on-device or nothing. Never fall back to server
             // recognition, which would upload the wearer's audio.
-            goDeaf("On-device speech recognition unavailable")
+            goDeaf("On-device speech for \(localeIdentifier) is not available on this iPhone")
             return
         }
         do {

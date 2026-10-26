@@ -27,10 +27,11 @@ public struct VoiceCommandParser: Sendable {
     public func parse(_ transcript: String) -> VoiceCommand? {
         let words = Self.words(in: transcript)
         let rest: [String]
-        if words.first == "safeguard" {
+        if words.first == "safeguard" || words.first == "सेफगार्ड" {
             rest = Array(words.dropFirst())
         } else if words.count >= 2,
-                  words[0] == "safe" || words[0] == "save", words[1] == "guard"
+                  words[0] == "safe" || words[0] == "save" || words[0] == "सेफ",
+                  words[1] == "guard" || words[1] == "गार्ड"
         {
             rest = Array(words.dropFirst(2))
         } else {
@@ -55,25 +56,45 @@ public struct VoiceCommandParser: Sendable {
     }
 
     private static let commands: [(VoiceCommand, [String])] = [
-        (.stopProtecting, ["stop protecting", "stop protection", "stop"]),
-        (.startProtecting, ["start protecting", "start protection", "begin protecting", "start"]),
-        (.status, ["status", "what s happening", "what is happening", "report", "how am i"]),
-        (.dim, ["dim the screen", "darken the screen", "darken", "dim"]),
-        (.brighten, ["brighten the screen", "brighten", "undim"]),
-        (.openSettings, ["open settings", "settings"]),
-        (.goBack, ["go back", "back"]),
+        (.stopProtecting, [
+            "stop protecting", "stop protection", "stop",
+            "suraksha band karo", "band karo", "सुरक्षा बंद करो", "बंद करो",
+        ]),
+        (.startProtecting, [
+            "start protecting", "start protection", "begin protecting", "start",
+            "suraksha shuru karo", "shuru karo", "सुरक्षा शुरू करो", "शुरू करो",
+        ]),
+        (.status, [
+            "status", "what s happening", "what is happening", "report", "how am i",
+            "haal batao", "स्थिति बताओ", "हाल बताओ",
+        ]),
+        (.dim, [
+            "dim the screen", "darken the screen", "darken", "dim",
+            "screen dim karo", "स्क्रीन धीमी करो",
+        ]),
+        (.brighten, [
+            "brighten the screen", "brighten", "undim",
+            "screen tez karo", "स्क्रीन तेज़ करो",
+        ]),
+        (.openSettings, ["open settings", "settings", "settings kholo", "सेटिंग्स खोलो"]),
+        (.goBack, ["go back", "back", "peeche jao", "पीछे जाओ"]),
         (.callEmergency, [
             "call 112", "call one one two", "call one twelve",
             "call emergency", "emergency call",
+            "112 call karo", "police ko bulao", "पुलिस को बुलाओ", "112 पर कॉल करो",
         ]),
-        (.shareLocation, ["share my location", "share location"]),
-        (.help, ["what can you say", "what can i say", "list commands", "commands", "help"]),
+        (.shareLocation, [
+            "share my location", "share location",
+            "location bhejo", "meri location bhejo", "लोकेशन भेजो",
+        ]),
+        (.help, [
+            "what can you say", "what can i say", "list commands", "commands", "help",
+            "madad", "kya bol sakta hoon", "मदद", "क्या बोल सकता हूँ",
+        ]),
     ]
 
     private static func words(in text: String) -> [String] {
-        text.lowercased()
-            .components(separatedBy: CharacterSet.alphanumerics.inverted)
-            .filter { !$0.isEmpty }
+        SpeechText.words(in: text)
     }
 }
 
@@ -117,18 +138,16 @@ public struct StopConfirmation: Sendable {
             pendingUntil = nil
             return .expired
         }
-        let words = Set(transcript.lowercased()
-            .components(separatedBy: CharacterSet.alphanumerics.inverted)
-            .filter { !$0.isEmpty })
+        let words = Set(SpeechText.words(in: transcript))
         // Deny first: uncertainty keeps protection on ("do not confirm"
         // must not confirm). Words only — "don't" tokenizes to don+t, so
         // "not" carries the negations ("do not stop", "not sure" → deny,
         // which is the safe direction).
-        if !words.intersection(["no", "nope", "nah", "cancel", "not"]).isEmpty {
+        if !words.intersection(["no", "nope", "nah", "cancel", "not", "nahi", "nahin", "नहीं", "मत", "रुको"]).isEmpty {
             pendingUntil = nil
             return .denied
         }
-        if !words.intersection(["yes", "yeah", "yep", "yup", "confirm", "affirmative"]).isEmpty {
+        if !words.intersection(["yes", "yeah", "yep", "yup", "confirm", "affirmative", "haan", "han", "ji", "haanji", "हाँ", "हां", "जी", "ठीक"]).isEmpty {
             pendingUntil = nil
             return .confirmed
         }
