@@ -34,6 +34,12 @@ struct ContentView: View {
                 .tag(Tab.settings)
         }
         .tint(DS.Colors.accent)
+        .onReceive(NotificationCenter.default.publisher(for: .safeguardOpenSettings)) { _ in
+            selection = .settings
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .safeguardGoBack)) { _ in
+            selection = .protect
+        }
         .onAppear {
             #if DEBUG
                 // Headless screenshot hook (Simulator):

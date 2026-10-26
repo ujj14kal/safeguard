@@ -79,6 +79,9 @@
 		A10000000000000000000097 /* PersonBoxOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000096 /* PersonBoxOverlay.swift */; };
 		B2000000000000000000003E /* BoxMappingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000098 /* BoxMappingTests.swift */; };
 		A1000000000000000000009A /* DSButtons.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000099 /* DSButtons.swift */; };
+		A1000000000000000000009C /* VoiceCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000009B /* VoiceCommands.swift */; };
+		B2000000000000000000003F /* VoiceCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000009B /* VoiceCommands.swift */; };
+		B20000000000000000000040 /* VoiceCommandTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000009D /* VoiceCommandTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -139,6 +142,8 @@
 		A10000000000000000000096 /* PersonBoxOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonBoxOverlay.swift; sourceTree = "<group>"; };
 		A10000000000000000000098 /* BoxMappingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoxMappingTests.swift; sourceTree = "<group>"; };
 		A10000000000000000000099 /* DSButtons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSButtons.swift; sourceTree = "<group>"; };
+		A1000000000000000000009B /* VoiceCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceCommands.swift; sourceTree = "<group>"; };
+		A1000000000000000000009D /* VoiceCommandTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceCommandTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -284,6 +289,7 @@
 				A1000000000000000000008E /* VerifySpeechTests.swift */,
 				A10000000000000000000093 /* ThemeContrastTests.swift */,
 				A10000000000000000000098 /* BoxMappingTests.swift */,
+				A1000000000000000000009D /* VoiceCommandTests.swift */,
 			);
 			path = SafeguardTests;
 			sourceTree = "<group>";
@@ -296,6 +302,7 @@
 				A10000000000000000000088 /* TranscriptWindow.swift */,
 				A1000000000000000000008A /* ListeningSession.swift */,
 				A1000000000000000000008F /* ConversationListener.swift */,
+				A1000000000000000000009B /* VoiceCommands.swift */,
 			);
 			path = Speech;
 			sourceTree = "<group>";
@@ -445,6 +452,7 @@
 				A10000000000000000000095 /* BoxMapping.swift in Sources */,
 				A10000000000000000000097 /* PersonBoxOverlay.swift in Sources */,
 				A1000000000000000000009A /* DSButtons.swift in Sources */,
+				A1000000000000000000009C /* VoiceCommands.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -484,6 +492,8 @@
 				B2000000000000000000003C /* ThemeContrastTests.swift in Sources */,
 				B2000000000000000000003D /* BoxMapping.swift in Sources */,
 				B2000000000000000000003E /* BoxMappingTests.swift in Sources */,
+				B2000000000000000000003F /* VoiceCommands.swift in Sources */,
+				B20000000000000000000040 /* VoiceCommandTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -30,6 +30,10 @@ struct ProtectView: View {
             }
             VStack(spacing: 0) {
                 hudTopBar
+                if let toast = model.toast {
+                    toastBubble(toast)
+                        .padding(.top, DS.Spacing.small)
+                }
                 if let failure = model.verifyFailure {
                     Text(failure.message)
                         .font(.footnote)
@@ -50,9 +54,33 @@ struct ProtectView: View {
             if model.state == .unsafe {
                 sosScrim
             }
+            if model.dimmed {
+                dimOverlay
+            }
         }
         .toolbar(.hidden, for: .tabBar)
         .onTapGesture(count: 2) { model.tapCheckIn() }
+    }
+
+    /// Near-black battery saver: the camera keeps running underneath.
+    /// Anything needing the wearer's eyes lifts it automatically; tapping
+    /// anywhere or the brighten button lifts it by hand.
+    private var dimOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.93)
+                .ignoresSafeArea()
+                .onTapGesture { model.dimmed = false }
+            VStack(spacing: DS.Spacing.small) {
+                Text(model.hudStatus.text)
+                    .font(.footnote)
+                    .foregroundStyle(.white.opacity(0.5))
+                Button {} label: {
+                    Image(systemName: "sun.max.fill")
+                        .accessibilityLabel("Brighten the screen")
+                }
+                .buttonStyle(IconButtonStyle())
+            }
+        }
     }
 
     @ViewBuilder
@@ -68,6 +96,16 @@ struct ProtectView: View {
         } else {
             DS.Colors.background
         }
+    }
+
+    /// Brief on-screen feedback for voice actions (HUD and idle alike).
+    private func toastBubble(_ text: String) -> some View {
+        Text(text)
+            .font(.footnote)
+            .padding(.horizontal, DS.Spacing.medium)
+            .padding(.vertical, DS.Spacing.small)
+            .safeguardPanel()
+            .transition(.opacity)
     }
 
     private var hudTopBar: some View {
@@ -104,8 +142,17 @@ struct ProtectView: View {
             Text("Say: Safeguard, stop • status • dim")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
-            Button("Stop protecting", role: .destructive) { model.stop() }
-                .buttonStyle(DestructiveButtonStyle())
+            HStack(spacing: DS.Spacing.medium) {
+                Button("Stop protecting", role: .destructive) { model.stop() }
+                    .buttonStyle(DestructiveButtonStyle())
+                Button { model.dimmed.toggle() } label: {
+                    Image(systemName: model.dimmed ? "sun.max.fill" : "moon.fill")
+                        .accessibilityLabel(
+                            model.dimmed ? "Brighten the screen" : "Dim the screen"
+                        )
+                }
+                .buttonStyle(IconButtonStyle())
+            }
         }
         .padding()
     }
@@ -176,7 +223,8 @@ struct ProtectView: View {
 
     private var idleView: some View {
         NavigationStack {
-            ScrollView {
+            ZStack(alignment: .top) {
+                ScrollView {
                 VStack(spacing: DS.Spacing.large) {
                     // Outline shield in the accent colour: the dark purple
                     // logo fades on the dark background.
@@ -218,6 +266,11 @@ struct ProtectView: View {
                     }
                 }
                 .padding()
+                }
+                if let toast = model.toast {
+                    toastBubble(toast)
+                        .padding(.top, DS.Spacing.small)
+                }
             }
             .background(DS.Colors.background)
             .navigationTitle("Protect")
@@ -230,9 +283,23 @@ struct ProtectView: View {
     /// Short voice-command list. Keep in sync with VoiceCommandParser.
     private var voiceCommandsCard: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.small) {
-            Label("Voice commands", systemImage: "mic.fill")
-                .font(.headline)
-                .foregroundStyle(DS.Colors.accent)
+            HStack {
+                Label("Voice commands", systemImage: "mic.fill")
+                    .font(.headline)
+                    .foregroundStyle(DS.Colors.accent)
+                Spacer()
+                if model.listenerLive {
+                    Text("ready")
+                        .font(.footnote)
+                        .foregroundStyle(DS.Colors.ok)
+                        .accessibilityLabel("Voice commands ready")
+                } else if let deaf = model.listenerDeafReason {
+                    Text("unavailable")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .accessibilityLabel("Voice commands unavailable: \(deaf)")
+                }
+            }
             ForEach(
                 ["Safeguard, start protecting", "Safeguard, stop",
                  "Safeguard, status", "Safeguard, dim the screen",

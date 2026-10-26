@@ -28,6 +28,10 @@ final class ProtectViewModel: ObservableObject {
     @Published var listenerLive = false
     @Published var listenerDeafReason: String?
     @Published var lastSpeechInfo: String?
+    @Published var toast: String?
+    /// Near-black screen saver: the camera keeps running underneath.
+    /// Lifted automatically when anything needs the wearer's eyes.
+    @Published var dimmed = false
 
     /// Conversation-listener opt-in (default OFF). On while protecting,
     /// transcripts feed the threat matcher; off, they are scanned for code
@@ -48,6 +52,9 @@ final class ProtectViewModel: ObservableObject {
     private let speechMatcher: SpeechMatcher
     private var window: TranscriptWindow
     private var speechGate: SpeechVerifyGate
+    private let commandParser = VoiceCommandParser()
+    private var stopConfirmation: StopConfirmation
+    private var offlineMessageSaid = false
     private let speechVerifier = VerifierClient()
     /// True while the app itself is speaking: voice commands are ignored
     /// then (code phrases and the threat matcher stay live).
@@ -92,9 +99,17 @@ final class ProtectViewModel: ObservableObject {
             triggerSeverity: safetyConfig.speechStrongThreshold,
             minInterval: speechConfig.speechVerifyMinInterval
         )
+        self.stopConfirmation = StopConfirmation(
+            windowSeconds: safetyConfig.stopConfirmSeconds
+        )
         listener.delegate = self
         listener.$isLive.assign(to: &$listenerLive)
         listener.$deafReason.assign(to: &$listenerDeafReason)
+        // Hands-free "start protecting" needs a hot mic while idle, so the
+        // listener runs from here on (foreground only — iOS suspends the
+        // mic in the background). Idle transcripts feed commands only: no
+        // code phrases, no window, no threat scan, no backend call.
+        startListener()
     }
 
     // CIContext is Sendable; shared for off-main replay frame conversion.
@@ -207,9 +222,12 @@ final class ProtectViewModel: ObservableObject {
         safety.stopProtecting()
         speaker.stop()
         speakingNow = false
-        listener.stop()
+        // The listener stays up for idle voice commands; the transcript
+        // window is still discarded on every stop.
         window.clear()
         speechGate.reset()
+        stopConfirmation.cancel()
+        dimmed = false
         detectionQueue.sync { pipeline.reset() }
         UIApplication.shared.isIdleTimerDisabled = false
         fpsTimer?.invalidate()
@@ -232,6 +250,7 @@ final class ProtectViewModel: ObservableObject {
         lastSpeechInfo = nil
         window.clear()
         speechGate.reset()
+        offlineMessageSaid = false
         safety.startProtecting(at: Self.now)
         refreshBackendStatus()
         startListener()
@@ -333,7 +352,13 @@ final class ProtectViewModel: ObservableObject {
 
     private func refreshBackendStatus() {
         Task {
-            backendStatus = await VerifierClient().fetchStatus()
+            let status = await VerifierClient().fetchStatus()
+            backendStatus = status
+            // Said once per session, then on-device protection only.
+            if !status.reachable, !offlineMessageSaid {
+                offlineMessageSaid = true
+                confirm("Verification is offline")
+            }
         }
     }
 
@@ -374,6 +399,10 @@ final class ProtectViewModel: ObservableObject {
         }
         if mapped != state {
             state = mapped
+            // Anything needing the wearer's eyes lifts the dim.
+            if mapped == .asking || mapped == .suspected || mapped == .unsafe {
+                dimmed = false
+            }
             announce(mapped)
         }
     }
@@ -421,25 +450,148 @@ final class ProtectViewModel: ObservableObject {
         }
     }
 
-    /// One transcript, three consumers in fixed order: code phrases first
-    /// (consumed, never scanned further), voice commands (Part D), then —
-    /// only when opted in — the threat matcher. With the toggle off there
-    /// is no window and no backend speech call.
+    /// One transcript, fixed consumer order. Idle: commands only (no code
+    /// phrases, no window, no threat scan). Protecting: code phrases first
+    /// (consumed, never scanned further), then the stop-confirmation
+    /// answer, then voice commands (never while speaking, never in the
+    /// silent window), then — only when opted in — the threat matcher.
     fileprivate func handleTranscript(_ text: String) {
-        guard isProtecting else { return }
+        if !isProtecting {
+            if !speakingNow, let command = commandParser.parse(text) {
+                runCommand(command)
+            }
+            return
+        }
         if let reply = phraseMatcher.match(text) {
             safety.noteReply(reply, at: Self.now)
             drainAskSpeech()
             syncProtectionState()
             return
         }
-        // Part D voice commands slot in here (wake word + command).
+        let now = Self.now
+        if stopConfirmation.isPending(at: now) {
+            if commandParser.parse(text) != nil {
+                // A fresh wake-worded command cancels the pending stop.
+                stopConfirmation.cancel()
+            } else {
+                switch stopConfirmation.answer(text, at: now) {
+                case .confirmed:
+                    showToast("Protection stopped")
+                    stop()
+                    return
+                case .denied:
+                    showToast("Still protecting")
+                    return
+                case .waiting, .expired:
+                    break // keep scanning below
+                }
+            }
+        }
+        if !speakingNow, safety.state != .listening,
+           let command = commandParser.parse(text)
+        {
+            runCommand(command)
+            return
+        }
         guard listenerOptIn else { return }
         window.append(text, at: Self.now)
         guard let found = speechMatcher.match(window.transcript) else { return }
         noteSpeechToPipeline(severity: found.severity, at: Self.now)
         if speechGate.consume(severity: found.severity, at: Self.now) {
             sendSpeechSnippet(match: found)
+        }
+    }
+
+    // MARK: - Voice commands (Part D)
+
+    private func runCommand(_ command: VoiceCommand) {
+        switch command {
+        case .startProtecting:
+            if isProtecting {
+                showToast("Already protecting")
+            } else {
+                confirm("Protection started")
+                Task { await startCamera() }
+            }
+        case .stopProtecting:
+            if !isProtecting {
+                showToast("Not protecting")
+            } else {
+                stopConfirmation.request(at: Self.now)
+                confirm("Stop protecting? Say yes to confirm.")
+            }
+        case .status:
+            confirm(statusSummary())
+        case .dim:
+            if !isProtecting {
+                showToast("Start protecting first")
+            } else {
+                dimmed = true
+                confirm("Screen dimmed")
+            }
+        case .brighten:
+            dimmed = false
+            confirm("Screen bright")
+        case .openSettings:
+            confirm("Opening Settings")
+            NotificationCenter.default.post(name: .safeguardOpenSettings, object: nil)
+        case .goBack:
+            confirm("Going back")
+            NotificationCenter.default.post(name: .safeguardGoBack, object: nil)
+        case .callEmergency:
+            confirm("Calling 112")
+            // telprompt always asks first: no pocket-dialled emergencies.
+            if let url = URL(string: "telprompt://112") {
+                Task {
+                    let opened = await UIApplication.shared.open(url)
+                    if !opened {
+                        showToast("Could not place the call on this device")
+                    }
+                }
+            }
+        case .shareLocation:
+            confirm("Sharing your location is not available yet.")
+        case .help:
+            confirm(
+                "You can say: start protecting, stop, status, dim, brighten, "
+                    + "settings, go back, call 112, share location, or help."
+            )
+        }
+    }
+
+    private func statusSummary() -> String {
+        if !isProtecting {
+            return "Not protecting."
+        }
+        let people = personCount == 1 ? "1 person nearby" : "\(personCount) people nearby"
+        let backend = backendStatus?.reachable == true ? "Verification online." : "Verification offline."
+        return "\(displayTitle). \(people). \(proximity.title). \(backend)"
+    }
+
+    /// Every voice action confirms three ways: a short spoken message, a
+    /// haptic, and a brief on-screen toast.
+    private func confirm(_ text: String) {
+        speak(text)
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        showToast(text)
+    }
+
+    private func speak(_ text: String) {
+        speakingNow = true
+        speaker.speak(text: text, volume: 1.0) { [weak self] in
+            Task { @MainActor [weak self] in
+                self?.speakingNow = false
+            }
+        }
+    }
+
+    private func showToast(_ text: String) {
+        toast = text
+        Task {
+            try? await Task.sleep(for: .seconds(3))
+            if toast == text {
+                toast = nil
+            }
         }
     }
 

@@ -9,6 +9,8 @@ protocol CheckInSpeaking: AnyObject {
         phrase: String, volume: Float,
         onStarted: @escaping () -> Void, onStopped: @escaping () -> Void
     )
+    /// One-shot message (confirmations, status, help). Same callback rules.
+    func speak(text: String, volume: Float, onStopped: @escaping () -> Void)
     func stop()
 }
 
@@ -33,6 +35,16 @@ final class CheckInSpeaker: NSObject, CheckInSpeaking, AVSpeechSynthesizerDelega
         self.onStarted = onStarted
         self.onStopped = onStopped
         let utterance = AVSpeechUtterance(string: phrase)
+        utterance.volume = volume
+        utterance.rate = AVSpeechUtteranceDefaultSpeechRate
+        synthesizer.speak(utterance)
+    }
+
+    func speak(text: String, volume: Float, onStopped: @escaping () -> Void) {
+        fireStarted()
+        fireStopped()
+        self.onStopped = onStopped
+        let utterance = AVSpeechUtterance(string: text)
         utterance.volume = volume
         utterance.rate = AVSpeechUtteranceDefaultSpeechRate
         synthesizer.speak(utterance)

@@ -49,6 +49,8 @@ public struct SafetyConfig: Sendable {
     /// Quiet period after Safe before movement/speech may nag again.
     /// A Muse `high` verdict bypasses it.
     public var cooldownSeconds: TimeInterval = 60
+    /// Seconds the wearer has to confirm a voice "stop protecting".
+    public var stopConfirmSeconds: TimeInterval = 5
 
     // MARK: - Listening window (Part C)
 
