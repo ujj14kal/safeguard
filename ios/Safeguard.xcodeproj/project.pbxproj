@@ -56,6 +56,9 @@
 		B2000000000000000000001F /* VerifierGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000003C /* VerifierGate.swift */; };
 		B20000000000000000000020 /* FrameBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000003D /* FrameBuffer.swift */; };
 		B20000000000000000000021 /* VerifierClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000003E /* VerifierClient.swift */; };
+		A1000000000000000000007F /* SafetyStateMachine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000007E /* SafetyStateMachine.swift */; };
+		B20000000000000000000032 /* SafetyStateMachine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000007E /* SafetyStateMachine.swift */; };
+		B20000000000000000000033 /* SafetyStateMachineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000080 /* SafetyStateMachineTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -100,6 +103,8 @@
 		A1000000000000000000003E /* VerifierClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerifierClient.swift; sourceTree = "<group>"; };
 		B2000000000000000000001D /* VerifierTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerifierTests.swift; sourceTree = "<group>"; };
 		B20000000000000000000030 /* BrandAssetsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrandAssetsTests.swift; sourceTree = "<group>"; };
+		A1000000000000000000007E /* SafetyStateMachine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafetyStateMachine.swift; sourceTree = "<group>"; };
+		A10000000000000000000080 /* SafetyStateMachineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafetyStateMachineTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -179,6 +184,7 @@
 				A1000000000000000000002D /* ProtectView.swift */,
 				A1000000000000000000002E /* ProtectViewModel.swift */,
 				A10000000000000000000034 /* DebugBoxOverlay.swift */,
+				A1000000000000000000007E /* SafetyStateMachine.swift */,
 			);
 			path = Protect;
 			sourceTree = "<group>";
@@ -233,6 +239,7 @@
 				B2000000000000000000001A /* ProximityTests.swift */,
 				B2000000000000000000001D /* VerifierTests.swift */,
 				B20000000000000000000030 /* BrandAssetsTests.swift */,
+				A10000000000000000000080 /* SafetyStateMachineTests.swift */,
 			);
 			path = SafeguardTests;
 			sourceTree = "<group>";
@@ -372,6 +379,7 @@
 				A1000000000000000000007B /* VerifierGate.swift in Sources */,
 				A1000000000000000000007C /* FrameBuffer.swift in Sources */,
 				A1000000000000000000007D /* VerifierClient.swift in Sources */,
+				A1000000000000000000007F /* SafetyStateMachine.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -398,6 +406,8 @@
 				B2000000000000000000001F /* VerifierGate.swift in Sources */,
 				B20000000000000000000020 /* FrameBuffer.swift in Sources */,
 				B20000000000000000000021 /* VerifierClient.swift in Sources */,
+				B20000000000000000000032 /* SafetyStateMachine.swift in Sources */,
+				B20000000000000000000033 /* SafetyStateMachineTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

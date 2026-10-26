@@ -1,0 +1,304 @@
+import XCTest
+
+/// Safety state machine: every transition, the 10 s no-reply clock, the
+/// cooldown, the always-on unsafe phrase, Muse-low cancellation, failed
+/// verify never suppressing, and speech never going straight to Unsafe.
+/// Pure timestamps throughout: no waiting, no audio, no network.
+final class SafetyStateMachineTests: XCTestCase {
+    private func protecting(at time: TimeInterval = 100) -> SafetyStateMachine {
+        var machine = SafetyStateMachine()
+        machine.startProtecting(at: time)
+        return machine
+    }
+
+    // MARK: - Session
+
+    func testStartsIdle() {
+        XCTAssertEqual(SafetyStateMachine().state, .idle)
+    }
+
+    func testStartStop() {
+        var machine = protecting()
+        XCTAssertEqual(machine.state, .monitoring)
+        machine.stopProtecting()
+        XCTAssertEqual(machine.state, .idle)
+    }
+
+    func testStopClearsUnsafe() {
+        var machine = protecting()
+        machine.noteReply(.unsafePhrase, at: 101)
+        XCTAssertEqual(machine.state, .unsafe)
+        machine.stopProtecting()
+        XCTAssertEqual(machine.state, .idle)
+        XCTAssertNil(machine.unsafeCause)
+    }
+
+    func testInputsIgnoredWhileIdle() {
+        var machine = SafetyStateMachine()
+        machine.noteMovementAlert(score: 0.9, at: 1)
+        machine.noteMuseVerdict(.high, at: 1)
+        machine.noteSpeech(severity: 1, at: 1)
+        machine.noteReply(.unsafePhrase, at: 1)
+        machine.tick(at: 1000)
+        XCTAssertEqual(machine.state, .idle)
+    }
+
+    // MARK: - Movement path
+
+    func testMovementAlertEntersListeningFirst() {
+        var machine = protecting()
+        machine.noteMovementAlert(score: 0.6, at: 100)
+        XCTAssertEqual(machine.state, .listening)
+        XCTAssertEqual(machine.suspicionSources, [.movement])
+        XCTAssertFalse(machine.takeAskSpeechDue(), "silent during the window")
+    }
+
+    func testListeningWindowEndsInAsking() {
+        var machine = protecting()
+        machine.noteMovementAlert(score: 0.6, at: 100)
+        machine.tick(at: 100 + 6)
+        XCTAssertEqual(machine.state, .asking)
+        XCTAssertTrue(machine.takeAskSpeechDue())
+        XCTAssertFalse(machine.takeAskSpeechDue(), "one TTS call per Asking entry")
+    }
+
+    func testHighScoreSkipsWindow() {
+        var machine = protecting()
+        machine.noteMovementAlert(score: 0.85, at: 100)
+        XCTAssertEqual(machine.state, .asking)
+        XCTAssertTrue(machine.takeAskSpeechDue())
+    }
+
+    // MARK: - 10 s no-reply clock
+
+    func testNoReplyBecomesUnsafe() {
+        var machine = protecting()
+        machine.noteMovementAlert(score: 0.85, at: 100)
+        machine.noteAskSpeechStarted(at: 102)
+        machine.tick(at: 111.9)
+        XCTAssertEqual(machine.state, .asking)
+        machine.tick(at: 112)
+        XCTAssertEqual(machine.state, .unsafe)
+        XCTAssertEqual(machine.unsafeCause, .noReply)
+    }
+
+    func testClockStartsWithSpeechNotWithAsking() {
+        var machine = protecting()
+        machine.noteMovementAlert(score: 0.85, at: 100)
+        // TTS lags 30 s (slow device): no deadline until audio starts.
+        machine.tick(at: 130)
+        XCTAssertEqual(machine.state, .asking)
+        machine.noteAskSpeechStarted(at: 130)
+        machine.tick(at: 139.9)
+        XCTAssertEqual(machine.state, .asking)
+        machine.tick(at: 140)
+        XCTAssertEqual(machine.state, .unsafe)
+    }
+
+    func testSafeReplyBeforeDeadline() {
+        var machine = protecting()
+        machine.noteMovementAlert(score: 0.85, at: 100)
+        machine.noteAskSpeechStarted(at: 100)
+        machine.noteReply(.safePhrase, at: 105)
+        XCTAssertEqual(machine.state, .safe)
+        machine.tick(at: 1000)
+        XCTAssertEqual(machine.state, .monitoring, "cooldown expires back to Monitoring")
+    }
+
+    func testTapIsNonVerbalOKWhenAsking() {
+        var machine = protecting()
+        machine.noteMovementAlert(score: 0.85, at: 100)
+        machine.noteReply(.tap, at: 101)
+        XCTAssertEqual(machine.state, .safe)
+    }
+
+    func testTapEndsWindowEarlyButStillAsks() {
+        var machine = protecting()
+        machine.noteMovementAlert(score: 0.6, at: 100)
+        machine.noteReply(.tap, at: 101)
+        XCTAssertEqual(machine.state, .asking)
+        XCTAssertTrue(machine.takeAskSpeechDue())
+    }
+
+    // MARK: - Cooldown
+
+    func testCooldownSuppressesNagging() {
+        var machine = protecting()
+        machine.noteMovementAlert(score: 0.85, at: 100)
+        machine.noteReply(.safePhrase, at: 101) // safe until 161
+        machine.noteMovementAlert(score: 0.9, at: 110)
+        machine.noteMuseVerdict(.medium, at: 110)
+        machine.noteSpeech(severity: 1, at: 110)
+        XCTAssertEqual(machine.state, .safe)
+    }
+
+    func testMuseHighBreaksCooldown() {
+        var machine = protecting()
+        machine.noteMovementAlert(score: 0.85, at: 100)
+        machine.noteReply(.safePhrase, at: 101)
+        machine.noteMuseVerdict(.high, at: 110)
+        XCTAssertEqual(machine.state, .asking)
+    }
+
+    // MARK: - Unsafe phrase, always on
+
+    func testUnsafePhraseStraightToUnsafe() {
+        // From Monitoring (no incident at all).
+        var machine = protecting()
+        machine.noteReply(.unsafePhrase, at: 101)
+        XCTAssertEqual(machine.state, .unsafe)
+        XCTAssertEqual(machine.unsafeCause, .unsafePhrase)
+        // From Listening.
+        machine = protecting()
+        machine.noteMovementAlert(score: 0.6, at: 100)
+        machine.noteReply(.unsafePhrase, at: 101)
+        XCTAssertEqual(machine.state, .unsafe)
+        // From Asking.
+        machine = protecting()
+        machine.noteMovementAlert(score: 0.85, at: 100)
+        machine.noteReply(.unsafePhrase, at: 101)
+        XCTAssertEqual(machine.state, .unsafe)
+        // From Safe (cooldown does not block it).
+        machine = protecting()
+        machine.noteMovementAlert(score: 0.85, at: 100)
+        machine.noteReply(.safePhrase, at: 101)
+        machine.noteReply(.unsafePhrase, at: 102)
+        XCTAssertEqual(machine.state, .unsafe)
+    }
+
+    func testSafePhraseOnlyCountsWhenAsking() {
+        var machine = protecting()
+        machine.noteReply(.safePhrase, at: 101)
+        XCTAssertEqual(machine.state, .monitoring)
+        machine.noteMovementAlert(score: 0.6, at: 102)
+        machine.noteReply(.safePhrase, at: 103)
+        XCTAssertEqual(machine.state, .listening, "window still runs; question still asked")
+    }
+
+    // MARK: - Muse verdicts
+
+    func testMuseLowCancelsMovementOnlySuspicion() {
+        // The known false alert: walking up to someone standing still
+        // scores ~0.74 on-device, but Muse says low.
+        var machine = protecting()
+        machine.noteMovementAlert(score: 0.74, at: 100)
+        XCTAssertEqual(machine.state, .listening)
+        machine.noteMuseVerdict(.low, at: 101)
+        XCTAssertEqual(machine.state, .monitoring)
+        XCTAssertTrue(machine.suspicionSources.isEmpty)
+    }
+
+    func testMuseLowKeepsSpeechBackedSuspicion() {
+        var machine = protecting()
+        machine.noteMovementAlert(score: 0.6, at: 100)
+        machine.noteSpeech(severity: 0.9, at: 101)
+        machine.noteMuseVerdict(.low, at: 102)
+        XCTAssertEqual(machine.state, .listening)
+    }
+
+    func testMuseLowKeepsMuseBackedSuspicion() {
+        var machine = protecting()
+        machine.noteMuseVerdict(.medium, at: 100)
+        machine.noteMuseVerdict(.low, at: 101)
+        XCTAssertEqual(machine.state, .listening)
+    }
+
+    func testMuseLowDoesNotYankQuestion() {
+        var machine = protecting()
+        machine.noteMovementAlert(score: 0.85, at: 100)
+        machine.noteMuseVerdict(.low, at: 101)
+        XCTAssertEqual(machine.state, .asking, "finish the check-in once asked")
+    }
+
+    func testMuseMediumTriggersCheckIn() {
+        var machine = protecting()
+        machine.noteMuseVerdict(.medium, at: 100)
+        XCTAssertEqual(machine.state, .listening)
+        XCTAssertEqual(machine.suspicionSources, [.muse])
+    }
+
+    func testMuseHighSkipsWindow() {
+        var machine = protecting()
+        machine.noteMuseVerdict(.high, at: 100)
+        XCTAssertEqual(machine.state, .asking)
+    }
+
+    func testMuseHighDuringWindowJumpsToAsking() {
+        var machine = protecting()
+        machine.noteMovementAlert(score: 0.6, at: 100)
+        machine.noteMuseVerdict(.high, at: 101)
+        XCTAssertEqual(machine.state, .asking)
+    }
+
+    // MARK: - Failed verify never suppresses
+
+    func testMissingVerdictKeepsOnDeviceSuspicion() {
+        // Backend down / 503 / timeout / rate limit: no verdict ever
+        // arrives. The on-device suspicion must still run its course.
+        var machine = protecting()
+        machine.noteMovementAlert(score: 0.6, at: 100)
+        machine.tick(at: 106)
+        XCTAssertEqual(machine.state, .asking)
+        machine.noteAskSpeechStarted(at: 106)
+        machine.tick(at: 116)
+        XCTAssertEqual(machine.state, .unsafe)
+        XCTAssertEqual(machine.unsafeCause, .noReply)
+    }
+
+    // MARK: - Speech input
+
+    func testSpeechTriggersAskingButNeverUnsafe() {
+        var machine = protecting()
+        machine.noteSpeech(severity: 1.0, at: 100)
+        XCTAssertEqual(machine.state, .listening)
+        XCTAssertEqual(machine.suspicionSources, [.speech])
+        machine.tick(at: 106)
+        XCTAssertEqual(machine.state, .asking, "speech leads to a question, not SOS")
+    }
+
+    func testWeakSpeechIgnored() {
+        var machine = protecting()
+        machine.noteSpeech(severity: 0.3, at: 100)
+        XCTAssertEqual(machine.state, .monitoring)
+    }
+
+    // MARK: - Code phrases
+
+    func testCodePhraseExact() {
+        let matcher = CodePhraseMatcher()
+        XCTAssertEqual(matcher.match("open calculator"), .safePhrase)
+        XCTAssertEqual(matcher.match("open app store"), .unsafePhrase)
+    }
+
+    func testCodePhraseCloseVariants() {
+        let matcher = CodePhraseMatcher()
+        XCTAssertEqual(matcher.match("Please, open calculator now!"), .safePhrase)
+        XCTAssertEqual(matcher.match("OPEN APP STORE"), .unsafePhrase)
+        XCTAssertEqual(matcher.match("hmm... open, calculator?"), .safePhrase)
+    }
+
+    func testCodePhraseWordBoundaries() {
+        let matcher = CodePhraseMatcher()
+        XCTAssertNil(matcher.match("open calculators"))
+        XCTAssertNil(matcher.match("reopen calculator app"))
+        XCTAssertNil(matcher.match("the app store is open"))
+        XCTAssertNil(matcher.match("open the app"))
+    }
+
+    func testCodePhraseUnsafeWins() {
+        let matcher = CodePhraseMatcher()
+        XCTAssertEqual(
+            matcher.match("open calculator no wait open app store"), .unsafePhrase
+        )
+    }
+
+    func testCodePhraseConfigurable() {
+        var config = SafetyConfig()
+        config.safePhrases = ["all good"]
+        config.unsafePhrases = ["red alert"]
+        let matcher = CodePhraseMatcher(config: config)
+        XCTAssertEqual(matcher.match("we are all good here"), .safePhrase)
+        XCTAssertEqual(matcher.match("red alert red alert"), .unsafePhrase)
+        XCTAssertNil(matcher.match("open calculator"))
+    }
+}
