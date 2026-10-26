@@ -44,6 +44,20 @@ public struct VerifyPayload: Sendable {
         self.boxes = boxes
         self.features = features
     }
+
+    /// Vision boxes are normalized with the origin at the LOWER-left; SAM 2
+    /// expects pixel [x0, y0, x1, y1] with the origin at the TOP-left. Passing
+    /// Vision's y straight through mirrored every box vertically.
+    public static func pixelBoxes(_ boxes: [CGRect], in size: CGSize) -> [[Double]] {
+        boxes.map { box in
+            [
+                Double(box.minX) * Double(size.width),
+                (1 - Double(box.maxY)) * Double(size.height),
+                Double(box.maxX) * Double(size.width),
+                (1 - Double(box.minY)) * Double(size.height),
+            ]
+        }
+    }
 }
 
 /// Parsed /verify verdict.
@@ -67,12 +81,42 @@ public struct VerifierConfig: Sendable {
         self.timeout = timeout
     }
 
-    /// Backend URL from Info.plist `BackendBaseURL`, else localhost (dev).
-    /// On-device runs must point this at the Mac running the backend.
+    /// UserDefaults key for the backend URL typed into Settings (debug builds).
+    public static let backendURLDefaultsKey = "backendBaseURL"
+
+    /// Localhost: only reachable from the Simulator. On a real iPhone this
+    /// points at the phone itself, so device runs must set a real URL.
+    public static let fallbackURL = URL(string: "http://127.0.0.1:8000")!
+
+    /// Backend URL, in priority order: the Settings override, the Info.plist
+    /// `BackendBaseURL` (set at build time with `BACKEND_BASE_URL=...`), else
+    /// localhost. Evaluated on every call, so changing it in Settings applies
+    /// immediately without relaunching.
     public static var `default`: VerifierConfig {
-        let raw = Bundle.main.object(forInfoDictionaryKey: "BackendBaseURL") as? String
-        let url = raw.flatMap(URL.init(string:)) ?? URL(string: "http://127.0.0.1:8000")!
+        resolve(
+            override: UserDefaults.standard.string(forKey: backendURLDefaultsKey),
+            plistValue: Bundle.main.object(forInfoDictionaryKey: "BackendBaseURL") as? String
+        )
+    }
+
+    public static func resolve(override: String?, plistValue: String?) -> VerifierConfig {
+        let url = validURL(override) ?? validURL(plistValue) ?? fallbackURL
         return VerifierConfig(baseURL: url)
+    }
+
+    /// Trimmed http(s) URL with a host, or nil. Anything else (empty, no
+    /// scheme, ftp, junk) falls through to the next source.
+    public static func validURL(_ raw: String?) -> URL? {
+        guard let trimmed = raw?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !trimmed.isEmpty,
+              let url = URL(string: trimmed),
+              let scheme = url.scheme?.lowercased(),
+              scheme == "http" || scheme == "https",
+              let host = url.host, !host.isEmpty
+        else {
+            return nil
+        }
+        return url
     }
 }
 
@@ -83,12 +127,29 @@ public enum VerifierError: Error, Equatable {
 
 /// POSTs one /verify call. URLSession is thread-safe; config is immutable.
 public final class VerifierClient: @unchecked Sendable {
-    private let config: VerifierConfig
+    private let fixedConfig: VerifierConfig?
     private let session: URLSession
 
-    public init(config: VerifierConfig = .default, session: URLSession = .shared) {
-        self.config = config
+    /// `config` nil (the app) resolves `VerifierConfig.default` on every call,
+    /// so a URL changed in Settings takes effect immediately.
+    public init(config: VerifierConfig? = nil, session: URLSession = .shared) {
+        self.fixedConfig = config
         self.session = session
+    }
+
+    private var config: VerifierConfig { fixedConfig ?? .default }
+
+    /// GET /health. False on any failure (unreachable, ATS, wrong URL, non-200).
+    public func checkHealth(timeout: TimeInterval = 5) async -> Bool {
+        let request = URLRequest(
+            url: config.baseURL.appendingPathComponent("health"), timeoutInterval: timeout
+        )
+        guard let (_, response) = try? await session.data(for: request),
+              let http = response as? HTTPURLResponse
+        else {
+            return false
+        }
+        return http.statusCode == 200
     }
 
     private struct RequestBody: Encodable {

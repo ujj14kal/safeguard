@@ -8,6 +8,7 @@ OpenAI-compatible contract.
 """
 
 import json
+import re
 import time
 
 import httpx
@@ -29,6 +30,47 @@ Reply with STRICT JSON only, no other text:
 
 class MuseError(Exception):
     pass
+
+
+# Appearance guard: a verdict must describe behaviour, never looks. Whole-word
+# patterns only. The first version matched substrings, so "age" rejected
+# "image", "manage", "average", "engaged", "message" and "stage": ordinary
+# behaviour verdicts ("no approach across the image sequence") were refused.
+_APPEARANCE_PATTERNS = [
+    re.compile(pattern, re.IGNORECASE)
+    for pattern in (
+        # clothing and grooming
+        r"\bwear(?:s|ing)?\b",
+        r"\bwore\b",
+        r"\bclothes\b",
+        r"\bclothing\b",
+        r"\bdressed\b",
+        r"\b(?:hoodie|jacket|shirt|jeans|coat|skirt|hat|uniform|beard|tattoos?|bald)\b",
+        # ethnicity, race, skin
+        r"\bethnic(?:ity|ities)?\b",
+        r"\bracial(?:ly)?\b",
+        r"\brace\b",
+        r"\bskinny\b",
+        r"\bskin\b",
+        # age
+        r"\bage\b",
+        r"\baged\b",
+        r"\belderly\b",
+        r"\bteen(?:ager|aged)?s?\b",
+        r"\b(?:old|young|middle-aged)\s+(?:man|woman|male|female|person|guy|girl|lady)\b",
+        # gender presentation
+        r"\b(?:man|men|woman|women|male|female|boy|girl|guy|lady|gentleman)\b",
+    )
+]
+
+
+def mentions_appearance(text: str) -> str | None:
+    """Return the first appearance term found in `text` (whole words), else None."""
+    for pattern in _APPEARANCE_PATTERNS:
+        match = pattern.search(text)
+        if match:
+            return match.group(0)
+    return None
 
 
 class MuseClient:
@@ -122,23 +164,9 @@ def parse_verdict(raw_body: str) -> dict:
     if not isinstance(reason, str) or not reason:
         raise MuseError("bad reason: must be a non-empty string")
     # Appearance-guard: the model must never smuggle looks-based labels in.
-    lowered = " ".join(behaviours + [reason]).lower()
-    banned = [
-        "wearing",
-        "clothes",
-        "clothing",
-        "dressed",
-        "ethnicity",
-        "ethnic",
-        "skin",
-        "age",
-        "old man",
-        "old woman",
-        "young man",
-        "young woman",
-    ]
-    if any(word in lowered for word in banned):
-        raise MuseError("verdict mentions appearance; refusing to use it")
+    term = mentions_appearance(" ".join(behaviours + [reason]))
+    if term:
+        raise MuseError(f"verdict mentions appearance ({term!r}); refusing to use it")
     return {
         "threat_level": level,
         "behaviours_observed": behaviours,

@@ -29,19 +29,54 @@ if printf '%s\n' "$staged_diff" | grep -E -q "$token_pat"; then
   block "token/key pattern found (sk-/ghp_/Bearer/AWS/Twilio-SID/private-key). Remove it; keys live in .env (untracked)."
 fi
 
-# 3. Assigned secrets with non-empty values (empty `KEY=` template lines pass).
-# Quoted literals are always blocked. Unquoted values pass only when they are
-# bare code references (identifier, dotted path, os.environ/call) — e.g.
-# `api_key=SETTINGS.x` or `self.api_key = api_key`. Real leaked values are
-# string literals or token-shaped (dashes etc., also caught by rule 2).
-# Known gap: a pure-alphanumeric UNQUOTED value (e.g. `password = hunter2`)
-# reads as a code reference and passes; quoted and token-shaped values block.
-secret_lhs='(api[_-]?key|auth[_-]?token|client[_-]?secret|TWILIO_[A-Z_]+|password)[ ]*=[ ]*'
-candidates=$(printf '%s\n' "$staged_diff" | grep -E -i "$secret_lhs"'[^[:space:]#]' || true)
-if [ -n "$candidates" ]; then
-  bad_assign=$(printf '%s\n' "$candidates" | grep -v -E -i "$secret_lhs"'`?[A-Za-z_][A-Za-z0-9_]*([.][A-Za-z_][A-Za-z0-9_]*|\([^)]*\))?(\[[^]]*\])?`?[ ,)`]*(#.*)?$' || true)
-  [ -n "$bad_assign" ] && block "assigned secret with a value found (e.g. *_KEY=<value>). Keep values in .env (untracked); commit only empty templates."
-fi
+# 3. Assigned secrets (`api_key = ...`, `TWILIO_AUTH_TOKEN=...`, `password = ...`).
+# Only ADDED lines are checked, so deleting a leaked secret is never blocked.
+# An empty value (template line) passes. A value passes ONLY when it is clearly
+# code, not data:
+#   - a dotted path, call or subscript:  SETTINGS.api_key   os.environ["K"]
+#   - a shell variable:                  "$KEY"   ${KEY}
+#   - a bare all-lowercase identifier:   api_key   (e.g. `self.api_key = api_key`)
+# Everything else is blocked: quoted literals, anything with a digit or capital
+# letter in a bare word (`hunter2`, `mk9AbC...`), and any token-shaped run
+# (20+ letters/digits containing a digit) even inside a dotted path (JWTs).
+# The earlier relaxation let ANY alphanumeric unquoted value through, e.g. a
+# 32-char hex auth token that started with a letter.
+# Residual gap: an all-lowercase letters-only password (`password = hunter`)
+# reads as a variable name and passes.
+secret_lhs_re='(api[_-]?key|apikey|auth[_-]?token|authtoken|client[_-]?secret|clientsecret|twilio_[a-z_]+|password)[[:space:]]*=[[:space:]]*'
+dotted_re='^`?[A-Za-z_][A-Za-z0-9_]*([.][A-Za-z_][A-Za-z0-9_]*|\([^)]*\)|\[[^]]*\])+`?[ ,)`]*(#.*)?$'
+shellvar_re='^"?\$\{?[A-Za-z_][A-Za-z0-9_]*\}?"?[ ,)]*(#.*)?$'
+lowerident_re='^`?[a-z_]+`?[ ,)`]*(#.*)?$'
+
+# Returns 0 when the line assigns something that looks like a real secret value.
+looks_like_secret_assignment() {
+  local line="$1" rhs
+  shopt -s nocasematch
+  if ! [[ $line =~ $secret_lhs_re ]]; then
+    shopt -u nocasematch
+    return 1
+  fi
+  shopt -u nocasematch
+  rhs="${line#*"${BASH_REMATCH[0]}"}"
+  [ -z "${rhs//[[:space:]]/}" ] && return 1          # empty template value
+  # Token-shaped run anywhere on the value: 20+ letters/digits containing a digit.
+  if printf '%s\n' "$rhs" | grep -o -E '[A-Za-z0-9]{20,}' | grep -q '[0-9]'; then
+    return 0
+  fi
+  if [[ $rhs =~ $dotted_re ]] || [[ $rhs =~ $shellvar_re ]] || [[ $rhs =~ $lowerident_re ]]; then
+    return 1
+  fi
+  return 0
+}
+
+bad_assign=""
+while IFS= read -r added; do
+  if looks_like_secret_assignment "${added#+}"; then
+    bad_assign="$added"
+    break
+  fi
+done < <(printf '%s\n' "$staged_diff" | grep -E '^\+' | grep -v -E '^\+\+\+' || true)
+[ -n "$bad_assign" ] && block "assigned secret with a value found (e.g. *_KEY=<value>). Keep values in .env (untracked); commit only empty templates, or read the value from the environment."
 
 # 4. Phone numbers (E.164-looking). Fictional +1-555-01xx numbers are allowed
 # for fake contacts/tests/docs; everything else is blocked.

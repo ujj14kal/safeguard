@@ -21,6 +21,9 @@ are not cloned, so install it once per clone:
 cp scripts/pre-commit.sh .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
 ```
 
+Test the hook itself with `./scripts/test-pre-commit.sh` (fake secrets must be
+blocked, code references must pass).
+
 Commit with your GitHub noreply address (`git config user.email
 <id>+<username>@users.noreply.github.com`): the repo is public and commit
 metadata is public too.
@@ -47,9 +50,36 @@ cd backend
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-python -m uvicorn app.main:app --port 8000
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
 curl http://127.0.0.1:8000/health   # {"status": "ok"}
 ```
+
+### Pointing the iPhone at the backend
+
+`127.0.0.1` on a phone is the phone itself, so a real iPhone cannot reach a
+backend on `127.0.0.1`. Run the backend with `--host 0.0.0.0` (above), put the
+iPhone on the same Wi-Fi as the Mac, then either:
+
+- in the app: **Settings → Debug → Verification backend**, enter
+  `http://<your-mac-ip>:8000` and tap **Test connection**; or
+- at build time: `BACKEND_BASE_URL=http://<your-mac-ip>:8000 ./scripts/build.sh device`
+  (passed to xcodebuild as a build setting).
+
+The first request asks for local-network permission. Plain `http://` is
+allowed only for local addresses (`NSAllowsLocalNetworking`); use an `https://`
+tunnel URL for anything else. The simulator can keep using `127.0.0.1`.
+
+## App icon and launch screen
+
+The icon, launch logo and splash are generated from `design/logo-source.png`:
+
+```sh
+python3 scripts/make-brand-assets.py   # needs Pillow and numpy
+```
+
+It rewrites `AppIcon`, `LaunchLogo` and `LaunchBackground` in
+`ios/Safeguard/Assets.xcassets`. In debug builds the splash can be skipped with
+`defaults write io.github.ujj14kal.safeguard skipSplash -bool YES`.
 
 ## Run the app in the Simulator
 

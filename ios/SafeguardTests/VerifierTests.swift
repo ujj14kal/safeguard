@@ -163,6 +163,164 @@ final class VerifierTests: XCTestCase {
         }
     }
 
+    // MARK: - Backend URL (an iPhone must be able to reach the Mac)
+
+    func testConfigPriorityOverrideThenPlistThenLocalhost() {
+        let withBoth = VerifierConfig.resolve(
+            override: "http://192.168.1.20:8000", plistValue: "http://10.0.0.5:8000"
+        )
+        XCTAssertEqual(withBoth.baseURL.absoluteString, "http://192.168.1.20:8000")
+        let plistOnly = VerifierConfig.resolve(override: nil, plistValue: "http://10.0.0.5:8000")
+        XCTAssertEqual(plistOnly.baseURL.absoluteString, "http://10.0.0.5:8000")
+        let neither = VerifierConfig.resolve(override: nil, plistValue: nil)
+        XCTAssertEqual(neither.baseURL, VerifierConfig.fallbackURL)
+    }
+
+    func testInvalidValuesFallThrough() {
+        // An empty build setting expands to "" in the Info.plist; junk typed
+        // in Settings must not break verification either.
+        for junk in ["", "   ", "not a url", "ftp://host", "http://", "192.168.1.20:8000"] {
+            XCTAssertEqual(
+                VerifierConfig.resolve(override: junk, plistValue: nil).baseURL,
+                VerifierConfig.fallbackURL, "\"\(junk)\" should be ignored"
+            )
+        }
+        let fellThrough = VerifierConfig.resolve(
+            override: "nope", plistValue: "https://abc.trycloudflare.com"
+        )
+        XCTAssertEqual(fellThrough.baseURL.host, "abc.trycloudflare.com")
+    }
+
+    func testOverrideIsTrimmed() {
+        let config = VerifierConfig.resolve(override: "  http://192.168.1.20:8000 \n", plistValue: nil)
+        XCTAssertEqual(config.baseURL.absoluteString, "http://192.168.1.20:8000")
+    }
+
+    func testInfoPlistAllowsLocalBackend() throws {
+        // Without these, iOS silently blocks http:// to the Mac and every
+        // /verify call fails on a real iPhone while mocked tests stay green.
+        let plistURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("Safeguard/Supporting/Info.plist")
+        let data = try Data(contentsOf: plistURL)
+        let plist = try XCTUnwrap(
+            PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any]
+        )
+        XCTAssertNotNil(plist["BackendBaseURL"], "build-time backend URL key missing")
+        let ats = try XCTUnwrap(plist["NSAppTransportSecurity"] as? [String: Any])
+        XCTAssertEqual(ats["NSAllowsLocalNetworking"] as? Bool, true)
+        XCTAssertNil(ats["NSAllowsArbitraryLoads"], "do not open App Transport Security wide")
+        let reason = plist["NSLocalNetworkUsageDescription"] as? String ?? ""
+        XCTAssertFalse(reason.isEmpty, "local network permission needs a usage description")
+    }
+
+    func testClientResolvesConfigOnEveryCall() async throws {
+        let (session, capture) = stubSession()
+        let key = VerifierConfig.backendURLDefaultsKey
+        defer { UserDefaults.standard.removeObject(forKey: key) }
+        let client = VerifierClient(session: session) // no fixed config, as in the app
+
+        UserDefaults.standard.set("http://first.test:9", forKey: key)
+        _ = try await client.verify(payload())
+        XCTAssertEqual(capture.request?.url?.host, "first.test")
+
+        UserDefaults.standard.set("http://second.test:9", forKey: key)
+        _ = try await client.verify(payload())
+        XCTAssertEqual(capture.request?.url?.host, "second.test")
+    }
+
+    func testHealthCheck() async {
+        let config = VerifierConfig(baseURL: URL(string: "http://example.test:9")!)
+        let (okSession, capture) = stubSession(status: 200, body: "{\"status\": \"ok\"}")
+        let healthy = await VerifierClient(config: config, session: okSession).checkHealth()
+        XCTAssertTrue(healthy)
+        XCTAssertEqual(capture.request?.url?.path, "/health")
+
+        let (badSession, _) = stubSession(status: 503, body: "{}")
+        let unhealthy = await VerifierClient(config: config, session: badSession).checkHealth()
+        XCTAssertFalse(unhealthy)
+
+        MockURLProtocol.handler = { _ in throw URLError(.cannotConnectToHost) }
+        let sessionConfig = URLSessionConfiguration.ephemeral
+        sessionConfig.protocolClasses = [MockURLProtocol.self]
+        let unreachable = await VerifierClient(
+            config: config, session: URLSession(configuration: sessionConfig)
+        ).checkHealth()
+        XCTAssertFalse(unreachable)
+    }
+
+    // MARK: - SAM 2 prompt boxes
+
+    func testPixelBoxesFlipYAxis() {
+        // A person in the TOP third of the picture has Vision y 0.65...0.95
+        // (origin lower-left). SAM 2 wants top-left pixels: y 25.6...179.2.
+        // Passing Vision's y through sent 332.8...486.4, the BOTTOM third.
+        let boxes = VerifyPayload.pixelBoxes(
+            [CGRect(x: 0.4, y: 0.65, width: 0.2, height: 0.30)],
+            in: CGSize(width: 512, height: 512)
+        )
+        XCTAssertEqual(boxes.count, 1)
+        XCTAssertEqual(boxes[0][0], 204.8, accuracy: 1e-6)
+        XCTAssertEqual(boxes[0][1], 25.6, accuracy: 1e-6)
+        XCTAssertEqual(boxes[0][2], 307.2, accuracy: 1e-6)
+        XCTAssertEqual(boxes[0][3], 179.2, accuracy: 1e-6)
+        XCTAssertLessThan(boxes[0][1], boxes[0][3], "y0 must be above y1")
+    }
+
+    func testPixelBoxesScaleToNonSquareFrames() {
+        let full = VerifyPayload.pixelBoxes(
+            [CGRect(x: 0, y: 0, width: 1, height: 1)], in: CGSize(width: 288, height: 512)
+        )
+        XCTAssertEqual(full[0], [0, 0, 288, 512])
+        XCTAssertEqual(VerifyPayload.pixelBoxes([], in: CGSize(width: 288, height: 512)).count, 0)
+    }
+
+    func testClipStartsAtOldestFrameWithPeople() throws {
+        // Boxes must belong to the clip's FIRST frame. Using the newest boxes
+        // on the oldest frame put SAM 2's prompts where the person no longer was.
+        let buffer = FrameBuffer(maxFrames: 8)
+        let early = CGRect(x: 0.20, y: 0.30, width: 0.2, height: 0.3)
+        let late = CGRect(x: 0.30, y: 0.30, width: 0.3, height: 0.5)
+        for _ in 0..<3 {
+            buffer.append(pixelBuffer: try TestHelpers.makePixelBuffer(), at: 0)
+        }
+        buffer.append(pixelBuffer: try TestHelpers.makePixelBuffer(), at: 1, boxes: [early])
+        for step in 0..<4 {
+            buffer.append(
+                pixelBuffer: try TestHelpers.makePixelBuffer(), at: Double(2 + step), boxes: [late]
+            )
+        }
+        let clip = buffer.clip()
+        XCTAssertEqual(clip.frames.count, 5, "the 3 empty leading frames are dropped")
+        XCTAssertEqual(clip.boxes, [early], "boxes are the ones seen on the first clip frame")
+    }
+
+    func testClipWithoutPeopleKeepsAllFramesAndNoBoxes() throws {
+        let buffer = FrameBuffer(maxFrames: 8)
+        for _ in 0..<4 {
+            buffer.append(pixelBuffer: try TestHelpers.makePixelBuffer(), at: 0)
+        }
+        let clip = buffer.clip()
+        XCTAssertEqual(clip.frames.count, 4)
+        XCTAssertTrue(clip.boxes.isEmpty)
+    }
+
+    func testClipBoxesFollowTheRingAsOldFramesDropOut() throws {
+        let buffer = FrameBuffer(maxFrames: 4)
+        var boxesByStep: [CGRect] = []
+        for step in 0..<6 {
+            let box = CGRect(x: 0.1 + 0.05 * Double(step), y: 0.3, width: 0.2, height: 0.4)
+            boxesByStep.append(box)
+            buffer.append(
+                pixelBuffer: try TestHelpers.makePixelBuffer(), at: Double(step), boxes: [box]
+            )
+        }
+        let clip = buffer.clip()
+        XCTAssertEqual(clip.frames.count, 4)
+        // Steps 0 and 1 fell out of the ring; the oldest kept frame is step 2.
+        XCTAssertEqual(clip.boxes, [boxesByStep[2]])
+    }
+
     // MARK: - Frame buffer
 
     func testFrameBufferRing() throws {

@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A10000000000000000000071 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000037 /* Assets.xcassets */; };
 		A10000000000000000000051 /* SafeguardApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000021 /* SafeguardApp.swift */; };
 		A10000000000000000000052 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000022 /* ContentView.swift */; };
 		A10000000000000000000053 /* DS.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000023 /* DS.swift */; };
@@ -51,12 +52,14 @@
 		A1000000000000000000007C /* FrameBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000003D /* FrameBuffer.swift */; };
 		A1000000000000000000007D /* VerifierClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000003E /* VerifierClient.swift */; };
 		B2000000000000000000001E /* VerifierTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000000000000000000001D /* VerifierTests.swift */; };
+		B20000000000000000000031 /* BrandAssetsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000030 /* BrandAssetsTests.swift */; };
 		B2000000000000000000001F /* VerifierGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000003C /* VerifierGate.swift */; };
 		B20000000000000000000020 /* FrameBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000003D /* FrameBuffer.swift */; };
 		B20000000000000000000021 /* VerifierClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000003E /* VerifierClient.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		A10000000000000000000037 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A10000000000000000000020 /* Safeguard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Safeguard.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A10000000000000000000021 /* SafeguardApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafeguardApp.swift; sourceTree = "<group>"; };
 		A10000000000000000000022 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -96,6 +99,7 @@
 		A1000000000000000000003D /* FrameBuffer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameBuffer.swift; sourceTree = "<group>"; };
 		A1000000000000000000003E /* VerifierClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerifierClient.swift; sourceTree = "<group>"; };
 		B2000000000000000000001D /* VerifierTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerifierTests.swift; sourceTree = "<group>"; };
+		B20000000000000000000030 /* BrandAssetsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrandAssetsTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -228,6 +232,7 @@
 				B20000000000000000000019 /* ThreatScorerTests.swift */,
 				B2000000000000000000001A /* ProximityTests.swift */,
 				B2000000000000000000001D /* VerifierTests.swift */,
+				B20000000000000000000030 /* BrandAssetsTests.swift */,
 			);
 			path = SafeguardTests;
 			sourceTree = "<group>";
@@ -389,6 +394,7 @@
 				B2000000000000000000001B /* ProximityTests.swift in Sources */,
 				B2000000000000000000001C /* ProximityTracker.swift in Sources */,
 				B2000000000000000000001E /* VerifierTests.swift in Sources */,
+				B20000000000000000000031 /* BrandAssetsTests.swift in Sources */,
 				B2000000000000000000001F /* VerifierGate.swift in Sources */,
 				B20000000000000000000020 /* FrameBuffer.swift in Sources */,
 				B20000000000000000000021 /* VerifierClient.swift in Sources */,

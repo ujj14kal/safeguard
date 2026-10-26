@@ -2,6 +2,56 @@
 
 Log of every deviation from the project brief, with reasons. Newest first.
 
+## Phase 4 review fixes + brand assets (2026-10-27)
+
+Found by reviewing the real Phase 4 code, probing it, and running it:
+
+1. **The phone could not reach the backend**: `VerifierConfig` defaulted to
+   `127.0.0.1` (the phone itself), and `Info.plist` had no `BackendBaseURL`, no
+   App Transport Security exception for `http://` and no local-network usage
+   text, so every /verify call failed silently on a real iPhone while the mocked
+   tests stayed green. Now: URL priority is Settings override > Info.plist
+   `BackendBaseURL` (build setting `BACKEND_BASE_URL`) > localhost, resolved on
+   every call; `NSAllowsLocalNetworking` (not arbitrary loads) and
+   `NSLocalNetworkUsageDescription` added; Settings > Debug has a Backend URL
+   field and a **Test connection** button (GET /health). The README now says to
+   run uvicorn with `--host 0.0.0.0`. A test reads the real Info.plist.
+2. **Appearance guard rejected normal verdicts**: it matched substrings, so "age"
+   refused "image", "manage", "average", "engaged", "message" (HTTP 503). Now
+   whole-word patterns (clothing, race/ethnicity, age, gender words); 25 tests
+   cover accepted wording, refused wording and the old false positives.
+3. **SAM 2 prompt boxes were wrong**: Vision's lower-left y was sent as top-left
+   pixels (a person in the top third landed in the bottom third), and the newest
+   boxes were applied to the clip's OLDEST frame. `FrameBuffer` now stores boxes
+   per frame and `clip()` starts at the oldest frame with people, returning that
+   frame's boxes; `VerifyPayload.pixelBoxes` flips y. Tested.
+4. **Secret-scan hook tightened**: the Phase 4 relaxation let any unquoted
+   alphanumeric value through (a 32-char hex auth token starting with a letter,
+   an unquoted API key, a short unquoted password). Now only dotted paths/calls/
+   subscripts, shell variables and bare all-lowercase identifiers pass, token-
+   shaped runs block even inside a dotted path, and only ADDED lines are checked.
+   `scripts/test-pre-commit.sh` (22 cases) fails 8 on the old hook, 0 on the new.
+   Residual gap: an all-lowercase letters-only password reads as a variable name.
+5. **Asset catalog was never compiled into the app**: the project referenced
+   `Assets.xcassets` by two IDs that had no definitions, so Xcode silently
+   skipped it. The accent colour, app icon and launch colour from Phase 1 never
+   shipped. Added the missing file reference and build file; `Assets.car` now
+   contains AccentColor, AppIcon, LaunchLogo and LaunchBackground. Visible side
+   effect: buttons are now teal (the intended accent) instead of default blue.
+6. **App icon, launch screen and splash** from the supplied logo
+   (`design/logo-source.png`, `scripts/make-brand-assets.py`): shield enlarged
+   from 51%x58% to 70%x81% of a 1024 icon on pure white; the launch screen shows
+   the same logo (Info.plist `UILaunchScreen`), and `SplashView` starts with it
+   fully visible in the same place, fades "SafeGuard" in beneath it, holds 3.5 s
+   and cross-fades out over 0.6 s (Reduce Motion respected, skippable in debug
+   builds with `skipSplash`). Brand tests check icon size, opacity, centring and
+   wiring. Not changed: the home-screen label is still "Safeguard".
+7. **Not done / still open**: `/verify` has no authentication (add a shared
+   secret before exposing it through a tunnel); verify failures are not retried;
+   frames are JPEG-encoded at 5 Hz even with nobody in view; backend tests need
+   `pip install -r requirements-dev.txt` (run here via a shim only for the new
+   parsing tests); Muse has still never been called live.
+
 ## Phase 4 (2026-10-26)
 
 Part A — proximity colours (display-only): new `ProximityTracker` maps the

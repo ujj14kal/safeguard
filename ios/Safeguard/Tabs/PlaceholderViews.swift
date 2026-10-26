@@ -29,6 +29,9 @@ struct ActivityPlaceholderView: View {
 struct SettingsView: View {
     @State private var debugRouteShown = false
     @AppStorage("debugOverlayEnabled") private var debugOverlayEnabled = false
+    @AppStorage(VerifierConfig.backendURLDefaultsKey) private var backendURL = ""
+    @State private var connectionStatus: String?
+    @State private var testingConnection = false
 
     var body: some View {
         NavigationStack {
@@ -42,6 +45,37 @@ struct SettingsView: View {
                             PreviewStatesView()
                         }
                         Toggle("Detection overlay", isOn: $debugOverlayEnabled)
+                    }
+                    Section {
+                        TextField("http://192.168.1.20:8000", text: $backendURL)
+                            .keyboardType(.URL)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                        Button {
+                            testConnection()
+                        } label: {
+                            if testingConnection {
+                                ProgressView()
+                            } else {
+                                Text("Test connection")
+                            }
+                        }
+                        .disabled(testingConnection)
+                        if let connectionStatus {
+                            Label(
+                                connectionStatus,
+                                systemImage: connectionStatus.hasPrefix("Reachable")
+                                    ? "checkmark.circle.fill" : "xmark.circle.fill"
+                            )
+                            .font(.footnote)
+                            .foregroundStyle(
+                                connectionStatus.hasPrefix("Reachable") ? Color.green : Color.red
+                            )
+                        }
+                    } header: {
+                        Text("Verification backend")
+                    } footer: {
+                        Text("The Mac running the backend, on the same Wi-Fi. Leave empty to use the build-time URL. 127.0.0.1 only works in the Simulator.")
                     }
                 #endif
             }
@@ -62,4 +96,19 @@ struct SettingsView: View {
             #endif
         }
     }
+
+    #if DEBUG
+        private func testConnection() {
+            testingConnection = true
+            connectionStatus = nil
+            Task {
+                let url = VerifierConfig.default.baseURL
+                let ok = await VerifierClient().checkHealth()
+                connectionStatus = ok
+                    ? "Reachable: \(url.absoluteString)"
+                    : "Cannot reach \(url.absoluteString). Check the URL, Wi-Fi, and that the backend listens on 0.0.0.0."
+                testingConnection = false
+            }
+        }
+    #endif
 }

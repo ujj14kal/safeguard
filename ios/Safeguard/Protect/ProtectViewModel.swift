@@ -231,10 +231,14 @@ private final class DetectionPipeline {
         guard now.timeIntervalSince(lastDetect) >= detectInterval else { return }
         lastDetect = now
         let nowSeconds = ProcessInfo.processInfo.systemUptime
-        frameBuffer.append(pixelBuffer: frame.pixelBuffer, at: nowSeconds)
         guard let people = try? detector.detect(in: frame.pixelBuffer) else { return }
         let tracks = tracker.update(detections: people)
         let live = tracks.filter { $0.missed == 0 }
+        // Store the boxes WITH their frame so a verify clip can prompt SAM 2 on
+        // its first frame with the boxes that were actually seen there.
+        frameBuffer.append(
+            pixelBuffer: frame.pixelBuffer, at: nowSeconds, boxes: live.map(\.box)
+        )
         extractor.update(tracks: live, at: nowSeconds)
         var scores: [Int: Double] = [:]
         var scored: [(track: Track, features: PersonFeatures, score: ThreatScore)] = []
@@ -247,11 +251,11 @@ private final class DetectionPipeline {
         }
         let maxScore = scores.values.max() ?? 0
         if verifierGate.consume(maxScore: maxScore) {
-            let snapshot = frameBuffer.snapshot()
+            let clip = frameBuffer.clip()
             let top = scored.sorted { $0.score.value > $1.score.value }.prefix(3)
             let payload = VerifyPayload(
-                frames: snapshot.frames,
-                boxes: live.map { Self.boxPixels($0.box, in: snapshot.size) },
+                frames: clip.frames,
+                boxes: VerifyPayload.pixelBoxes(clip.boxes, in: clip.size),
                 features: top.map {
                     VerifyFeatureSummary(
                         track: $0.track, features: $0.features,
@@ -275,13 +279,6 @@ private final class DetectionPipeline {
                 tracks: live, frameSize: size, scores: scores, proximity: level
             )
         }
-    }
-
-    private static func boxPixels(_ box: CGRect, in size: CGSize) -> [Double] {
-        [
-            Double(box.minX) * size.width, Double(box.minY) * size.height,
-            Double(box.maxX) * size.width, Double(box.maxY) * size.height,
-        ]
     }
 
     nonisolated private static func makeImage(from pixelBuffer: CVPixelBuffer) -> UIImage? {

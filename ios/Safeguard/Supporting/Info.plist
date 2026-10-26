@@ -27,12 +27,23 @@
 	</dict>
 	<key>CFBundleDisplayName</key>
 	<string>Safeguard</string>
+	<key>BackendBaseURL</key>
+	<string>$(BACKEND_BASE_URL)</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Safeguard sends a few frames to your own computer on the local network to double-check a possible threat.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Safeguard watches for threatening behaviour by people nearby. Frames are analysed on-device and discarded.</string>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>
-		<string>AccentColor</string>
+		<string>LaunchBackground</string>
+		<key>UIImageName</key>
+		<string>LaunchLogo</string>
 	</dict>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>

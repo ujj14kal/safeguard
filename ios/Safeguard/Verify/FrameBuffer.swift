@@ -16,7 +16,9 @@ public final class FrameBuffer: @unchecked Sendable {
     private static let context = CIContext()
 
     private let lock = NSLock()
-    private var frames: [(time: TimeInterval, jpeg: Data)] = []
+    /// Each frame keeps the normalized (Vision, lower-left origin) boxes of the
+    /// people tracked on THAT frame, so SAM 2 prompts match the clip's first frame.
+    private var frames: [(time: TimeInterval, jpeg: Data, boxes: [CGRect])] = []
     private var latestSize: CGSize = .zero
 
     public init(maxFrames: Int = 8, maxPixelSize: Int = 512, jpegQuality: Double = 0.7) {
@@ -26,14 +28,16 @@ public final class FrameBuffer: @unchecked Sendable {
     }
 
     /// Downscale + JPEG-encode a frame and append it, dropping the oldest.
-    public func append(pixelBuffer: CVPixelBuffer, at time: TimeInterval) {
+    public func append(
+        pixelBuffer: CVPixelBuffer, at time: TimeInterval, boxes: [CGRect] = []
+    ) {
         guard let (jpeg, size) = Self.encode(
             pixelBuffer: pixelBuffer, maxPixelSize: maxPixelSize, quality: jpegQuality
         ) else {
             return
         }
         lock.withLock {
-            frames.append((time, jpeg))
+            frames.append((time, jpeg, boxes))
             latestSize = size
             if frames.count > maxFrames {
                 frames.removeFirst(frames.count - maxFrames)
@@ -44,6 +48,20 @@ public final class FrameBuffer: @unchecked Sendable {
     /// Oldest-first JPEGs plus their pixel size (for box scaling).
     public func snapshot() -> (frames: [Data], size: CGSize) {
         lock.withLock { (frames.map(\.jpeg), latestSize) }
+    }
+
+    /// The clip to send to /verify. SAM 2 is prompted with boxes on the clip's
+    /// FIRST frame, so the clip starts at the oldest buffered frame that has
+    /// tracked people, and `boxes` are the boxes seen on that exact frame.
+    /// If nobody was tracked on any frame, all frames come back with no boxes.
+    public func clip() -> (frames: [Data], size: CGSize, boxes: [CGRect]) {
+        lock.withLock {
+            guard let start = frames.firstIndex(where: { !$0.boxes.isEmpty }) else {
+                return (frames.map(\.jpeg), latestSize, [])
+            }
+            let tail = frames[start...]
+            return (tail.map(\.jpeg), latestSize, frames[start].boxes)
+        }
     }
 
     public func clear() {
