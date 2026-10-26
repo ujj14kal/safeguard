@@ -61,7 +61,12 @@ final class VideoFileSource: NSObject, FrameSource {
 
         repeat {
             do {
-                try await playOnce(asset: asset, track: track, fps: fps)
+                let frames = try await playOnce(asset: asset, track: track, fps: fps)
+                // A pass that yields nothing would otherwise loop hot forever.
+                if frames == 0 && !stopped {
+                    fail(.readerFailed("The video contains no frames."))
+                    return
+                }
             } catch {
                 fail(.readerFailed(error.localizedDescription))
                 return
@@ -70,7 +75,8 @@ final class VideoFileSource: NSObject, FrameSource {
         stateLock.withLock { _isRunning = false }
     }
 
-    private func playOnce(asset: AVAsset, track: AVAssetTrack, fps: Double) async throws {
+    /// Plays the clip once; returns how many frames were delivered.
+    private func playOnce(asset: AVAsset, track: AVAssetTrack, fps: Double) async throws -> Int {
         let reader = try AVAssetReader(asset: asset)
         let output = AVAssetReaderTrackOutput(track: track, outputSettings: [
             kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA
@@ -84,6 +90,7 @@ final class VideoFileSource: NSObject, FrameSource {
         }
 
         let intervalNs = UInt64(1_000_000_000.0 / max(fps, 1))
+        var delivered = 0
         while !stopped {
             guard let sample = output.copyNextSampleBuffer() else { break }
             if let pixelBuffer = CMSampleBufferGetImageBuffer(sample) {
@@ -91,6 +98,7 @@ final class VideoFileSource: NSObject, FrameSource {
                 delegate?.frameSource(
                     self, didOutput: SafeguardFrame(pixelBuffer: pixelBuffer, timestamp: timestamp)
                 )
+                delivered += 1
             }
             CMSampleBufferInvalidate(sample)
             try? await Task.sleep(nanoseconds: intervalNs)
@@ -98,6 +106,7 @@ final class VideoFileSource: NSObject, FrameSource {
         if reader.status == .failed {
             throw FrameSourceError.readerFailed(reader.error?.localizedDescription ?? "read failed")
         }
+        return delivered
     }
 
     private func fail(_ error: FrameSourceError) {

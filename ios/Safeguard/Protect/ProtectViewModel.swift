@@ -32,8 +32,13 @@ final class ProtectViewModel: ObservableObject {
     /// resets use `sync`).
     private nonisolated(unsafe) let pipeline = DetectionPipeline()
 
+    // Frames arrive on a background queue. A lock-based counter avoids spawning
+    // a Task per frame, and the gate drops frames while the previous one is
+    // still being handled (no unbounded backlog at 30 fps).
+    private nonisolated let frameCounter = FrameCounter()
+    private nonisolated let pipelineGate = ConversionGate()
+
     private var source: (any FrameSource)?
-    private var framesReceived = 0
     private var lastFpsSample = 0
     private var fpsTimer: Timer?
 
@@ -96,7 +101,7 @@ final class ProtectViewModel: ObservableObject {
         statusLine = status
         // Foreground-only app: keep the screen awake while protecting.
         UIApplication.shared.isIdleTimerDisabled = true
-        framesReceived = 0
+        frameCounter.reset()
         lastFpsSample = 0
         personCount = 0
         debugTracks = []
@@ -108,8 +113,9 @@ final class ProtectViewModel: ObservableObject {
     }
 
     private func tickFps() {
-        let fps = framesReceived - lastFpsSample
-        lastFpsSample = framesReceived
+        let total = frameCounter.value
+        let fps = total - lastFpsSample
+        lastFpsSample = total
         let base = usingReplay ? "Replay mode: \(replayName ?? "video")" : "Monitoring with phone camera"
         let people = personCount == 1 ? "1 person" : "\(personCount) people"
         statusLine = "\(base) • \(fps) fps • \(people)"
@@ -119,11 +125,6 @@ final class ProtectViewModel: ObservableObject {
         if let image {
             replayImage = image
         }
-        framesReceived += 1
-    }
-
-    fileprivate func countFrame() {
-        framesReceived += 1
     }
 
     fileprivate func publishDetection(tracks: [Track], frameSize: CGSize) {
@@ -150,8 +151,6 @@ private final class DetectionPipeline {
         if isReplay {
             let image = Self.makeImage(from: frame.pixelBuffer)
             Task { await owner.publishReplayFrame(image) }
-        } else {
-            Task { await owner.countFrame() }
         }
 
         let now = Date()
@@ -178,10 +177,15 @@ private final class DetectionPipeline {
 
 extension ProtectViewModel: FrameSourceDelegate {
     nonisolated func frameSource(_ source: any FrameSource, didOutput frame: SafeguardFrame) {
+        frameCounter.increment()
+        // Drop frames while one is still being handled: bounds the queue
+        // and the detection work under a 30 fps source.
+        guard pipelineGate.tryEnter() else { return }
         let isReplay = source is VideoFileSource
         detectionQueue.async { [weak self] in
             guard let self else { return }
             self.pipeline.handleFrame(frame, isReplay: isReplay, owner: self)
+            self.pipelineGate.leave()
         }
     }
 
@@ -189,4 +193,31 @@ extension ProtectViewModel: FrameSourceDelegate {
         let message = error.localizedDescription
         Task { await self.handleSourceError(message) }
     }
+}
+
+/// Thread-safe frame counter shared between the capture queue and the main actor.
+private final class FrameCounter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var count = 0
+
+    var value: Int { lock.withLock { count } }
+    func increment() { lock.withLock { count += 1 } }
+    func reset() { lock.withLock { count = 0 } }
+}
+
+/// Lets one frame be handled at a time; later frames are dropped until the
+/// previous one finishes.
+private final class ConversionGate: @unchecked Sendable {
+    private let lock = NSLock()
+    private var busy = false
+
+    func tryEnter() -> Bool {
+        lock.withLock {
+            if busy { return false }
+            busy = true
+            return true
+        }
+    }
+
+    func leave() { lock.withLock { busy = false } }
 }

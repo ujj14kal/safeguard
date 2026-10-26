@@ -2,6 +2,11 @@
 
 Log of every deviation from the project brief, with reasons. Newest first.
 
+## Merge (2026-10-26): upstream Phase 1 review fixes merged into Phase 2.
+The lock-based frame counter and drop-while-busy gate now guard the whole
+detect-then-track pipeline (not just replay conversion); the camera delivers
+upright portrait buffers so the `.up` detector orientation is correct.
+
 ## Phase 2
 
 1. **Hostless test target**: `SafeguardTests` has no app host and compiles the
@@ -23,6 +28,26 @@ Log of every deviation from the project brief, with reasons. Newest first.
    platform/runtime); ran the verbatim, hash-verified suite via SwiftPM on
    macOS instead — 15/15 pass. `scripts/test.sh` runs it under Xcode once
    the platform is installed.
+
+## Phase 1 review fixes (2026-10-26)
+
+1. **Camera orientation**: `PhoneCameraSource` now sets the video connection's
+   `videoRotationAngle` to 90, so frame buffers are upright portrait. Needed
+   before Phase 2: Vision would otherwise receive sideways landscape buffers.
+2. **Camera failures stop protection**: runtime errors and interruptions
+   (call, other app, backgrounding) are reported to the delegate, so the app
+   never shows "Protecting" while no frames arrive.
+3. **Replay hardening**: a clip with no frames now fails with a message
+   instead of looping hot; replay frames are dropped (not queued) while the
+   previous one is still converting, and frame counting uses a lock-based
+   counter instead of a Task per frame. This supersedes Phase 1 item 4.
+4. **Info.plist**: added the standard bundle keys (`$(PRODUCT_BUNDLE_IDENTIFIER)`,
+   version keys from `MARKETING_VERSION`/`CURRENT_PROJECT_VERSION`, single-scene
+   manifest) because `GENERATE_INFOPLIST_FILE = NO`.
+5. **Backend deps**: `requirements.txt` has version bounds.
+6. **Honest status**: README no longer says Phase 1 is "done"; it is written
+   and typechecked but not yet built with `xcodebuild` or run on a Simulator
+   or device. Hook install and the GitHub noreply commit email are documented.
 
 ## Phase 1
 
