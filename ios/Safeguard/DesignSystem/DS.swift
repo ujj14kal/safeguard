@@ -74,4 +74,14 @@ extension View {
             self.background(.regularMaterial, in: RoundedRectangle(cornerRadius: DS.cornerRadius))
         }
     }
+
+    /// Circular sibling of `safeguardPanel` (icon buttons).
+    @ViewBuilder
+    func safeguardCircle() -> some View {
+        if #available(iOS 26, *) {
+            self.glassEffect(.regular, in: Circle())
+        } else {
+            self.background(.regularMaterial, in: Circle())
+        }
+    }
 }

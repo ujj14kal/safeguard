@@ -78,6 +78,7 @@
 		B2000000000000000000003D /* BoxMapping.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000094 /* BoxMapping.swift */; };
 		A10000000000000000000097 /* PersonBoxOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000096 /* PersonBoxOverlay.swift */; };
 		B2000000000000000000003E /* BoxMappingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000098 /* BoxMappingTests.swift */; };
+		A1000000000000000000009A /* DSButtons.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000099 /* DSButtons.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -137,6 +138,7 @@
 		A10000000000000000000094 /* BoxMapping.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoxMapping.swift; sourceTree = "<group>"; };
 		A10000000000000000000096 /* PersonBoxOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonBoxOverlay.swift; sourceTree = "<group>"; };
 		A10000000000000000000098 /* BoxMappingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoxMappingTests.swift; sourceTree = "<group>"; };
+		A10000000000000000000099 /* DSButtons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSButtons.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -194,6 +196,7 @@
 				A10000000000000000000023 /* DS.swift */,
 				A10000000000000000000024 /* ShieldRingView.swift */,
 				A10000000000000000000025 /* StatusCardView.swift */,
+				A10000000000000000000099 /* DSButtons.swift */,
 			);
 			path = DesignSystem;
 			sourceTree = "<group>";
@@ -441,6 +444,7 @@
 				A10000000000000000000092 /* OnboardingView.swift in Sources */,
 				A10000000000000000000095 /* BoxMapping.swift in Sources */,
 				A10000000000000000000097 /* PersonBoxOverlay.swift in Sources */,
+				A1000000000000000000009A /* DSButtons.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

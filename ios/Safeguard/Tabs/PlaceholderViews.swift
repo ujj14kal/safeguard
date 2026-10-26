@@ -5,10 +5,12 @@ import SwiftUI
 struct ContactsPlaceholderView: View {
     var body: some View {
         NavigationStack {
-            ContentUnavailableView(
-                "Contacts", systemImage: "person.2.fill",
-                description: Text("Emergency contacts arrive in Phase 7.")
-            )
+            ContentUnavailableView {
+                Label("Contacts", systemImage: "person.2.fill")
+                    .foregroundStyle(DS.Colors.accent)
+            } description: {
+                Text("Emergency contacts arrive in Phase 7.")
+            }
             .navigationTitle("Contacts")
         }
     }
@@ -17,10 +19,12 @@ struct ContactsPlaceholderView: View {
 struct ActivityPlaceholderView: View {
     var body: some View {
         NavigationStack {
-            ContentUnavailableView(
-                "Activity", systemImage: "list.bullet.clipboard",
-                description: Text("Incident history arrives in Phase 7.")
-            )
+            ContentUnavailableView {
+                Label("Activity", systemImage: "list.bullet.clipboard")
+                    .foregroundStyle(DS.Colors.accent)
+            } description: {
+                Text("Incident history arrives in Phase 7.")
+            }
             .navigationTitle("Activity")
         }
     }

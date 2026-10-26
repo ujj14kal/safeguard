@@ -33,6 +33,7 @@ struct ContentView: View {
                 .tabItem { Label("Settings", systemImage: "gearshape") }
                 .tag(Tab.settings)
         }
+        .tint(DS.Colors.accent)
         .onAppear {
             #if DEBUG
                 // Headless screenshot hook (Simulator):

@@ -105,7 +105,7 @@ struct ProtectView: View {
                 .font(.footnote)
                 .foregroundStyle(.secondary)
             Button("Stop protecting", role: .destructive) { model.stop() }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(DestructiveButtonStyle())
         }
         .padding()
     }
@@ -118,9 +118,9 @@ struct ProtectView: View {
                 .font(.footnote)
                 .foregroundStyle(.secondary)
             Button("I'm safe") { model.answerSafe() }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(PrimaryButtonStyle())
             Button("I need help", role: .destructive) { model.answerUnsafe() }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(DestructiveButtonStyle())
         }
         .padding()
         .safeguardPanel()
@@ -172,17 +172,23 @@ struct ProtectView: View {
         .accessibilityLabel("SOS. Help is on the way.")
     }
 
-    // MARK: - Idle (restyled in D3)
+    // MARK: - Idle
 
     private var idleView: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: DS.Spacing.large) {
-                    ShieldRingView(state: model.state, proximity: model.proximity)
+                    // Outline shield in the accent colour: the dark purple
+                    // logo fades on the dark background.
+                    Image(systemName: "shield")
+                        .font(.system(size: 96, weight: .light))
+                        .foregroundStyle(DS.Colors.accent)
+                        .accessibilityHidden(true)
                         .padding(.top, DS.Spacing.medium)
                     VStack(spacing: DS.Spacing.small) {
-                        Text(model.displayTitle)
-                            .font(.system(.title2, design: .rounded, weight: .bold))
+                        Text("Safeguard")
+                            .font(.system(.largeTitle, design: .rounded, weight: .bold))
+                            .foregroundStyle(DS.Colors.accent)
                         Text(model.statusLine)
                             .font(.footnote)
                             .foregroundStyle(.secondary)
@@ -199,24 +205,48 @@ struct ProtectView: View {
                     }
                     VStack(spacing: DS.Spacing.medium) {
                         Button("Start protecting") { Task { await model.startCamera() } }
-                            .buttonStyle(.borderedProminent)
+                            .buttonStyle(PrimaryButtonStyle())
                         Button("Replay a video…") { model.showingPicker = true }
-                            .buttonStyle(.bordered)
+                            .buttonStyle(SecondaryButtonStyle())
                     }
+                    voiceCommandsCard
                     if let error = model.errorMessage {
                         Label(error, systemImage: "exclamationmark.triangle.fill")
                             .font(.footnote)
-                            .foregroundStyle(.red)
+                            .foregroundStyle(DS.Colors.danger)
                             .multilineTextAlignment(.center)
                     }
                 }
                 .padding()
             }
+            .background(DS.Colors.background)
             .navigationTitle("Protect")
             .sheet(isPresented: $model.showingPicker) {
                 DocumentPicker { url in model.startReplay(url: url) }
             }
         }
+    }
+
+    /// Short voice-command list. Keep in sync with VoiceCommandParser.
+    private var voiceCommandsCard: some View {
+        VStack(alignment: .leading, spacing: DS.Spacing.small) {
+            Label("Voice commands", systemImage: "mic.fill")
+                .font(.headline)
+                .foregroundStyle(DS.Colors.accent)
+            ForEach(
+                ["Safeguard, start protecting", "Safeguard, stop",
+                 "Safeguard, status", "Safeguard, dim the screen",
+                 "Safeguard, help"],
+                id: \.self
+            ) { command in
+                Text("“\(command)”")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+        .background(DS.Colors.surface, in: RoundedRectangle(cornerRadius: DS.cornerRadius))
     }
 }
 
