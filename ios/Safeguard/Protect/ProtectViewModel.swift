@@ -122,12 +122,15 @@ final class ProtectViewModel: ObservableObject {
     }
 
     fileprivate func publishReplayFrame(_ image: UIImage?) {
+        // A frame still in flight when stop() ran must not repaint the screen.
+        guard isProtecting else { return }
         if let image {
             replayImage = image
         }
     }
 
     fileprivate func publishDetection(tracks: [Track], frameSize: CGSize) {
+        guard isProtecting else { return }
         debugTracks = tracks
         debugFrameSize = frameSize
         personCount = tracks.count

@@ -14,6 +14,11 @@ public final class PersonDetector {
         orientation: CGImagePropertyOrientation = .up
     ) throws -> [DetectedPerson] {
         let request = VNDetectHumanRectanglesRequest()
+        #if targetEnvironment(simulator)
+            // The Simulator has no usable GPU/Neural Engine path for Vision and
+            // fails with "Could not create inference context". Devices are unaffected.
+            request.usesCPUOnly = true
+        #endif
         let handler = VNImageRequestHandler(
             cvPixelBuffer: pixelBuffer, orientation: orientation, options: [:]
         )

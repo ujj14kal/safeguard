@@ -2,6 +2,28 @@
 
 Log of every deviation from the project brief, with reasons. Newest first.
 
+## Phase 2 debug review (2026-10-26)
+
+1. **Replay ignored video rotation** (bug from Phase 1): iPhone portrait clips
+   are stored landscape with a rotation flag, and a plain track output drops it,
+   so they replayed sideways and Vision looked for sideways people. Now read
+   through `AVAssetReaderVideoCompositionOutput` with a composition that applies
+   the transform. Reproduced with a 640x360 clip flagged 90 degrees on a macOS
+   harness: delivered 640x360 before, 360x640 after.
+2. **Stale results after Stop**: a frame still in flight when `stop()` ran
+   published its tracks/image afterwards, leaving ghost boxes and a frozen
+   frame. `publishDetection`/`publishReplayFrame` now ignore results unless
+   protecting.
+3. **Detector tests in the Simulator**: Vision failed with "Could not create
+   inference context". The detector now sets `usesCPUOnly` under
+   `#if targetEnvironment(simulator)` only (deprecated in iOS 17, so that
+   build emits a deprecation warning; devices are unaffected). 15/15 tests pass.
+4. **Not verified**: the detector only has negative tests (blank/noise find
+   nobody). Whether it actually finds a person, and that boxes sit upright on
+   people, needs a run on the iPhone. Note Vision's default
+   (`upperBodyOnly = true`, revision 2) returns upper-body boxes; revisit when
+   Phase 3 chooses distance features.
+
 ## Bundle ID (2026-10-26)
 
 1. **Unique bundle ID**: changed `com.safeguard.app` to

@@ -59,9 +59,22 @@ final class VideoFileSource: NSObject, FrameSource {
         let nominalRate = (try? await track.load(.nominalFrameRate)) ?? 0
         let fps = nominalRate > 0 ? Double(nominalRate) : 30
 
+        // iPhone clips are stored landscape with a rotation flag. A plain track
+        // output ignores it, so portrait clips would replay (and be detected)
+        // sideways. A video-composition output applies the preferred transform.
+        let composition: AVMutableVideoComposition
+        do {
+            composition = try await AVMutableVideoComposition.videoComposition(withPropertiesOf: asset)
+        } catch {
+            fail(.readerFailed(error.localizedDescription))
+            return
+        }
+
         repeat {
             do {
-                let frames = try await playOnce(asset: asset, track: track, fps: fps)
+                let frames = try await playOnce(
+                    asset: asset, track: track, composition: composition, fps: fps
+                )
                 // A pass that yields nothing would otherwise loop hot forever.
                 if frames == 0 && !stopped {
                     fail(.readerFailed("The video contains no frames."))
@@ -76,11 +89,14 @@ final class VideoFileSource: NSObject, FrameSource {
     }
 
     /// Plays the clip once; returns how many frames were delivered.
-    private func playOnce(asset: AVAsset, track: AVAssetTrack, fps: Double) async throws -> Int {
+    private func playOnce(
+        asset: AVAsset, track: AVAssetTrack, composition: AVVideoComposition, fps: Double
+    ) async throws -> Int {
         let reader = try AVAssetReader(asset: asset)
-        let output = AVAssetReaderTrackOutput(track: track, outputSettings: [
+        let output = AVAssetReaderVideoCompositionOutput(videoTracks: [track], videoSettings: [
             kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA
         ])
+        output.videoComposition = composition
         guard reader.canAdd(output) else {
             throw FrameSourceError.readerFailed("cannot add track output")
         }
