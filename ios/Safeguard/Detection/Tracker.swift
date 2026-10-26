@@ -9,13 +9,19 @@ public struct Track: Sendable, Equatable {
     public var age: Int
     /// Consecutive frames without a matching detection (coasting).
     public var missed: Int
+    /// Latest matched pose (kept while coasting; may be nil).
+    public var pose: BodyPose?
 
-    public init(id: Int, box: CGRect, confidence: Float, age: Int, missed: Int) {
+    public init(
+        id: Int, box: CGRect, confidence: Float, age: Int, missed: Int,
+        pose: BodyPose? = nil
+    ) {
         self.id = id
         self.box = box
         self.confidence = confidence
         self.age = age
         self.missed = missed
+        self.pose = pose
     }
 }
 
@@ -78,6 +84,7 @@ public final class IoUTracker {
                 tracks[index].confidence = detection.confidence
                 tracks[index].missed = 0
                 tracks[index].age += 1
+                tracks[index].pose = detection.pose
             } else {
                 tracks[index].missed += 1
             }
@@ -89,7 +96,8 @@ public final class IoUTracker {
         {
             tracks.append(Track(
                 id: nextID, box: detection.box,
-                confidence: detection.confidence, age: 1, missed: 0
+                confidence: detection.confidence, age: 1, missed: 0,
+                pose: detection.pose
             ))
             nextID += 1
         }

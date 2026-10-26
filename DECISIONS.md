@@ -2,6 +2,37 @@
 
 Log of every deviation from the project brief, with reasons. Newest first.
 
+## Phase 3
+
+1. **Upper-body boxes kept (now explicit)**: `upperBodyOnly = true` is set
+   deliberately, not just inherited. Upper-body boxes stay stable when legs
+   are occluded or out of frame (crowds, doorways, close range — the common
+   cases) and keep one consistent box meaning for velocity/growth math; the
+   growth features use ratios, so absolute height never matters. If absolute
+   distance is ever needed, upper-body height is roughly 0.55x full height.
+   Revisit against real footage in Phase 8.
+2. **Pose is enrichment, rectangles are critical**: the two Vision requests
+   run as separate performs. A pose failure degrades facing to unknown with
+   a once-only log and never kills tracking. Found by the Simulator run:
+   the pose request cannot initialise there ("Unable to setup request"),
+   so facing is unverified until an iPhone/Replay run with real people.
+3. **Facing is 2D-only**: nose+eye visibility times a shoulder-spread gate.
+   It separates facing-toward (face visible) from profile/back-of-head, but
+   has no depth; heavy occlusion yields unknown, not facing.
+4. **Reappearing means same-track gaps**: relinking across track IDs would
+   need appearance matching, which is forbidden; a track that coasts
+   through a gap longer than `reappearMinGap` and matches again counts.
+5. **Tuning is synthetic-only so far** (threshold 0.50): following 0.59,
+   fast approach 0.87, cornering 0.67, crowd max 0.29, passerby 0.22.
+   False-alert behaviour: negatives clear by 0.21+; the thinnest positive
+   margin is slow following (+0.09). Borderline scores only ever trigger a
+   voice check-in (Phase 5), never an SOS directly — escalation needs
+   Unsafe or no-reply. Box jitter, occlusion ID-switches and low-light
+   pose loss on real footage are unverified; Phase 8 replay tuning owns
+   the thresholds.
+6. **Script default device** is now iPhone 17 (this Mac's simulators are
+   17-series; there is no iPhone 16 device).
+
 ## Phase 2 debug review (2026-10-26)
 
 1. **Replay ignored video rotation** (bug from Phase 1): iPhone portrait clips

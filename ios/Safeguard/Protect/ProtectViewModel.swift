@@ -17,6 +17,7 @@ final class ProtectViewModel: ObservableObject {
     @Published var showingPicker = false
     @Published var debugTracks: [Track] = []
     @Published var debugFrameSize: CGSize = .zero
+    @Published var debugScores: [Int: Double] = [:]
     @Published var personCount = 0
 
     // CIContext is Sendable; shared for off-main replay frame conversion.
@@ -91,7 +92,8 @@ final class ProtectViewModel: ObservableObject {
         personCount = 0
         state = .idle
         statusLine = "Not protecting"
-        detectionQueue.sync { pipeline.tracker.reset() }
+        debugScores = [:]
+        detectionQueue.sync { pipeline.reset() }
         UIApplication.shared.isIdleTimerDisabled = false
         fpsTimer?.invalidate()
         fpsTimer = nil
@@ -105,7 +107,8 @@ final class ProtectViewModel: ObservableObject {
         lastFpsSample = 0
         personCount = 0
         debugTracks = []
-        detectionQueue.sync { pipeline.tracker.reset() }
+        debugScores = [:]
+        detectionQueue.sync { pipeline.reset() }
         fpsTimer?.invalidate()
         fpsTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in self?.tickFps() }
@@ -129,10 +132,11 @@ final class ProtectViewModel: ObservableObject {
         }
     }
 
-    fileprivate func publishDetection(tracks: [Track], frameSize: CGSize) {
+    fileprivate func publishDetection(tracks: [Track], frameSize: CGSize, scores: [Int: Double]) {
         guard isProtecting else { return }
         debugTracks = tracks
         debugFrameSize = frameSize
+        debugScores = scores
         personCount = tracks.count
     }
 
@@ -145,10 +149,25 @@ final class ProtectViewModel: ObservableObject {
 /// Detection pipeline state: frame render, throttled Vision detection, IoU
 /// tracking. All methods run on the view model's `detectionQueue`.
 private final class DetectionPipeline {
-    let detector = PersonDetector()
+    let config: ThreatConfig
+    let detector: PersonDetector
     let tracker = IoUTracker()
+    let extractor: FeatureExtractor
+    let scorer: ThreatScorer
     var lastDetect = Date.distantPast
     let detectInterval: TimeInterval = 0.2
+
+    init(config: ThreatConfig = ThreatConfig()) {
+        self.config = config
+        self.detector = PersonDetector(poseMatchDistance: config.poseMatchDistance)
+        self.extractor = FeatureExtractor(config: config)
+        self.scorer = ThreatScorer(config: config)
+    }
+
+    func reset() {
+        tracker.reset()
+        extractor.reset()
+    }
 
     func handleFrame(_ frame: SafeguardFrame, isReplay: Bool, owner: ProtectViewModel) {
         if isReplay {
@@ -162,11 +181,19 @@ private final class DetectionPipeline {
         guard let people = try? detector.detect(in: frame.pixelBuffer) else { return }
         let tracks = tracker.update(detections: people)
         let live = tracks.filter { $0.missed == 0 }
+        let nowSeconds = ProcessInfo.processInfo.systemUptime
+        extractor.update(tracks: live, at: nowSeconds)
+        var scores: [Int: Double] = [:]
+        for track in live {
+            if let features = extractor.features(for: track.id, at: nowSeconds) {
+                scores[track.id] = scorer.score(features).value
+            }
+        }
         let size = CGSize(
             width: CVPixelBufferGetWidth(frame.pixelBuffer),
             height: CVPixelBufferGetHeight(frame.pixelBuffer)
         )
-        Task { await owner.publishDetection(tracks: live, frameSize: size) }
+        Task { await owner.publishDetection(tracks: live, frameSize: size, scores: scores) }
     }
 
     nonisolated private static func makeImage(from pixelBuffer: CVPixelBuffer) -> UIImage? {

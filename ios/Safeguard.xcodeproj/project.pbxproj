@@ -34,6 +34,16 @@
 		B2000000000000000000000C /* DetectedPerson.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000031 /* DetectedPerson.swift */; };
 		B2000000000000000000000D /* PersonDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000032 /* PersonDetector.swift */; };
 		B2000000000000000000000E /* Tracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000033 /* Tracker.swift */; };
+		A10000000000000000000076 /* ThreatConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000035 /* ThreatConfig.swift */; };
+		A10000000000000000000077 /* BodyPose.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000038 /* BodyPose.swift */; };
+		A10000000000000000000078 /* FeatureExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000039 /* FeatureExtractor.swift */; };
+		A10000000000000000000079 /* ThreatScorer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000003A /* ThreatScorer.swift */; };
+		B20000000000000000000012 /* FeatureExtractorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000018 /* FeatureExtractorTests.swift */; };
+		B20000000000000000000013 /* ThreatScorerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000019 /* ThreatScorerTests.swift */; };
+		B20000000000000000000014 /* ThreatConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000035 /* ThreatConfig.swift */; };
+		B20000000000000000000015 /* BodyPose.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000038 /* BodyPose.swift */; };
+		B20000000000000000000016 /* FeatureExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000039 /* FeatureExtractor.swift */; };
+		B20000000000000000000017 /* ThreatScorer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000003A /* ThreatScorer.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -64,6 +74,12 @@
 		B20000000000000000000006 /* TestHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestHelpers.swift; sourceTree = "<group>"; };
 		B20000000000000000000007 /* TrackerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackerTests.swift; sourceTree = "<group>"; };
 		B20000000000000000000008 /* PersonDetectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonDetectorTests.swift; sourceTree = "<group>"; };
+		A10000000000000000000035 /* ThreatConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThreatConfig.swift; sourceTree = "<group>"; };
+		A10000000000000000000038 /* BodyPose.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyPose.swift; sourceTree = "<group>"; };
+		A10000000000000000000039 /* FeatureExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureExtractor.swift; sourceTree = "<group>"; };
+		A1000000000000000000003A /* ThreatScorer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThreatScorer.swift; sourceTree = "<group>"; };
+		B20000000000000000000018 /* FeatureExtractorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureExtractorTests.swift; sourceTree = "<group>"; };
+		B20000000000000000000019 /* ThreatScorerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThreatScorerTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -176,6 +192,10 @@
 				A10000000000000000000031 /* DetectedPerson.swift */,
 				A10000000000000000000032 /* PersonDetector.swift */,
 				A10000000000000000000033 /* Tracker.swift */,
+				A10000000000000000000035 /* ThreatConfig.swift */,
+				A10000000000000000000038 /* BodyPose.swift */,
+				A10000000000000000000039 /* FeatureExtractor.swift */,
+				A1000000000000000000003A /* ThreatScorer.swift */,
 			);
 			path = Detection;
 			sourceTree = "<group>";
@@ -186,6 +206,8 @@
 				B20000000000000000000006 /* TestHelpers.swift */,
 				B20000000000000000000007 /* TrackerTests.swift */,
 				B20000000000000000000008 /* PersonDetectorTests.swift */,
+				B20000000000000000000018 /* FeatureExtractorTests.swift */,
+				B20000000000000000000019 /* ThreatScorerTests.swift */,
 			);
 			path = SafeguardTests;
 			sourceTree = "<group>";
@@ -307,6 +329,10 @@
 				A10000000000000000000073 /* PersonDetector.swift in Sources */,
 				A10000000000000000000074 /* Tracker.swift in Sources */,
 				A10000000000000000000075 /* DebugBoxOverlay.swift in Sources */,
+				A10000000000000000000076 /* ThreatConfig.swift in Sources */,
+				A10000000000000000000077 /* BodyPose.swift in Sources */,
+				A10000000000000000000078 /* FeatureExtractor.swift in Sources */,
+				A10000000000000000000079 /* ThreatScorer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -320,6 +346,12 @@
 				B2000000000000000000000C /* DetectedPerson.swift in Sources */,
 				B2000000000000000000000D /* PersonDetector.swift in Sources */,
 				B2000000000000000000000E /* Tracker.swift in Sources */,
+				B20000000000000000000012 /* FeatureExtractorTests.swift in Sources */,
+				B20000000000000000000013 /* ThreatScorerTests.swift in Sources */,
+				B20000000000000000000014 /* ThreatConfig.swift in Sources */,
+				B20000000000000000000015 /* BodyPose.swift in Sources */,
+				B20000000000000000000016 /* FeatureExtractor.swift in Sources */,
+				B20000000000000000000017 /* ThreatScorer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

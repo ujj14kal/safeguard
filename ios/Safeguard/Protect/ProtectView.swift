@@ -54,7 +54,11 @@ struct ProtectView: View {
         }
         .overlay {
             if debugOverlayEnabled {
-                DebugBoxOverlay(tracks: model.debugTracks, frameSize: model.debugFrameSize)
+                DebugBoxOverlay(
+                    tracks: model.debugTracks,
+                    frameSize: model.debugFrameSize,
+                    scores: model.debugScores
+                )
             }
         }
         .frame(height: 260)

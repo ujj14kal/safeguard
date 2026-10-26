@@ -6,6 +6,7 @@ import SwiftUI
 struct DebugBoxOverlay: View {
     let tracks: [Track]
     let frameSize: CGSize
+    let scores: [Int: Double]
 
     var body: some View {
         GeometryReader { geometry in
@@ -15,7 +16,7 @@ struct DebugBoxOverlay: View {
                     Rectangle()
                         .stroke(Color.teal, lineWidth: 2)
                         .frame(width: rect.width, height: rect.height)
-                    Text("#\(track.id)")
+                    Text(label(for: track.id))
                         .font(.caption2)
                         .bold()
                         .foregroundStyle(.white)
@@ -26,6 +27,13 @@ struct DebugBoxOverlay: View {
             }
         }
         .accessibilityHidden(true)
+    }
+
+    private func label(for id: Int) -> String {
+        if let score = scores[id] {
+            return String(format: "#%d %.2f", id, score)
+        }
+        return "#\(id)"
     }
 
     private func boxRect(_ box: CGRect, frame: CGSize, view: CGSize) -> CGRect {

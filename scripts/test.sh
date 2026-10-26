@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Runs the XCTest suite on a Simulator.
 # Needs the iOS platform + a Simulator runtime (Xcode -> Settings -> Platforms).
-# Usage: ./scripts/test.sh ["iPhone 16"]
+# Usage: ./scripts/test.sh ["iPhone 17"]
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-DEVICE_NAME="${1:-iPhone 16}"
+DEVICE_NAME="${1:-iPhone 17}"
 UDID="$(xcrun simctl list devices available -j | python3 -c "
 import json, sys
 want = '''$DEVICE_NAME'''.lower()

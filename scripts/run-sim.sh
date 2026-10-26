@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Build, install and launch Safeguard on a Simulator (which has no camera,
 # so use Replay mode inside the app: Protect tab -> "Replay a video...").
-# Usage: ./scripts/run-sim.sh ["iPhone 16"]
+# Usage: ./scripts/run-sim.sh ["iPhone 17"]
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-DEVICE_NAME="${1:-iPhone 16}"
+DEVICE_NAME="${1:-iPhone 17}"
 UDID="$(xcrun simctl list devices available -j | python3 -c "
 import json, sys
 want = '''$DEVICE_NAME'''.lower()

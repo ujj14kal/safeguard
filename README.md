@@ -55,7 +55,7 @@ curl http://127.0.0.1:8000/health   # {"status": "ok"}
 
 ```sh
 ./scripts/build.sh simulator     # no signing needed
-./scripts/run-sim.sh "iPhone 16" # builds, installs, launches
+./scripts/run-sim.sh "iPhone 17" # builds, installs, launches
 ```
 
 Then: Protect tab → “Replay a video…” → pick a `.mov`/`.mp4` (Simulator has
@@ -93,4 +93,9 @@ Phase 2 written, **not yet verified in Xcode**: `PersonDetector` (Vision human
 rectangles) + greedy-IoU `Tracker` with stable IDs, 15 XCTest tests, detection
 loop + debug overlay in the app, `scripts/test.sh`. The suite passes on macOS
 via SwiftPM on verbatim copies; `xcodebuild test` awaits the same install.
-Next: Phase 3 (feature extractor + threat scorer).
+Phase 3 done: `ThreatConfig` (all thresholds/windows/weights), `BodyPose` +
+facing score, `FeatureExtractor` (trend, speed, persistence, facing,
+isolation, blocking, cornering over explicit second-based windows),
+`ThreatScorer` with reasons, pose attached in the detector, scores on the
+debug overlay. 45/45 tests pass on the iOS Simulator.
+Next: Phase 4 (backend /verify with SAM 2 + Muse).
