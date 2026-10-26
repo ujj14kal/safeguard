@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ProtectView: View {
     @StateObject private var model = ProtectViewModel()
+    @AppStorage("debugOverlayEnabled") private var debugOverlayEnabled = false
 
     var body: some View {
         NavigationStack {
@@ -49,6 +50,11 @@ struct ProtectView: View {
                     "No preview", systemImage: "video.slash",
                     description: Text("Start protecting to see the camera feed.")
                 )
+            }
+        }
+        .overlay {
+            if debugOverlayEnabled {
+                DebugBoxOverlay(tracks: model.debugTracks, frameSize: model.debugFrameSize)
             }
         }
         .frame(height: 260)

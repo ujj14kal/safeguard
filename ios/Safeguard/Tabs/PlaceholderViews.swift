@@ -28,6 +28,7 @@ struct ActivityPlaceholderView: View {
 
 struct SettingsView: View {
     @State private var debugRouteShown = false
+    @AppStorage("debugOverlayEnabled") private var debugOverlayEnabled = false
 
     var body: some View {
         NavigationStack {
@@ -40,9 +41,7 @@ struct SettingsView: View {
                         NavigationLink("Preview states") {
                             PreviewStatesView()
                         }
-                        Text("The detection overlay arrives with Phase 2.")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
+                        Toggle("Detection overlay", isOn: $debugOverlayEnabled)
                     }
                 #endif
             }

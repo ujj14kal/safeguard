@@ -89,4 +89,8 @@ scripts. All Swift sources typecheck against the iOS 26.5 SDK, but the app has
 not yet been built with `xcodebuild`, run in the Simulator, or run on a device
 (the iOS platform/Simulator runtime must be installed first — see
 Prerequisites). It becomes "done" once that run succeeds.
-Next: Phase 2 (person detector + tracker).
+Phase 2 written, **not yet verified in Xcode**: `PersonDetector` (Vision human
+rectangles) + greedy-IoU `Tracker` with stable IDs, 15 XCTest tests, detection
+loop + debug overlay in the app, `scripts/test.sh`. The suite passes on macOS
+via SwiftPM on verbatim copies; `xcodebuild test` awaits the same install.
+Next: Phase 3 (feature extractor + threat scorer).

@@ -2,10 +2,12 @@ import AVFoundation
 import CoreMedia
 import CoreVideo
 
-/// A timestamped video frame held in memory only. Frames are never stored;
-/// consumers must process and discard them. The pixel buffer is valid only
-/// for the duration of the delegate call — copy or convert synchronously.
-struct SafeguardFrame {
+/// A timestamped video frame held in memory only. Frames are never stored.
+/// Retaining the frame keeps the pixel buffer alive, so consumers may hand it
+/// to another queue — but convert promptly to free memory.
+/// Thread-safety: frames are handed to exactly one consumer queue and only
+/// read there (Vision + Core Image reads); never mutated after creation.
+struct SafeguardFrame: @unchecked Sendable {
     let pixelBuffer: CVPixelBuffer
     let timestamp: CMTime
 }

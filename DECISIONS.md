@@ -10,6 +10,41 @@ Log of every deviation from the project brief, with reasons. Newest first.
    team because it is already taken. First device build succeeded with this ID
    and installed on the iPhone; launching needs the developer profile trusted.
 
+## Merge (2026-10-26): upstream Phase 1 review fixes merged into Phase 2.
+The lock-based frame counter and drop-while-busy gate now guard the whole
+detect-then-track pipeline (not just replay conversion); the camera delivers
+upright portrait buffers so the `.up` detector orientation is correct.
+
+Verification after the merge (first real `xcodebuild test`, iOS 26.5 Simulator):
+the SafeguardTests target had mismatched build-configuration IDs in the project
+file (empty `SWIFT_VERSION`), fixed, and its bundle ID now follows the app's
+(`io.github.ujj14kal.safeguard.tests`). Result: 11/11 tracker tests pass; the 4
+`PersonDetectorTests` (5 assertions) fail in the Simulator with Vision's
+"Could not create inference context", a Simulator limitation, so the detector
+is still unverified until it runs on the iPhone.
+
+## Phase 2
+
+1. **Hostless test target**: `SafeguardTests` has no app host and compiles the
+   Detection sources directly (no `import Safeguard`), so the same files run
+   under `xcodebuild test` and under a macOS SwiftPM harness.
+2. **Detector orientation** defaults to `.up`; chest-mount framing is tuned
+   against real footage in Phase 8.
+3. **Result type**: `VNDetectHumanRectanglesRequest.results` is
+   `[VNHumanObservation]` (confirmed via the compiler); mapped straight to
+   `DetectedPerson`, no cast.
+4. **Detection at 5 Hz** in the view model (Vision cost); the tracker coasts
+   between detections. Debug overlay maps boxes through the aspect-fill
+   transform using the published frame size.
+5. **No positive-path detector test**: asserting "finds a real person" needs
+   footage fixtures, which the repo forbids committing; covered by the
+   Phase 8 replay tuning instead. Unit tests assert blanks/noise find nobody
+   and never throw.
+6. **Environment**: `xcodebuild test` impossible here (still no iOS
+   platform/runtime); ran the verbatim, hash-verified suite via SwiftPM on
+   macOS instead — 15/15 pass. `scripts/test.sh` runs it under Xcode once
+   the platform is installed.
+
 ## Phase 1 review fixes (2026-10-26)
 
 1. **Camera orientation**: `PhoneCameraSource` now sets the video connection's
