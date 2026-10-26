@@ -96,6 +96,32 @@ public struct ThreatConfig: Sendable {
     public var weightBlocking: Double = 0.10
     public var weightCornering: Double = 0.10
 
+    // MARK: - Hands and expression (Vision hand pose + face landmarks)
+
+    /// Hand box height (normalized) where a hand counts as close to the
+    /// camera, and where it counts as in your face (feature 1.0).
+    public var handNearHeight: Double = 0.12
+    public var handReachHeightForMax: Double = 0.30
+    /// Hand box-height growth per second that maps to full lunge speed.
+    public var handSpeedForMax: Double = 0.25
+    /// Inner-lip height/width at or above which the mouth is wide open
+    /// (shouting). GUESS: tune on real clips.
+    public var mouthOpenThreshold: Double = 0.45
+    /// Mouth-open samples needed in the feature window before it counts.
+    public var minMouthSamples: Int = 3
+    /// Additive weights like speech: absent cues leave every older score
+    /// bit-for-bit unchanged.
+    public var weightHandReach: Double = 0.25
+    public var weightShouting: Double = 0.15
+
+    // MARK: - Close-person behaviour sweep (backend)
+
+    /// Someone near for this long is sent to the backend for a behaviour
+    /// check (held objects, gestures, expression) even without a movement
+    /// alert, then again every `sweepIntervalSeconds` while they stay near.
+    public var sweepNearSeconds: TimeInterval = 3
+    public var sweepIntervalSeconds: TimeInterval = 20
+
     // MARK: - Speech signal (Part B)
 
     /// Speech is ADDITIVE, not normalized: value = base + speech * weight

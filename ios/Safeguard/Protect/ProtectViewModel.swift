@@ -27,6 +27,7 @@ final class ProtectViewModel: ObservableObject {
     @Published var backendStatus: BackendStatus?
     @Published var listenerLive = false
     @Published var listenerDeafReason: String?
+    @Published var lastHeard = ""
     @Published var lastSpeechInfo: String?
     @Published var toast: String?
     /// Near-black screen saver: the camera keeps running underneath.
@@ -108,6 +109,7 @@ final class ProtectViewModel: ObservableObject {
         listener.delegate = self
         listener.$isLive.assign(to: &$listenerLive)
         listener.$deafReason.assign(to: &$listenerDeafReason)
+        listener.$lastHeard.assign(to: &$lastHeard)
         // Hands-free "start protecting" needs a hot mic while idle, so the
         // listener runs from here on (foreground only — iOS suspends the
         // mic in the background). Idle transcripts feed commands only: no
@@ -684,6 +686,7 @@ private final class DetectionPipeline {
     var proximityTracker: ProximityTracker
     let verifier = VerifierClient()
     var verifierGate: VerifierGate
+    var sweepGate: NearSweepGate
     let frameBuffer = FrameBuffer()
     var lastDetect = Date.distantPast
     let detectInterval: TimeInterval = 0.2
@@ -695,6 +698,7 @@ private final class DetectionPipeline {
         self.scorer = ThreatScorer(config: config)
         self.proximityTracker = ProximityTracker(config: config)
         self.verifierGate = VerifierGate(config: config)
+        self.sweepGate = NearSweepGate(config: config)
     }
 
     func reset() {
@@ -702,6 +706,7 @@ private final class DetectionPipeline {
         extractor.reset()
         proximityTracker.reset()
         verifierGate.reset()
+        sweepGate.reset()
         frameBuffer.clear()
     }
 
@@ -740,7 +745,13 @@ private final class DetectionPipeline {
             }
         }
         let maxScore = scores.values.max() ?? 0
-        if verifierGate.consume(maxScore: maxScore) {
+        let nearestHeight = live.map { Double($0.box.height) }.max()
+        let alertFired = verifierGate.consume(maxScore: maxScore)
+        let sweepDue = sweepGate.consume(
+            isNear: (nearestHeight ?? 0) >= config.nearHeight, at: nowSeconds
+        )
+        if alertFired { sweepGate.noteSent(at: nowSeconds) }
+        if alertFired || sweepDue {
             let clip = frameBuffer.clip()
             let top = scored.sorted { $0.score.value > $1.score.value }.prefix(3)
             let payload = VerifyPayload(

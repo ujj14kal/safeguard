@@ -43,17 +43,26 @@ public struct ThreatScorer: Sendable {
         // bodies stand still.
         let closingIn = max(features.trend, features.speed, features.cornering)
         let strongSpeech = features.speech >= config.reasonThreshold
-        if closingIn < config.motionMin, !features.reappearing, !strongSpeech {
+        let strongHand = features.handReach >= config.reasonThreshold
+        if closingIn < config.motionMin, !features.reappearing, !strongSpeech, !strongHand {
             value = min(value, config.staticScoreCap)
         }
         // Speech is additive (never normalized in): silent speech leaves
         // every Phase 3 value bit-for-bit identical.
-        value = min(1, value + features.speech * config.weightSpeech)
+        value = min(1, value + features.speech * config.weightSpeech
+            + features.handReach * config.weightHandReach
+            + features.shouting * config.weightShouting)
         var reasons = parts
             .filter { $0.value >= config.reasonThreshold }
             .map(\.reason)
         if strongSpeech {
             reasons.append("threatening speech")
+        }
+        if strongHand {
+            reasons.append("hand reaching toward you")
+        }
+        if features.shouting >= config.reasonThreshold {
+            reasons.append("shouting or aggressive expression")
         }
         return ThreatScore(
             value: value,

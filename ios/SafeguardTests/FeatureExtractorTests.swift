@@ -332,3 +332,134 @@ final class FeatureExtractorTests: XCTestCase {
         XCTAssertEqual(extractor.features(for: 1, at: 1)?.speech ?? -1, 0)
     }
 }
+
+/// Hands, expression and the close-person sweep.
+final class GestureFeatureTests: XCTestCase {
+    private let config = ThreatConfig()
+
+    private func track(_ cues: GestureCues?, id: Int = 1) -> Track {
+        Track(
+            id: id, box: CGRect(x: 0.3, y: 0.2, width: 0.4, height: 0.5),
+            confidence: 0.9, age: 10, missed: 0, cues: cues
+        )
+    }
+
+    private func hand(height: Double) -> HandCue {
+        HandCue(box: CGRect(x: 0.4, y: 0.3, width: height, height: height))
+    }
+
+    func testNoCuesLeavesFeaturesAtZero() {
+        let extractor = FeatureExtractor(config: config)
+        for i in 0..<10 { extractor.update(tracks: [track(nil)], at: Double(i) * 0.2) }
+        let f = extractor.features(for: 1, at: 1.8)
+        XCTAssertEqual(f?.handReach, 0)
+        XCTAssertEqual(f?.shouting, 0)
+    }
+
+    func testSmallDistantHandIsNotReach() {
+        let extractor = FeatureExtractor(config: config)
+        for i in 0..<10 {
+            extractor.update(tracks: [track(GestureCues(hands: [hand(height: 0.05)]))], at: Double(i) * 0.2)
+        }
+        XCTAssertEqual(extractor.features(for: 1, at: 1.8)?.handReach ?? 1, 0, accuracy: 0.001)
+    }
+
+    func testLargeHandCloseToCameraIsReach() {
+        let extractor = FeatureExtractor(config: config)
+        for i in 0..<10 {
+            extractor.update(tracks: [track(GestureCues(hands: [hand(height: 0.30)]))], at: Double(i) * 0.2)
+        }
+        XCTAssertGreaterThanOrEqual(extractor.features(for: 1, at: 1.8)?.handReach ?? 0, 0.5)
+    }
+
+    func testGrowingHandScoresHigherThanSteadyHand() {
+        let steady = FeatureExtractor(config: config)
+        let lunge = FeatureExtractor(config: config)
+        for i in 0..<10 {
+            let t = Double(i) * 0.2
+            steady.update(tracks: [track(GestureCues(hands: [hand(height: 0.25)]))], at: t)
+            lunge.update(tracks: [track(GestureCues(hands: [hand(height: 0.10 + 0.04 * Double(i))]))], at: t)
+        }
+        XCTAssertGreaterThan(
+            lunge.features(for: 1, at: 1.8)?.handReach ?? 0,
+            steady.features(for: 1, at: 1.8)?.handReach ?? 1
+        )
+    }
+
+    func testMouthWideOpenOverTimeIsShouting() {
+        let extractor = FeatureExtractor(config: config)
+        for i in 0..<10 {
+            extractor.update(tracks: [track(GestureCues(mouthOpen: 0.7))], at: Double(i) * 0.2)
+        }
+        XCTAssertEqual(extractor.features(for: 1, at: 1.8)?.shouting ?? 0, 1, accuracy: 0.001)
+    }
+
+    func testOneMouthSampleIsNotShouting() {
+        let extractor = FeatureExtractor(config: config)
+        extractor.update(tracks: [track(GestureCues(mouthOpen: 0.9))], at: 0)
+        XCTAssertEqual(extractor.features(for: 1, at: 0.1)?.shouting ?? 1, 0, accuracy: 0.001)
+    }
+
+    func testHandReachBypassesStaticCapAndAddsReason() {
+        let scorer = ThreatScorer(config: config)
+        var f = PersonFeatures(persistence: 1, facing: 1, isolation: 1, blocking: 1)
+        let still = scorer.score(f)
+        XCTAssertLessThanOrEqual(still.value, config.staticScoreCap + 0.0001)
+        f.handReach = 0.9
+        let reaching = scorer.score(f)
+        XCTAssertGreaterThan(reaching.value, still.value)
+        XCTAssertTrue(reaching.reasons.contains("hand reaching toward you"))
+    }
+
+    func testNearSweepFiresAfterNearHoldThenAtInterval() {
+        var gate = NearSweepGate(config: config)
+        XCTAssertFalse(gate.consume(isNear: true, at: 0))
+        XCTAssertFalse(gate.consume(isNear: true, at: 2.9))
+        XCTAssertTrue(gate.consume(isNear: true, at: 3.1))
+        XCTAssertFalse(gate.consume(isNear: true, at: 10))
+        XCTAssertTrue(gate.consume(isNear: true, at: 24))
+    }
+
+    func testNearSweepResetsWhenPersonLeaves() {
+        var gate = NearSweepGate(config: config)
+        _ = gate.consume(isNear: true, at: 0)
+        XCTAssertFalse(gate.consume(isNear: false, at: 2))
+        XCTAssertFalse(gate.consume(isNear: true, at: 3))
+        XCTAssertFalse(gate.consume(isNear: true, at: 5))
+        XCTAssertTrue(gate.consume(isNear: true, at: 6.5))
+    }
+
+    func testAlertClipSuppressesImmediateSweep() {
+        var gate = NearSweepGate(config: config)
+        gate.noteSent(at: 3)
+        _ = gate.consume(isNear: true, at: 0)
+        XCTAssertFalse(gate.consume(isNear: true, at: 4))
+    }
+}
+
+/// The listener must restart after every final result or quiet task end.
+final class ListeningRestartTests: XCTestCase {
+    func testTaskEndBumpsGenerationAndRestarts() {
+        var session = ListeningSession()
+        session.start(at: 0)
+        XCTAssertEqual(session.noteTaskEnded(at: 5), .restart)
+        XCTAssertEqual(session.generation, 1)
+        XCTAssertTrue(session.isLive)
+    }
+
+    func testRapidEndingsReportDeafInsteadOfSpinning() {
+        var session = ListeningSession()
+        session.start(at: 0)
+        var last = ListeningSession.TaskEndDecision.restart
+        for i in 0..<8 { last = session.noteTaskEnded(at: Double(i) * 0.5) }
+        XCTAssertEqual(last, .deaf(reason: "Speech recognition keeps stopping"))
+        XCTAssertFalse(session.isLive)
+    }
+
+    func testSlowEndingsNeverGoDeaf() {
+        var session = ListeningSession()
+        session.start(at: 0)
+        for i in 0..<30 { XCTAssertEqual(session.noteTaskEnded(at: Double(i) * 3), .restart) }
+        XCTAssertTrue(session.isLive)
+    }
+}

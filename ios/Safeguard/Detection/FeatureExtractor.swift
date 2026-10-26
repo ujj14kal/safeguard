@@ -24,6 +24,10 @@ public struct PersonFeatures: Sendable, Equatable {
     /// Latest speech severity (global, not per-track): threatening or
     /// harassing talk near the wearer. Stamped by the extractor while fresh.
     public var speech: Double
+    /// A hand close to the camera and, if it is growing, lunging at it.
+    public var handReach: Double
+    /// Fraction of recent samples with the mouth wide open (shouting).
+    public var shouting: Double
 
     public init(
         trend: Double = 0,
@@ -34,7 +38,9 @@ public struct PersonFeatures: Sendable, Equatable {
         isolation: Double = 0,
         blocking: Double = 0,
         cornering: Double = 0,
-        speech: Double = 0
+        speech: Double = 0,
+        handReach: Double = 0,
+        shouting: Double = 0
     ) {
         self.trend = trend
         self.speed = speed
@@ -45,6 +51,8 @@ public struct PersonFeatures: Sendable, Equatable {
         self.blocking = blocking
         self.cornering = cornering
         self.speech = speech
+        self.handReach = handReach
+        self.shouting = shouting
     }
 }
 
@@ -57,6 +65,7 @@ public final class FeatureExtractor {
         var time: TimeInterval
         var box: CGRect
         var pose: BodyPose?
+        var cues: GestureCues?
         var others: Int
     }
 
@@ -91,7 +100,8 @@ public final class FeatureExtractor {
         let live = tracks.filter { $0.missed == 0 }
         for track in live {
             histories[track.id, default: []].append(Sample(
-                time: time, box: track.box, pose: track.pose, others: live.count - 1
+                time: time, box: track.box, pose: track.pose, cues: track.cues,
+                others: live.count - 1
             ))
         }
         let cutoff = time - maxWindow
@@ -159,7 +169,39 @@ public final class FeatureExtractor {
             features.cornering = features.speed * centre * steadiness
         }
 
+        applyCues(to: &features, samples: samples, at: time)
         return features
+    }
+
+    /// Hand reach: the closest hand's size, scaled up when that hand is
+    /// growing (a lunge). Shouting: how often the mouth is wide open.
+    private func applyCues(to features: inout PersonFeatures, samples: [Sample], at time: TimeInterval) {
+        let recent = window(samples, time, config.featureWindow)
+        let withCues = recent.filter { $0.cues != nil }
+        guard !withCues.isEmpty else { return }
+
+        let handHeights: [(TimeInterval, Double)] = recent.compactMap { sample in
+            guard let top = sample.cues?.hands.map({ Double($0.box.height) }).max() else { return nil }
+            return (sample.time, top)
+        }
+        if let latest = handHeights.last, time - latest.0 <= config.approachWindow {
+            let size = clamp01(
+                (latest.1 - config.handNearHeight)
+                    / max(config.handReachHeightForMax - config.handNearHeight, 1e-6)
+            )
+            let recentHands = handHeights.filter { time - $0.0 < config.approachWindow }
+            var lunge = 0.0
+            if recentHands.count >= 3, let growth = slope(of: recentHands) {
+                lunge = clamp01(growth / config.handSpeedForMax)
+            }
+            features.handReach = size * (0.5 + 0.5 * lunge)
+        }
+
+        let mouths = recent.compactMap { $0.cues?.mouthOpen }
+        if mouths.count >= config.minMouthSamples {
+            let open = mouths.filter { $0 >= config.mouthOpenThreshold }.count
+            features.shouting = Double(open) / Double(mouths.count)
+        }
     }
 
     // MARK: - Helpers

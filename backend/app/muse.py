@@ -23,6 +23,18 @@ the wearer moves) are low threat: say "stationary, not a threat" or similar \
 when nothing threatening is happening. A clip where the camera moves toward \
 a motionless person is camera motion, not an approaching person.
 
+Look closely at what people do with their hands, bodies and faces, and report \
+these as behaviours when you see them: an object held in a hand, raised, swung, \
+pointed or held close to the wearer (say what kind of object it appears to be \
+and whether it looks like a weapon or a tool used to threaten); reaching for, \
+grabbing at or lunging toward the wearer or the camera; blocking the way with \
+the body or an arm; shouting, snarling or a clearly aggressive or intimidating \
+expression; staring fixedly from very close; and indecent behaviour aimed at \
+the wearer, such as exposing oneself or touching oneself or making sexual \
+gestures. Describe such behaviour in plain clinical words in "behaviours_observed" \
+and rate it medium or high when it is directed at the wearer. A person holding an \
+ordinary object calmly (a phone, a bag, a drink) is not a threat.
+
 Reply with STRICT JSON only, no other text:
 {"threat_level": "low|medium|high", "behaviours_observed": ["..."], \
 "confidence": 0.0-1.0, "reason": "one short sentence"}"""

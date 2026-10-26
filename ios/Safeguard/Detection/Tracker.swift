@@ -11,10 +11,13 @@ public struct Track: Sendable, Equatable {
     public var missed: Int
     /// Latest matched pose (kept while coasting; may be nil).
     public var pose: BodyPose?
+    /// Latest hand/face cues (nil when none were seen this frame).
+    public var cues: GestureCues?
 
     public init(
         id: Int, box: CGRect, confidence: Float, age: Int, missed: Int,
-        pose: BodyPose? = nil
+        pose: BodyPose? = nil,
+        cues: GestureCues? = nil
     ) {
         self.id = id
         self.box = box
@@ -22,6 +25,7 @@ public struct Track: Sendable, Equatable {
         self.age = age
         self.missed = missed
         self.pose = pose
+        self.cues = cues
     }
 }
 
@@ -85,6 +89,7 @@ public final class IoUTracker {
                 tracks[index].missed = 0
                 tracks[index].age += 1
                 tracks[index].pose = detection.pose
+                tracks[index].cues = detection.cues
             } else {
                 tracks[index].missed += 1
             }
@@ -97,7 +102,7 @@ public final class IoUTracker {
             tracks.append(Track(
                 id: nextID, box: detection.box,
                 confidence: detection.confidence, age: 1, missed: 0,
-                pose: detection.pose
+                pose: detection.pose, cues: detection.cues
             ))
             nextID += 1
         }

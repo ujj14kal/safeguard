@@ -57,7 +57,82 @@ public final class PersonDetector {
                 )
             }
         }
+        attachCues(to: &detections, handler: handler, pixelBuffer: pixelBuffer)
         return detections
+    }
+
+    /// Hands and face are enrichment like pose: a failure leaves the frame
+    /// with no cues, never without people.
+    private func attachCues(
+        to detections: inout [DetectedPerson], handler: VNImageRequestHandler,
+        pixelBuffer: CVPixelBuffer
+    ) {
+        guard !detections.isEmpty else { return }
+        let handRequest = VNDetectHumanHandPoseRequest()
+        handRequest.maximumHandCount = 6
+        let faceRequest = VNDetectFaceLandmarksRequest()
+        #if targetEnvironment(simulator)
+            handRequest.usesCPUOnly = true
+            faceRequest.usesCPUOnly = true
+        #endif
+        try? handler.perform([handRequest, faceRequest])
+        let width = Double(CVPixelBufferGetWidth(pixelBuffer))
+        let height = Double(CVPixelBufferGetHeight(pixelBuffer))
+
+        var cues = [GestureCues](repeating: GestureCues(), count: detections.count)
+        for hand in handRequest.results ?? [] {
+            guard let points = try? hand.recognizedPoints(.all).values
+                .filter({ $0.confidence > 0.3 }).map(\.location),
+                  let box = Self.boundingBox(of: points),
+                  let index = owner(of: box, in: detections)
+            else { continue }
+            cues[index].hands.append(HandCue(box: box))
+        }
+        for face in faceRequest.results ?? [] {
+            guard let index = owner(of: face.boundingBox, in: detections),
+                  let ratio = Self.mouthOpenRatio(face, width: width, height: height)
+            else { continue }
+            cues[index].mouthOpen = max(cues[index].mouthOpen ?? 0, ratio)
+        }
+        for index in detections.indices where !cues[index].isEmpty {
+            detections[index].cues = cues[index]
+        }
+    }
+
+    /// The detection whose box, grown to include reaching arms, holds the
+    /// centre of `box`; the nearest centre wins when several do.
+    private func owner(of box: CGRect, in detections: [DetectedPerson]) -> Int? {
+        let centre = CGPoint(x: box.midX, y: box.midY)
+        return detections.indices
+            .filter {
+                let b = detections[$0].box
+                return b.insetBy(dx: -b.width * 0.5, dy: -b.height * 0.4).contains(centre)
+            }
+            .min(by: {
+                distance(self.center(of: detections[$0].box), centre)
+                    < distance(self.center(of: detections[$1].box), centre)
+            })
+    }
+
+    static func boundingBox(of points: [CGPoint]) -> CGRect? {
+        guard let first = points.first else { return nil }
+        return points.dropFirst().reduce(CGRect(origin: first, size: .zero)) {
+            $0.union(CGRect(origin: $1, size: .zero))
+        }
+    }
+
+    /// Inner-lip height over width, measured in pixels (landmark points are
+    /// normalized to the face box, which is not square).
+    private static func mouthOpenRatio(
+        _ face: VNFaceObservation, width: Double, height: Double
+    ) -> Double? {
+        guard let lips = face.landmarks?.innerLips?.normalizedPoints, lips.count >= 4,
+              let box = boundingBox(of: lips)
+        else { return nil }
+        let w = Double(box.width) * Double(face.boundingBox.width) * width
+        let h = Double(box.height) * Double(face.boundingBox.height) * height
+        guard w > 1 else { return nil }
+        return h / w
     }
 
     private static func bodyPose(from observation: VNHumanBodyPoseObservation) -> BodyPose {

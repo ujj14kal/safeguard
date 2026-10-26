@@ -22,6 +22,13 @@ public struct ListeningSession: Sendable {
 
     public private(set) var state: State = .idle
     private let restartInterval: TimeInterval
+    private var recentTaskEnds: [TimeInterval] = []
+
+    /// What to do when a recognition task ends on its own.
+    public enum TaskEndDecision: Sendable, Equatable {
+        case restart
+        case deaf(reason: String)
+    }
 
     public init(config: SpeechConfig = SpeechConfig()) {
         self.restartInterval = config.restartIntervalSeconds
@@ -65,6 +72,25 @@ public struct ListeningSession: Sendable {
             return true
         }
         return false
+    }
+
+    /// A recognition task finished by itself: after every final result, and
+    /// on "no speech detected" style errors. The recogniser then delivers
+    /// NOTHING more, so the listener must start a fresh request at once, or
+    /// it goes deaf after the first sentence. Many endings in a short time
+    /// mean something is really broken: report it instead of spinning.
+    public mutating func noteTaskEnded(at time: TimeInterval) -> TaskEndDecision {
+        guard case let .listening(generation, _) = state else { return .restart }
+        recentTaskEnds.append(time)
+        recentTaskEnds.removeAll { time - $0 > 10 }
+        if recentTaskEnds.count >= 8 {
+            recentTaskEnds = []
+            let reason = "Speech recognition keeps stopping"
+            state = .deaf(reason: reason)
+            return .deaf(reason: reason)
+        }
+        state = .listening(generation: generation + 1, requestStart: time)
+        return .restart
     }
 
     /// Phone call, Siri, or another app took the microphone.

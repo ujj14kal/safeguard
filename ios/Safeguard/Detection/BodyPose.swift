@@ -66,3 +66,29 @@ public struct BodyPose: Sendable, Equatable {
         return CGPoint(x: (left.x + right.x) / 2, y: (left.y + right.y) / 2)
     }
 }
+
+/// One hand seen near a person: its box and how far the person is reaching.
+public struct HandCue: Sendable, Equatable {
+    /// Normalized Vision box around the visible hand joints.
+    public var box: CGRect
+
+    public init(box: CGRect) {
+        self.box = box
+    }
+}
+
+/// Gesture and expression cues from hand pose and face landmarks. Behaviour
+/// only: a hand box and a mouth-open ratio, never identity or appearance.
+public struct GestureCues: Sendable, Equatable {
+    public var hands: [HandCue]
+    /// Inner-lip height over width (0 closed, ~0.5+ wide open: shouting,
+    /// yelling). Nil when no face landmarks were found for this person.
+    public var mouthOpen: Double?
+
+    public init(hands: [HandCue] = [], mouthOpen: Double? = nil) {
+        self.hands = hands
+        self.mouthOpen = mouthOpen
+    }
+
+    public var isEmpty: Bool { hands.isEmpty && mouthOpen == nil }
+}

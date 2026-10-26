@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ProtectView: View {
     @StateObject private var model = ProtectViewModel()
+    @AppStorage("debugOverlayEnabled") private var debugOverlay = false
 
     var body: some View {
         if model.isProtecting {
@@ -139,6 +140,15 @@ struct ProtectView: View {
 
     private var hudBottomBar: some View {
         VStack(spacing: DS.Spacing.small) {
+            if debugOverlay {
+                // Debug only: what the recogniser just heard, so you can see
+                // whether Hindi/English is being picked up at all.
+                Text(model.lastHeard.isEmpty ? "Heard: (nothing yet)" : "Heard: \(model.lastHeard)")
+                    .font(.footnote.monospaced())
+                    .lineLimit(2)
+                    .padding(8)
+                    .safeguardPanel()
+            }
             Text("Say: Safeguard, stop • status • dim")
                 .font(.footnote)
                 .foregroundStyle(.secondary)

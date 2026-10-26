@@ -31,6 +31,9 @@ final class ConversationListener: ObservableObject {
     @Published private(set) var isLive = false
     /// Why the mic is deaf (permission, interruption, error). Nil when live.
     @Published private(set) var deafReason: String?
+    /// The latest transcript text, for the Debug overlay only. It lives in
+    /// memory, is replaced by the next utterance and cleared on stop.
+    @Published private(set) var lastHeard = ""
 
     private var session: ListeningSession
     private var recognizer: SFSpeechRecognizer?
@@ -140,6 +143,7 @@ final class ConversationListener: ObservableObject {
         recognizer = nil
         try? AVAudioSession.sharedInstance().setActive(false)
         session.stop()
+        lastHeard = ""
         publishState()
     }
 
@@ -173,23 +177,42 @@ final class ConversationListener: ObservableObject {
         _ result: SFSpeechRecognitionResult?, error: Error?, generation: Int?
     ) {
         if let error {
-            // A stale task's error (routine restart cancel) is not deaf.
+            // A stale task's error (routine restart cancel) is ignored.
             // Stale RESULTS still count: they cover pre-swap audio the new
             // request never saw, so dropping them would miss real speech.
             if generation != session.generation {
                 return
             }
-            goDeaf("Recognition failed (\(error.localizedDescription))")
+            // "No speech detected" and similar end the task quietly; the
+            // recogniser then sends nothing more. Start a new request.
+            restartAfterTaskEnd()
             return
         }
         guard let result else { return }
         let text = result.bestTranscription.formattedString
-        guard !text.isEmpty else { return }
-        if result.isFinal {
-            delegate?.listener(self, didTranscribe: text)
-        } else {
-            delegate?.listener(self, didHearPartial: text)
+        if !text.isEmpty {
+            lastHeard = text
+            if result.isFinal {
+                delegate?.listener(self, didTranscribe: text)
+            } else {
+                delegate?.listener(self, didHearPartial: text)
+            }
         }
+        // A final result ends the task: without a new request the mic would
+        // be deaf until the 50 s restart.
+        if result.isFinal, generation == session.generation {
+            restartAfterTaskEnd()
+        }
+    }
+
+    private func restartAfterTaskEnd() {
+        switch session.noteTaskEnded(at: Self.now) {
+        case .restart:
+            swapRequest()
+        case .deaf(let reason):
+            goDeaf(reason)
+        }
+        publishState()
     }
 
     private func restartIfDue() {
