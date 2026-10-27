@@ -7,6 +7,16 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D30B5497923B1A2A90AB7DC8 /* AccountTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D336F6B227A3FBF14E0E9ED0 /* AccountTests.swift */; };
+		D483F7DBD1DF59447687A013 /* AccountStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D38A556EA82C00AAB711E1A3 /* AccountStore.swift */; };
+		D49BA87FDA05EAA1F5339F39 /* AccountClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3CA465994CC966FDD93527F /* AccountClient.swift */; };
+		D4D3E0DFB7705E75C9A3529A /* SecretStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D32345A678D371FA6159A914 /* SecretStore.swift */; };
+		D4C62C8B00A698B5FB03750B /* AccountModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = D324C898D5DC27C3158D67C1 /* AccountModels.swift */; };
+		D30BD9C7C0FBDCB4CF37FF7F /* AccountFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33D9CE5EE39158BF27D7676 /* AccountFlowView.swift */; };
+		D3BCC446CF8E54AAF4775E32 /* AccountStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D38A556EA82C00AAB711E1A3 /* AccountStore.swift */; };
+		D39E28361A9A5A99DC53C041 /* AccountClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3CA465994CC966FDD93527F /* AccountClient.swift */; };
+		D3E50DB5640D5EAE66532458 /* SecretStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D32345A678D371FA6159A914 /* SecretStore.swift */; };
+		D335901DF39877CB4A9B34CB /* AccountModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = D324C898D5DC27C3158D67C1 /* AccountModels.swift */; };
 		D36E9C1B465B70B195B95EC2 /* PhoneContactPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = D32E4235114BDEA9F78F78B1 /* PhoneContactPicker.swift */; };
 		D48D77B16759F7ECADC5C0F7 /* PhoneContacts.swift in Sources */ = {isa = PBXBuildFile; fileRef = D36C19AF0ACE697CF2C93551 /* PhoneContacts.swift */; };
 		D38A2D43FF12D83A6DC9C373 /* PhoneContacts.swift in Sources */ = {isa = PBXBuildFile; fileRef = D36C19AF0ACE697CF2C93551 /* PhoneContacts.swift */; };
@@ -154,6 +164,12 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		D336F6B227A3FBF14E0E9ED0 /* AccountTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountTests.swift; sourceTree = "<group>"; };
+		D33D9CE5EE39158BF27D7676 /* AccountFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountFlowView.swift; sourceTree = "<group>"; };
+		D38A556EA82C00AAB711E1A3 /* AccountStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountStore.swift; sourceTree = "<group>"; };
+		D3CA465994CC966FDD93527F /* AccountClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountClient.swift; sourceTree = "<group>"; };
+		D32345A678D371FA6159A914 /* SecretStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretStore.swift; sourceTree = "<group>"; };
+		D324C898D5DC27C3158D67C1 /* AccountModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountModels.swift; sourceTree = "<group>"; };
 		D32E4235114BDEA9F78F78B1 /* PhoneContactPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneContactPicker.swift; sourceTree = "<group>"; };
 		D36C19AF0ACE697CF2C93551 /* PhoneContacts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneContacts.swift; sourceTree = "<group>"; };
 		D3755B6E7787565AC33A8D91 /* Readiness.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Readiness.swift; sourceTree = "<group>"; };
@@ -271,6 +287,18 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		D584F9DF9B6B42A842B7BE04 /* Account */ = {
+			isa = PBXGroup;
+			children = (
+				D33D9CE5EE39158BF27D7676 /* AccountFlowView.swift */,
+				D38A556EA82C00AAB711E1A3 /* AccountStore.swift */,
+				D3CA465994CC966FDD93527F /* AccountClient.swift */,
+				D32345A678D371FA6159A914 /* SecretStore.swift */,
+				D324C898D5DC27C3158D67C1 /* AccountModels.swift */,
+			);
+			path = Account;
+			sourceTree = "<group>";
+		};
 		A10000000000000000000010 /* Project */ = {
 			isa = PBXGroup;
 			children = (
@@ -283,6 +311,7 @@
 		A10000000000000000000011 /* Safeguard */ = {
 			isa = PBXGroup;
 			children = (
+				D584F9DF9B6B42A842B7BE04 /* Account */,
 				A10000000000000000000021 /* SafeguardApp.swift */,
 				A10000000000000000000022 /* ContentView.swift */,
 				A10000000000000000000013 /* DesignSystem */,
@@ -399,6 +428,7 @@
 		B20000000000000000000004 /* SafeguardTests */ = {
 			isa = PBXGroup;
 			children = (
+				D336F6B227A3FBF14E0E9ED0 /* AccountTests.swift */,
 				D3DE8F5A24FC5286B203D42A /* DashboardTests.swift */,
 				D3DC7C69BD9D77607774B042 /* LocationFixPolicyTests.swift */,
 				B20000000000000000000006 /* TestHelpers.swift */,
@@ -609,6 +639,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D30BD9C7C0FBDCB4CF37FF7F /* AccountFlowView.swift in Sources */,
+				D3BCC446CF8E54AAF4775E32 /* AccountStore.swift in Sources */,
+				D39E28361A9A5A99DC53C041 /* AccountClient.swift in Sources */,
+				D3E50DB5640D5EAE66532458 /* SecretStore.swift in Sources */,
+				D335901DF39877CB4A9B34CB /* AccountModels.swift in Sources */,
 				D36E9C1B465B70B195B95EC2 /* PhoneContactPicker.swift in Sources */,
 				D38A2D43FF12D83A6DC9C373 /* PhoneContacts.swift in Sources */,
 				D34F9BA5A02D755E3115D889 /* Readiness.swift in Sources */,
@@ -691,6 +726,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D30B5497923B1A2A90AB7DC8 /* AccountTests.swift in Sources */,
+				D483F7DBD1DF59447687A013 /* AccountStore.swift in Sources */,
+				D49BA87FDA05EAA1F5339F39 /* AccountClient.swift in Sources */,
+				D4D3E0DFB7705E75C9A3529A /* SecretStore.swift in Sources */,
+				D4C62C8B00A698B5FB03750B /* AccountModels.swift in Sources */,
 				D48D77B16759F7ECADC5C0F7 /* PhoneContacts.swift in Sources */,
 				D47395ABCBF474909EE348C3 /* Readiness.swift in Sources */,
 				D4656C76178F2AAACBB7609A /* LocationFixPolicy.swift in Sources */,

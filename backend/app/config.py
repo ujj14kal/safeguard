@@ -149,11 +149,31 @@ class Settings:
             "NOTIFY_LOG_PATH", "logs/notifications.jsonl"
         )
     )
+    # Accounts (Supabase). The anon key starts auth calls; the service-role
+    # key (server only, never sent to the app) writes the profile row.
+    supabase_url: str = field(
+        default_factory=lambda: os.environ.get("SUPABASE_URL", "").rstrip("/")
+    )
+    supabase_anon_key: str = field(
+        default_factory=lambda: os.environ.get("SUPABASE_ANON_KEY", "")
+    )
+    supabase_service_role_key: str = field(
+        default_factory=lambda: os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+    )
+    auth_rate_per_min: int = field(
+        default_factory=lambda: int(os.environ.get("AUTH_RATE_LIMIT_PER_MIN", "10"))
+    )
     incident_rate_per_min: int = field(
         default_factory=lambda: int(
             os.environ.get("INCIDENT_RATE_LIMIT_PER_MIN", "10")
         )
     )
+
+    @property
+    def accounts_enabled(self) -> bool:
+        return bool(
+            self.supabase_url and self.supabase_anon_key and self.supabase_service_role_key
+        )
 
 
 SETTINGS = Settings()

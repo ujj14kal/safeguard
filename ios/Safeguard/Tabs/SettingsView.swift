@@ -6,6 +6,9 @@ import UIKit
 struct SettingsView: View {
     @ObservedObject private var model = ProtectViewModel.shared
     @AppStorage("debugOverlayEnabled") private var debugOverlayEnabled = false
+    @StateObject private var account = AccountStore.shared
+    @State private var showingAccount = false
+    @State private var confirmDeleteAccount = false
     @AppStorage("autoStartProtecting") private var autoStartProtecting = Defaults.autoStartProtectingDefault
     @AppStorage(VerifierConfig.backendURLDefaultsKey) private var backendURL = ""
     @AppStorage("speechLanguage") private var speechLanguage = "auto"
@@ -24,6 +27,7 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
+                accountSection
                 profileSection
                 peopleSection
                 codephrasesSection
@@ -62,6 +66,30 @@ struct SettingsView: View {
             } message: {
                 Text("This cannot be undone. Contacts, history, recordings, settings and backend evidence are all deleted.")
             }
+            .sheet(isPresented: $showingAccount) {
+                NavigationStack {
+                    ScrollView {
+                        AccountFlowView(onFinished: { showingAccount = false })
+                            .padding()
+                    }
+                    .background(DS.Colors.background)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Cancel") { showingAccount = false }
+                        }
+                    }
+                }
+            }
+            .confirmationDialog(
+                "Delete your account?", isPresented: $confirmDeleteAccount, titleVisibility: .visible
+            ) {
+                Button("Delete my account", role: .destructive) {
+                    Task { await account.deleteAccount() }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Your profile is removed from the Safeguard server and you are signed out. Contacts, history and recordings on this phone stay until you use Delete all my data.")
+            }
             .alert("Delete all my data", isPresented: Binding(
                 get: { wipeReport != nil },
                 set: { if !$0 { wipeReport = nil } }
@@ -89,6 +117,28 @@ struct SettingsView: View {
         }
     }
 
+
+    private var accountSection: some View {
+        Section {
+            if let profile = account.profile {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(profile.name).font(.headline)
+                    Text(profile.email).font(.footnote).foregroundStyle(.secondary)
+                }
+                Button("Sign out") { Task { await account.signOut() } }
+                Button("Delete my account", role: .destructive) { confirmDeleteAccount = true }
+            } else {
+                Button("Create account or sign in") { showingAccount = true }
+            }
+            if let error = account.errorMessage {
+                Text(error).font(.footnote).foregroundStyle(DS.Colors.danger)
+            }
+        } header: {
+            Text("Account")
+        } footer: {
+            Text("An account backs up your profile on the Safeguard server. The app works without one.")
+        }
+    }
 
     private var profileSection: some View {
                     Section("Profile") {

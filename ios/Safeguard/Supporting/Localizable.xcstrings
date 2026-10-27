@@ -641,6 +641,38 @@
         }
       }
     },
+    "Account": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Account"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "खाता"
+          }
+        }
+      }
+    },
+    "Accounts are not available right now. You can continue without one.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accounts are not available right now. You can continue without one."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "खाते अभी उपलब्ध नहीं हैं। आप खाते के बिना आगे बढ़ सकते हैं।"
+          }
+        }
+      }
+    },
     "Activity": {
       "localizations": {
         "en": {
@@ -717,6 +749,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "जोड़ा गया"
+          }
+        }
+      }
+    },
+    "Agree to the privacy notice to continue.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Agree to the privacy notice to continue."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आगे बढ़ने के लिए गोपनीयता सूचना से सहमत हों।"
           }
         }
       }
@@ -845,6 +893,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "अनुमति है"
+          }
+        }
+      }
+    },
+    "An account backs up your profile on the Safeguard server. The app works without one.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An account backs up your profile on the Safeguard server. The app works without one."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "खाता आपकी प्रोफ़ाइल का Safeguard सर्वर पर बैकअप रखता है। ऐप खाते के बिना भी चलता है।"
+          }
+        }
+      }
+    },
+    "An account with this email already exists. Try signing in.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An account with this email already exists. Try signing in."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "इस ईमेल से खाता पहले से है। साइन इन करके देखें।"
           }
         }
       }
@@ -1313,6 +1393,22 @@
         }
       }
     },
+    "Check your email and open the link to confirm, then sign in here.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check your email and open the link to confirm, then sign in here."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अपना ईमेल देखें और पुष्टि के लिए लिंक खोलें, फिर यहाँ साइन इन करें।"
+          }
+        }
+      }
+    },
     "Checking what is happening around you.": {
       "localizations": {
         "en": {
@@ -1601,6 +1697,38 @@
         }
       }
     },
+    "Continue": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continue"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आगे बढ़ें"
+          }
+        }
+      }
+    },
+    "Continue without an account": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continue without an account"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "खाते के बिना आगे बढ़ें"
+          }
+        }
+      }
+    },
     "Conversation flag": {
       "localizations": {
         "en": {
@@ -1697,6 +1825,22 @@
         }
       }
     },
+    "Could not reach the Safeguard server. Check your connection.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not reach the Safeguard server. Check your connection."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safeguard सर्वर तक नहीं पहुँच पाए। अपना कनेक्शन जाँचें।"
+          }
+        }
+      }
+    },
     "Could not read replay file: %@": {
       "localizations": {
         "en": {
@@ -1757,6 +1901,54 @@
           "stringUnit": {
             "state": "translated",
             "value": "बैकएंड से संपर्क नहीं हो सका, इसलिए सही टेक्स्ट दिख नहीं सकता। असली SOS ऑफ़लाइन होने पर अपने-आप फिर कोशिश करता है।"
+          }
+        }
+      }
+    },
+    "Create account": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create account"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "खाता बनाएँ"
+          }
+        }
+      }
+    },
+    "Create account or sign in": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create account or sign in"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "खाता बनाएँ या साइन इन करें"
+          }
+        }
+      }
+    },
+    "Create your account": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create your account"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अपना खाता बनाएँ"
           }
         }
       }
@@ -1969,6 +2161,22 @@
         }
       }
     },
+    "Delete my account": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete my account"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "मेरा खाता हटाएँ"
+          }
+        }
+      }
+    },
     "Delete this event": {
       "localizations": {
         "en": {
@@ -1997,6 +2205,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "यह इवेंट हटाएँ?"
+          }
+        }
+      }
+    },
+    "Delete your account?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete your account?"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अपना खाता हटाएँ?"
           }
         }
       }
@@ -2305,6 +2529,22 @@
         }
       }
     },
+    "Email": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Email"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ईमेल"
+          }
+        }
+      }
+    },
     "Emergency": {
       "localizations": {
         "en": {
@@ -2381,6 +2621,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "अंग्रेज़ी (भारत)"
+          }
+        }
+      }
+    },
+    "Enter a valid email address.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter a valid email address."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सही ईमेल पता लिखें।"
+          }
+        }
+      }
+    },
+    "Enter a valid phone number, or leave it empty.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter a valid phone number, or leave it empty."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सही फ़ोन नंबर लिखें, या खाली छोड़ दें।"
+          }
+        }
+      }
+    },
+    "Enter your name (1 to 40 characters).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter your name (1 to 40 characters)."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अपना नाम लिखें (1 से 40 अक्षर)।"
+          }
+        }
+      }
+    },
+    "Enter your password.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter your password."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अपना पासवर्ड लिखें।"
           }
         }
       }
@@ -2737,6 +3041,22 @@
         }
       }
     },
+    "Hide password": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hide password"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "पासवर्ड छिपाएँ"
+          }
+        }
+      }
+    },
     "Hindi": {
       "localizations": {
         "en": {
@@ -2797,6 +3117,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "अस्पताल"
+          }
+        }
+      }
+    },
+    "I agree to the privacy notice": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I agree to the privacy notice"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "मैं गोपनीयता सूचना से सहमत हूँ"
           }
         }
       }
@@ -3341,6 +3677,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "माइक्रोफ़ोन या स्पीच पहचान बंद है, इसलिए अभ्यास सुन नहीं सकता। अभ्यास के लिए इन्हें सेटिंग में चालू करें।"
+          }
+        }
+      }
+    },
+    "Mix upper and lower case letters and add a number.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mix upper and lower case letters and add a number."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "बड़े और छोटे अक्षर मिलाएँ और एक अंक जोड़ें।"
           }
         }
       }
@@ -3937,6 +4289,22 @@
         }
       }
     },
+    "Password": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Password"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "पासवर्ड"
+          }
+        }
+      }
+    },
     "Pending": {
       "localizations": {
         "en": {
@@ -3985,6 +4353,22 @@
         }
       }
     },
+    "Phone (optional)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Phone (optional)"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "फ़ोन (वैकल्पिक)"
+          }
+        }
+      }
+    },
     "Pick people you trust": {
       "localizations": {
         "en": {
@@ -4013,6 +4397,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "नंबर प्लेट"
+          }
+        }
+      }
+    },
+    "Please check the details and try again.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Please check the details and try again."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कृपया जानकारी जाँचकर फिर कोशिश करें।"
+          }
+        }
+      }
+    },
+    "Please sign in again.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Please sign in again."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कृपया फिर से साइन इन करें।"
           }
         }
       }
@@ -4897,6 +5313,22 @@
         }
       }
     },
+    "Safeguard stores your name, email, optional phone and language in your account. Your password goes straight to the sign-in service and is never stored by Safeguard. Contacts you pick stay on this phone. You can delete your account any time in Settings.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safeguard stores your name, email, optional phone and language in your account. Your password goes straight to the sign-in service and is never stored by Safeguard. Contacts you pick stay on this phone. You can delete your account any time in Settings."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safeguard आपके खाते में आपका नाम, ईमेल, वैकल्पिक फ़ोन और भाषा रखता है। आपका पासवर्ड सीधे साइन-इन सेवा के पास जाता है और Safeguard उसे कभी नहीं रखता। आपके चुने संपर्क इसी फ़ोन में रहते हैं। आप कभी भी सेटिंग में अपना खाता हटा सकते हैं।"
+          }
+        }
+      }
+    },
     "Safeguard watches for threatening behaviour by people nearby.": {
       "localizations": {
         "en": {
@@ -5361,6 +5793,22 @@
         }
       }
     },
+    "Show password": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show password"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "पासवर्ड दिखाएँ"
+          }
+        }
+      }
+    },
     "Shown in SOS alerts to your contacts.": {
       "localizations": {
         "en": {
@@ -5373,6 +5821,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "आपके संपर्कों के SOS अलर्ट में दिखता है।"
+          }
+        }
+      }
+    },
+    "Sign in": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign in"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "साइन इन करें"
+          }
+        }
+      }
+    },
+    "Sign out": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign out"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "साइन आउट करें"
           }
         }
       }
@@ -5485,6 +5965,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "कुछ गड़बड़ लग रहा है"
+          }
+        }
+      }
+    },
+    "Something went wrong. Please try again.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Something went wrong. Please try again."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कुछ गड़बड़ हो गई। कृपया फिर कोशिश करें।"
           }
         }
       }
@@ -6209,6 +6705,22 @@
         }
       }
     },
+    "Too many attempts. Wait a minute and try again.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Too many attempts. Wait a minute and try again."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "बहुत ज़्यादा कोशिशें हुईं। एक मिनट रुककर फिर कोशिश करें।"
+          }
+        }
+      }
+    },
     "Tracks": {
       "localizations": {
         "en": {
@@ -6305,6 +6817,22 @@
         }
       }
     },
+    "Unexpected reply from the server.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unexpected reply from the server."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सर्वर से अनपेक्षित जवाब मिला।"
+          }
+        }
+      }
+    },
     "Unsafe phrase": {
       "localizations": {
         "en": {
@@ -6349,6 +6877,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "1 से 40 अक्षर रखें।"
+          }
+        }
+      }
+    },
+    "Use at least %d characters.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use at least %d characters."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कम से कम %d अक्षर रखें।"
+          }
+        }
+      }
+    },
+    "Use at most %d characters.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use at most %d characters."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ज़्यादा से ज़्यादा %d अक्षर रखें।"
           }
         }
       }
@@ -6721,6 +7281,22 @@
         }
       }
     },
+    "Welcome back": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Welcome back"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "फिर से स्वागत है"
+          }
+        }
+      }
+    },
     "Welcome to Safeguard": {
       "localizations": {
         "en": {
@@ -6865,6 +7441,22 @@
         }
       }
     },
+    "Wrong email or password.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wrong email or password."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ईमेल या पासवर्ड गलत है।"
+          }
+        }
+      }
+    },
     "Yes, they agreed": {
       "localizations": {
         "en": {
@@ -6893,6 +7485,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "आप सुरक्षित हैं"
+          }
+        }
+      }
+    },
+    "You can add one later in Settings. Without one, your profile is not backed up.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can add one later in Settings. Without one, your profile is not backed up."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आप बाद में सेटिंग में खाता जोड़ सकते हैं। खाते के बिना आपकी प्रोफ़ाइल का बैकअप नहीं होता।"
           }
         }
       }
@@ -6941,6 +7549,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "आपका सेटअप हो गया"
+          }
+        }
+      }
+    },
+    "You're signed in": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You're signed in"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आप साइन इन हैं"
+          }
+        }
+      }
+    },
+    "Your account keeps your profile safe and ready on any phone.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your account keeps your profile safe and ready on any phone."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आपका खाता आपकी प्रोफ़ाइल को सुरक्षित रखता है और किसी भी फ़ोन पर तैयार रखता है।"
           }
         }
       }
@@ -7037,6 +7677,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "आपका नाम"
+          }
+        }
+      }
+    },
+    "Your profile is removed from the Safeguard server and you are signed out. Contacts, history and recordings on this phone stay until you use Delete all my data.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your profile is removed from the Safeguard server and you are signed out. Contacts, history and recordings on this phone stay until you use Delete all my data."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आपकी प्रोफ़ाइल Safeguard सर्वर से हट जाती है और आप साइन आउट हो जाते हैं। इस फ़ोन के संपर्क, इतिहास और रिकॉर्डिंग तब तक रहते हैं जब तक आप \"मेरा सारा डेटा हटाएँ\" नहीं चुनते।"
           }
         }
       }

@@ -1889,6 +1889,12 @@ final class ProtectViewModel: ObservableObject {
         }
         let sessions = Set(history.entries.compactMap(\.evidenceSessionID))
         let codes = sosContacts.contacts.map(\.code)
+        // The account goes first: deleting it needs the saved session.
+        var accountDeleted: Bool?
+        if AccountStore.shared.isSignedIn {
+            accountDeleted = await AccountStore.shared.deleteAccount()
+        }
+        AccountStore.shared.clearLocal()
         var report = DataWipe.wipeLocal(keeping: keepingSetup ? ["setupComplete"] : [])
         sosContacts = SOSContactStore()
         history = IncidentHistory()
@@ -1907,6 +1913,13 @@ final class ProtectViewModel: ObservableObject {
                 report.backendDeleted.append("contact")
             } catch {
                 report.backendFailed.append("contact")
+            }
+        }
+        if let accountDeleted {
+            if accountDeleted {
+                report.backendDeleted.append("account")
+            } else {
+                report.backendFailed.append("account")
             }
         }
         AppLog.shared.event("data_wipe", [

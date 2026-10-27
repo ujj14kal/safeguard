@@ -64,10 +64,15 @@ final class SetupMachineTests: XCTestCase {
     func testStepOrderAndProgress() {
         XCTAssertEqual(
             SetupStep.allCases,
-            [.welcome, .name, .permissions, .contacts, .phrases, .listening, .dryRun, .done]
+            [.welcome, .account, .name, .permissions, .contacts, .phrases, .listening, .dryRun, .done]
         )
         XCTAssertEqual(SetupMachine(step: .welcome).progress, 0, accuracy: 0.001)
         XCTAssertEqual(SetupMachine(step: .done).progress, 1, accuracy: 0.001)
+    }
+
+    func testAccountStepNeverBlocksSetup() {
+        // Accounts are optional: the step can always be passed.
+        XCTAssertTrue(SetupMachine.canAdvance(from: .account))
     }
 
     func testNameValidation() {

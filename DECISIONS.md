@@ -2,6 +2,35 @@
 
 Log of every deviation from the project brief, with reasons. Newest first.
 
+## Phase 7.6 (2026-10-27): accounts on Supabase
+
+Backend 152 passed, 1 skipped; iOS 415/415. Nothing here has talked to a real
+Supabase project yet: the backend tests use a fake Supabase, the iOS tests a
+fake service.
+
+1. **Relay design**: the app calls this backend, the backend calls Supabase
+   Auth and PostgREST. The anon and service-role keys never reach the phone.
+   Passwords are forwarded, never stored or logged.
+2. **Profile row** (`profiles`: name, email, phone, language, consent_at):
+   written with the service-role key; RLS lets a signed-in user read and
+   update only their own row; no insert/delete policy on purpose.
+3. **Accounts are optional**: setup has an "Account" step with "Continue
+   without an account", because the app must still work offline or when the
+   server is down. Existing installs are not forced to sign up.
+4. **Consent** is required at sign-up and timestamped; the privacy text lists
+   exactly what is stored.
+5. **Tokens** live in the Keychain (this device only, when unlocked); the
+   cached profile (name, email) is in UserDefaults and cleared on sign-out.
+6. **"Delete all my data"** now also deletes the account on the server (or
+   reports that it could not). Settings has "Delete my account" on its own.
+7. **Not applied to Supabase**: the Supabase CLI on this Mac is signed in to a
+   different account (projects JobSync, Fleet1, etc.), and the project ref
+   given earlier (wiyvykavdcisvvuwwxss) is not in it, so nothing was run
+   against any project. The migration must be applied by whoever owns the
+   Safeguard project.
+8. **Muse Code MCP** was not used; the setup is a plain SQL file plus
+   environment variables, so no agent needs database access.
+
 ## Phase 7.5 (2026-10-27): location fix, SOS redesign, Dashboard, loading, contacts, live viewer
 
 Written directly (not by Muse). iOS `./scripts/test.sh` 398/398; backend 137

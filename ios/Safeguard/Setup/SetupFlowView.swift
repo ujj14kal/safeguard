@@ -59,6 +59,8 @@ struct SetupFlowView: View {
         switch machine.step {
         case .welcome:
             SetupWelcomeStep()
+        case .account:
+            SetupAccountStep(onFinished: { advance() })
         case .name:
             SetupNameStep(name: $name)
         case .permissions:
@@ -107,6 +109,10 @@ struct SetupFlowView: View {
     }
 
     private func advance() {
+        if machine.step == .account {
+            // Signing up filled the name; carry it to the next screen.
+            name = model.wearerName
+        }
         if machine.step == .name {
             model.wearerName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         }

@@ -3,6 +3,7 @@ import Foundation
 /// First-run setup steps, in order. One idea per screen.
 public enum SetupStep: Int, Sendable, CaseIterable {
     case welcome
+    case account
     case name
     case permissions
     case contacts
@@ -72,7 +73,7 @@ public struct SetupMachine: Sendable, Equatable {
         phrasesValid: Bool = false, dryRunSeen: Bool = false
     ) -> Bool {
         switch step {
-        case .welcome, .permissions, .listening, .done:
+        case .welcome, .account, .permissions, .listening, .done:
             return true
         case .name:
             return nameValid(name)

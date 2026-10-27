@@ -80,6 +80,7 @@ public enum Defaults {
         "setupComplete",
         "setupStep",
         "wearerName",
+        "accountProfileJSON",
         "sendRealAlerts",
         "sosContactsJSON",
         "listenerOptIn",

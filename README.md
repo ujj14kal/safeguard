@@ -69,6 +69,29 @@ The first request asks for local-network permission. Plain `http://` is
 allowed only for local addresses (`NSAllowsLocalNetworking`); use an `https://`
 tunnel URL for anything else. The simulator can keep using `127.0.0.1`.
 
+## Accounts (Supabase)
+
+Optional sign-up/sign-in; the app works without an account. The phone talks
+only to this backend (`/auth/signup`, `/auth/login`, `/auth/refresh`,
+`/auth/logout`, `/me`); the backend talks to Supabase, so no Supabase key is
+ever in the app. Passwords go straight to Supabase Auth and are never stored
+or logged here; the profile (name, email, optional phone, language, consent
+time) is one row in `public.profiles`.
+
+1. In the Supabase dashboard, open the **Safeguard** project's SQL editor and
+   run `supabase/migrations/20261027000000_profiles.sql` (or `supabase link`
+   then `supabase db push`). It enables row level security.
+2. Project Settings -> API: copy the URL, the anon key and the service-role
+   key into the environment (or your git-ignored `.env`) as `SUPABASE_URL`,
+   `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`. Restart the backend.
+3. Authentication -> Providers -> Email: turn "Confirm email" OFF for quick
+   demos, or leave it on (the app then asks the user to open the email link
+   and sign in).
+4. Set `SAFEGUARD_APP_TOKEN` too: every account route also needs it.
+
+Without these three variables the account routes answer 503 and the app says
+accounts are unavailable and lets the user continue without one.
+
 ## Conversation listener (opt-in, default OFF)
 
 When switched on (onboarding, or Settings), Safeguard transcribes speech

@@ -27,6 +27,13 @@ from fastapi import FastAPI, Header, HTTPException, Request, WebSocket, WebSocke
 from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel, Field
 
+from .accounts import (
+    AccountsError,
+    SupabaseAccounts,
+    password_problem,
+    valid_email,
+    valid_phone,
+)
 from .config import SETTINGS
 from .contacts import ContactLimitError, ContactStore, invite_link, link_from_updates
 from .incidents import IncidentStore
@@ -916,3 +923,215 @@ def live_segment(share_token: str, name: str):
     media = "video/mp4" if kind == "video" else "audio/mp4"
     return FileResponse(path, media_type=media, filename=name)
 
+
+
+# --- Accounts (Supabase) ---------------------------------------------------------
+# Sign-up / sign-in are relayed here so the Supabase keys never reach the
+# phone. Passwords go straight to Supabase Auth and are never stored or
+# logged; the profile (name, phone, language, consent) is a row in
+# `profiles`. Every route also needs the app token.
+
+_auth_limiter = RateLimiter(SETTINGS.auth_rate_per_min)
+_accounts_override: SupabaseAccounts | None = None  # tests inject a fake
+
+
+def get_accounts() -> SupabaseAccounts:
+    if _accounts_override is not None:
+        return _accounts_override
+    return SupabaseAccounts(
+        SETTINGS.supabase_url, SETTINGS.supabase_anon_key, SETTINGS.supabase_service_role_key
+    )
+
+
+def _auth_guard(app_token: str | None) -> SupabaseAccounts:
+    require_app_token(app_token)
+    if not _auth_limiter.allow():
+        raise HTTPException(status_code=429, detail="too many attempts, wait a minute")
+    try:
+        return get_accounts()
+    except AccountsError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
+
+
+def _bearer(authorization: str | None) -> str:
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(status_code=401, detail="sign in first")
+    token = authorization[7:].strip()
+    if not token or len(token) > 4096:
+        raise HTTPException(status_code=401, detail="sign in first")
+    return token
+
+
+def _profile_out(row: dict, user: dict | None = None) -> dict:
+    user = user or {}
+    return {
+        "id": row.get("id") or user.get("id"),
+        "email": row.get("email") or user.get("email"),
+        "name": row.get("name") or "",
+        "phone": row.get("phone"),
+        "language": row.get("language") or "en",
+        "created_at": row.get("created_at"),
+    }
+
+
+def _fail(exc: AccountsError):
+    return HTTPException(status_code=exc.status_code, detail=exc.message)
+
+
+class SignupRequest(BaseModel):
+    email: str = Field(max_length=320)
+    password: str = Field(max_length=200)
+    name: str = Field(min_length=1, max_length=60)
+    phone: str | None = Field(default=None, max_length=24)
+    language: str = Field(default="en", pattern="^(en|hi)$")
+    # The wearer agreed to the privacy notice (what is stored and why).
+    consent: bool = False
+
+
+class LoginRequest(BaseModel):
+    email: str = Field(max_length=320)
+    password: str = Field(max_length=200)
+
+
+class RefreshRequest(BaseModel):
+    refresh_token: str = Field(min_length=10, max_length=4096)
+
+
+class ProfileUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=60)
+    phone: str | None = Field(default=None, max_length=24)
+    language: str | None = Field(default=None, pattern="^(en|hi)$")
+
+
+@app.post("/auth/signup")
+def auth_signup(
+    body: SignupRequest, x_safeguard_token: str | None = Header(default=None)
+) -> dict:
+    accounts = _auth_guard(x_safeguard_token)
+    email = body.email.strip().lower()
+    if not valid_email(email):
+        raise HTTPException(status_code=422, detail="enter a valid email address")
+    problem = password_problem(body.password)
+    if problem:
+        raise HTTPException(status_code=422, detail=problem)
+    if body.phone and not valid_phone(body.phone):
+        raise HTTPException(status_code=422, detail="enter a valid phone number")
+    if not body.consent:
+        raise HTTPException(status_code=422, detail="agree to the privacy notice to continue")
+    name = " ".join(body.name.split())
+    try:
+        user, session = accounts.sign_up(
+            email, body.password,
+            {"name": name, "language": body.language},
+        )
+        row = accounts.upsert_profile(
+            user["id"], email,
+            {"name": name, "phone": body.phone, "language": body.language},
+            consent_at=datetime.now(timezone.utc).isoformat(),
+        )
+    except AccountsError as exc:
+        raise _fail(exc) from exc
+    return {
+        "user": _profile_out(row, user),
+        "session": session.as_dict() if session else None,
+        # Supabase projects with email confirmation on return no session
+        # until the link in the email is opened.
+        "needs_confirmation": session is None,
+    }
+
+
+@app.post("/auth/login")
+def auth_login(
+    body: LoginRequest, x_safeguard_token: str | None = Header(default=None)
+) -> dict:
+    accounts = _auth_guard(x_safeguard_token)
+    email = body.email.strip().lower()
+    try:
+        user, session = accounts.sign_in(email, body.password)
+        row = accounts.get_profile(user["id"]) if user.get("id") else None
+        if row is None and user.get("id"):
+            meta = user.get("user_metadata") or {}
+            row = accounts.upsert_profile(
+                user["id"], email,
+                {"name": meta.get("name") or email.split("@")[0], "language": meta.get("language") or "en"},
+            )
+    except AccountsError as exc:
+        raise _fail(exc) from exc
+    return {"user": _profile_out(row or {}, user), "session": session.as_dict()}
+
+
+@app.post("/auth/refresh")
+def auth_refresh(
+    body: RefreshRequest, x_safeguard_token: str | None = Header(default=None)
+) -> dict:
+    accounts = _auth_guard(x_safeguard_token)
+    try:
+        session = accounts.refresh(body.refresh_token)
+    except AccountsError as exc:
+        raise _fail(exc) from exc
+    return {"session": session.as_dict()}
+
+
+@app.post("/auth/logout")
+def auth_logout(
+    x_safeguard_token: str | None = Header(default=None),
+    authorization: str | None = Header(default=None),
+) -> dict:
+    accounts = _auth_guard(x_safeguard_token)
+    accounts.sign_out(_bearer(authorization))
+    return {"ok": True}
+
+
+def _current_user(accounts: SupabaseAccounts, authorization: str | None) -> dict:
+    try:
+        return accounts.user_for(_bearer(authorization))
+    except AccountsError as exc:
+        raise _fail(exc) from exc
+
+
+@app.get("/me")
+def me_get(
+    x_safeguard_token: str | None = Header(default=None),
+    authorization: str | None = Header(default=None),
+) -> dict:
+    accounts = _auth_guard(x_safeguard_token)
+    user = _current_user(accounts, authorization)
+    try:
+        row = accounts.get_profile(user["id"]) or {}
+    except AccountsError as exc:
+        raise _fail(exc) from exc
+    return _profile_out(row, user)
+
+
+@app.put("/me")
+def me_put(
+    body: ProfileUpdate,
+    x_safeguard_token: str | None = Header(default=None),
+    authorization: str | None = Header(default=None),
+) -> dict:
+    accounts = _auth_guard(x_safeguard_token)
+    user = _current_user(accounts, authorization)
+    if body.phone and not valid_phone(body.phone):
+        raise HTTPException(status_code=422, detail="enter a valid phone number")
+    fields = body.model_dump(exclude_unset=True)
+    if "name" in fields and fields["name"]:
+        fields["name"] = " ".join(fields["name"].split())
+    try:
+        row = accounts.update_profile(user["id"], fields)
+    except AccountsError as exc:
+        raise _fail(exc) from exc
+    return _profile_out(row, user)
+
+
+@app.delete("/me")
+def me_delete(
+    x_safeguard_token: str | None = Header(default=None),
+    authorization: str | None = Header(default=None),
+) -> dict:
+    accounts = _auth_guard(x_safeguard_token)
+    user = _current_user(accounts, authorization)
+    try:
+        accounts.delete_user(user["id"])
+    except AccountsError as exc:
+        raise _fail(exc) from exc
+    return {"deleted": True}
