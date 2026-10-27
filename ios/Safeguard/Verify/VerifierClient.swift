@@ -129,6 +129,28 @@ public struct VerifierConfig: Sendable {
         }
         return url
     }
+
+    /// App token for backend auth, baked in at build time
+    /// (`SAFEGUARD_APP_TOKEN=...`, Info.plist `SafeguardAppToken`). Nil in
+    /// local dev builds, and the backend allows that with a warning.
+    public static var appToken: String? {
+        let raw = (Bundle.main.object(forInfoDictionaryKey: "SafeguardAppToken") as? String)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return raw?.isEmpty == false ? raw : nil
+    }
+
+    /// Stamps X-Safeguard-Token when the build carries one. The token-taking
+    /// static exists so tests pin the header without a plist.
+    public func authorize(_ request: URLRequest) -> URLRequest {
+        Self.authorize(request, token: Self.appToken)
+    }
+
+    public static func authorize(_ request: URLRequest, token: String?) -> URLRequest {
+        guard let token, !token.isEmpty else { return request }
+        var copy = request
+        copy.setValue(token, forHTTPHeaderField: "X-Safeguard-Token")
+        return copy
+    }
 }
 
 public enum VerifierError: Error, Equatable {

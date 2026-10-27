@@ -94,6 +94,18 @@
 		C1000000000000000000008B /* AudioResampler.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1000000000000000000008A /* AudioResampler.swift */; };
 		C1000000000000000000008C /* AudioResampler.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1000000000000000000008A /* AudioResampler.swift */; };
 		C1000000000000000000009B /* CloudEar.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1000000000000000000009A /* CloudEar.swift */; };
+		A100000000000000000000A0 /* EscalationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000009F /* EscalationCoordinator.swift */; };
+		B20000000000000000000041 /* EscalationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000009F /* EscalationCoordinator.swift */; };
+		A100000000000000000000A2 /* SOSContacts.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A1 /* SOSContacts.swift */; };
+		B20000000000000000000042 /* SOSContacts.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A1 /* SOSContacts.swift */; };
+		A100000000000000000000A4 /* RouteChoice.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A3 /* RouteChoice.swift */; };
+		B20000000000000000000043 /* RouteChoice.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A3 /* RouteChoice.swift */; };
+		A100000000000000000000A6 /* SOSMessageBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A5 /* SOSMessageBuilder.swift */; };
+		B20000000000000000000044 /* SOSMessageBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A5 /* SOSMessageBuilder.swift */; };
+		A100000000000000000000A8 /* IncidentClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A7 /* IncidentClient.swift */; };
+		B20000000000000000000045 /* IncidentClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A7 /* IncidentClient.swift */; };
+		B20000000000000000000046 /* EscalationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A9 /* EscalationTests.swift */; };
+		B20000000000000000000047 /* IncidentClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000AA /* IncidentClientTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -163,6 +175,13 @@
 		C1000000000000000000007A /* CloudEarSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudEarSupport.swift; sourceTree = "<group>"; };
 		C1000000000000000000008A /* AudioResampler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioResampler.swift; sourceTree = "<group>"; };
 		C1000000000000000000009A /* CloudEar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudEar.swift; sourceTree = "<group>"; };
+		A1000000000000000000009F /* EscalationCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EscalationCoordinator.swift; sourceTree = "<group>"; };
+		A100000000000000000000A1 /* SOSContacts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SOSContacts.swift; sourceTree = "<group>"; };
+		A100000000000000000000A3 /* RouteChoice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteChoice.swift; sourceTree = "<group>"; };
+		A100000000000000000000A5 /* SOSMessageBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SOSMessageBuilder.swift; sourceTree = "<group>"; };
+		A100000000000000000000A7 /* IncidentClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IncidentClient.swift; sourceTree = "<group>"; };
+		A100000000000000000000A9 /* EscalationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EscalationTests.swift; sourceTree = "<group>"; };
+		A100000000000000000000AA /* IncidentClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IncidentClientTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -201,6 +220,7 @@
 				A10000000000000000000037 /* Assets.xcassets */,
 				A10000000000000000000083 /* Speech */,
 				A10000000000000000000091 /* OnboardingView.swift */,
+				A1000000000000000000009E /* Escalation */,
 			);
 			path = Safeguard;
 			sourceTree = "<group>";
@@ -310,6 +330,8 @@
 				A10000000000000000000093 /* ThemeContrastTests.swift */,
 				A10000000000000000000098 /* BoxMappingTests.swift */,
 				A1000000000000000000009D /* VoiceCommandTests.swift */,
+				A100000000000000000000A9 /* EscalationTests.swift */,
+				A100000000000000000000AA /* IncidentClientTests.swift */,
 			);
 			path = SafeguardTests;
 			sourceTree = "<group>";
@@ -328,6 +350,18 @@
 				A1000000000000000000009B /* VoiceCommands.swift */,
 			);
 			path = Speech;
+			sourceTree = "<group>";
+		};
+		A1000000000000000000009E /* Escalation */ = {
+			isa = PBXGroup;
+			children = (
+				A1000000000000000000009F /* EscalationCoordinator.swift */,
+				A100000000000000000000A1 /* SOSContacts.swift */,
+				A100000000000000000000A3 /* RouteChoice.swift */,
+				A100000000000000000000A5 /* SOSMessageBuilder.swift */,
+				A100000000000000000000A7 /* IncidentClient.swift */,
+			);
+			path = Escalation;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */		A1000000000000000000001A /* Verify */ = {
@@ -485,6 +519,11 @@
 				A10000000000000000000097 /* PersonBoxOverlay.swift in Sources */,
 				A1000000000000000000009A /* DSButtons.swift in Sources */,
 				A1000000000000000000009C /* VoiceCommands.swift in Sources */,
+				A100000000000000000000A0 /* EscalationCoordinator.swift in Sources */,
+				A100000000000000000000A2 /* SOSContacts.swift in Sources */,
+				A100000000000000000000A4 /* RouteChoice.swift in Sources */,
+				A100000000000000000000A6 /* SOSMessageBuilder.swift in Sources */,
+				A100000000000000000000A8 /* IncidentClient.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -532,6 +571,13 @@
 				B2000000000000000000003E /* BoxMappingTests.swift in Sources */,
 				B2000000000000000000003F /* VoiceCommands.swift in Sources */,
 				B20000000000000000000040 /* VoiceCommandTests.swift in Sources */,
+				B20000000000000000000041 /* EscalationCoordinator.swift in Sources */,
+				B20000000000000000000042 /* SOSContacts.swift in Sources */,
+				B20000000000000000000043 /* RouteChoice.swift in Sources */,
+				B20000000000000000000044 /* SOSMessageBuilder.swift in Sources */,
+				B20000000000000000000045 /* IncidentClient.swift in Sources */,
+				B20000000000000000000046 /* EscalationTests.swift in Sources */,
+				B20000000000000000000047 /* IncidentClientTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
