@@ -14,15 +14,14 @@ struct SetupDryRunStep: View {
         VStack(alignment: .leading, spacing: DS.Spacing.medium) {
             Text("Try a sample SOS")
                 .font(.system(.largeTitle, design: .rounded, weight: .bold))
-            Text("This runs a SAMPLE SOS: no real message, no recording, " +
-                "no location sent. You will see the red screen, the four track " +
-                "chips and exactly the text your contacts would receive.")
+            Text("This runs a SAMPLE SOS: no real message, no recording, no location sent. You will see the red screen, the four track chips and exactly the text your contacts would receive.")
                 .foregroundStyle(.secondary)
             if !seen {
-                Button(running ? "Running sample..." : "Run sample SOS") {
+                Button(running ? String(localized: "Running sample...") : String(localized: "Run sample SOS")) {
                     run()
                 }
                 .buttonStyle(.borderedProminent)
+                .minTouchTarget()
                 .disabled(running)
             }
             if running {
@@ -32,8 +31,7 @@ struct SetupDryRunStep: View {
                 sampleCard(preview)
             } else if failed {
                 Label(
-                    "Couldn't reach the backend, so there is no exact text to show. " +
-                        "The real SOS retries automatically when offline.",
+                    "Couldn't reach the backend, so there is no exact text to show. The real SOS retries automatically when offline.",
                     systemImage: "wifi.exclamationmark"
                 )
                 .font(.footnote)
@@ -69,7 +67,7 @@ struct SetupDryRunStep: View {
                         .font(.footnote.bold())
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
-                        .background(.white.opacity(0.2))
+                        .background(.black.opacity(0.45))
                         .clipShape(Capsule())
                         .foregroundStyle(.white)
                 }
@@ -78,17 +76,21 @@ struct SetupDryRunStep: View {
             .accessibilityLabel("Sample tracks: route, contacts, live stream, cab")
             Text("Your contacts would receive:")
                 .font(.footnote)
-                .foregroundStyle(.white.opacity(0.9))
+                .foregroundStyle(.white)
             Text(verbatim: text)
                 .font(.body)
                 .foregroundStyle(.white)
                 .padding(10)
-                .background(.black.opacity(0.25))
+                .background(.black.opacity(0.45))
                 .clipShape(RoundedRectangle(cornerRadius: 10))
         }
         .padding()
-        .background(DS.Colors.danger.opacity(0.88))
+        .background(.black.opacity(0.5))
         .clipShape(RoundedRectangle(cornerRadius: DS.cornerRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: DS.cornerRadius)
+                .stroke(DS.Colors.danger, lineWidth: 2)
+        )
         .accessibilityElement(children: .combine)
     }
 }

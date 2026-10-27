@@ -10,5 +10,5 @@ public enum SOSMessageBuilder {
     /// pretend the demo cab is real. (Alert/cab/ended texts are composed
     /// server-side so both languages stay in one place; the app-side
     /// composer was removed in Phase 7.)
-    public static let demoBanner = "DEMO — no real cab service is connected."
+    public static let demoBanner = String(localized: "DEMO — no real cab service is connected.")
 }

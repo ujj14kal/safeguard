@@ -7,7 +7,14 @@ struct ProtectView: View {
     @AppStorage("debugOverlayEnabled") private var debugOverlay = false
     @AppStorage("listenerOptIn") private var listenerOptIn = Defaults.current.listenerOptIn
     @Environment(\.openURL) private var openURL
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @State private var endingPressed = false
+
+    /// Chip bed on the red scrim: near-black normally, solid with Reduce
+    /// Transparency.
+    private var chipBed: Color {
+        reduceTransparency ? .black : .black.opacity(DS.SOS.chipBedOpacity)
+    }
 
     var body: some View {
         if model.isProtecting {
@@ -142,7 +149,7 @@ struct ProtectView: View {
                 .frame(width: 10, height: 10)
                 .accessibilityLabel(
                     model.backendStatus?.reachable == true
-                        ? "Verification backend reachable" : "Verification backend offline"
+                        ? String(localized: "Verification backend reachable") : String(localized: "Verification backend offline")
                 )
         }
         .padding()
@@ -181,7 +188,7 @@ struct ProtectView: View {
                 Button { model.dimmed.toggle() } label: {
                     Image(systemName: model.dimmed ? "sun.max.fill" : "moon.fill")
                         .accessibilityLabel(
-                            model.dimmed ? "Brighten the screen" : "Dim the screen"
+                            model.dimmed ? String(localized: "Brighten the screen") : String(localized: "Dim the screen")
                         )
                 }
                 .buttonStyle(IconButtonStyle())
@@ -198,13 +205,16 @@ struct ProtectView: View {
                 .foregroundStyle(DS.Colors.danger)
             TimelineView(.periodic(from: .now, by: 0.1)) { _ in
                 let left = max(0, (model.countdownDeadline ?? 0) - ProcessInfo.processInfo.systemUptime)
-                Text(verbatim: "\(Int(left.rounded(.up)))")
+                let secs = Int(left.rounded(.up))
+                Text(verbatim: "\(secs)")
                     .font(.system(size: 72, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
                     .monospacedDigit()
                     .accessibilityLabel(Text(
-                        format: "%d seconds until auto SOS", Int(left.rounded(.up))
+                        format: "%d seconds until auto SOS", secs
                     ))
+                    .onAppear { announceCountdown(secs) }
+                    .onChange(of: secs) { _, new in announceCountdown(new) }
             }
             Text("Recording and safety measures start when it reaches zero.")
                 .font(.footnote)
@@ -221,6 +231,13 @@ struct ProtectView: View {
         .overlay(RoundedRectangle(cornerRadius: 20).stroke(DS.Colors.danger, lineWidth: 3))
         .padding(.horizontal)
         .accessibilityElement(children: .contain)
+    }
+
+    /// Announces each countdown second (VoiceOver reads the bare number);
+    /// zero is silent because the SOS screen announces itself next.
+    private func announceCountdown(_ secs: Int) {
+        guard secs > 0 else { return }
+        UIAccessibility.post(notification: .announcement, argument: "\(secs)")
     }
 
     /// Red banner for concerning talk: stays a few seconds, offers the
@@ -285,7 +302,7 @@ struct ProtectView: View {
     /// each chip shows its own status, one failing never stops the rest.
     private var sosScrim: some View {
         ZStack {
-            DS.Colors.danger.opacity(0.88)
+            (reduceTransparency ? DS.Colors.danger : DS.Colors.danger.opacity(DS.SOS.scrimOpacity))
                 .ignoresSafeArea()
             ScrollView {
                 VStack(spacing: DS.Spacing.medium) {
@@ -311,6 +328,7 @@ struct ProtectView: View {
                     if model.escalation.status(of: .cab) == .done {
                         Button("Cab (demo)") { model.showingCabSheet = true }
                             .buttonStyle(.bordered)
+                            .minTouchTarget()
                             .tint(.white)
                             .foregroundStyle(.white)
                     }
@@ -358,7 +376,7 @@ struct ProtectView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(.white.opacity(0.16))
+        .background(chipBed)
         .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
@@ -410,7 +428,7 @@ struct ProtectView: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(.white.opacity(0.16))
+            .background(chipBed)
             .clipShape(RoundedRectangle(cornerRadius: 10))
         }
     }
@@ -428,14 +446,16 @@ struct ProtectView: View {
         }
     }
 
+    /// Delivery words on the dark SOS chip: DS tokens, so the contrast
+    /// test pins the real pairs (white "Failed" — the word carries it).
     private func deliveryColor(_ status: String) -> Color {
         switch status {
         case "sent":
-            return .green
+            return DS.Colors.ok
         case "dry-run":
-            return .yellow
+            return DS.Colors.warning
         case "failed":
-            return Color(red: 1, green: 0.6, blue: 0.6)
+            return .white
         default:
             return .white.opacity(0.8)
         }
@@ -460,19 +480,21 @@ struct ProtectView: View {
                         model.showToast(String(localized: "Link copied"))
                     }
                     .buttonStyle(.bordered)
+                    .minTouchTarget()
                     .tint(.white)
                     .foregroundStyle(.white)
                     ShareLink(item: url, message: Text("My Safeguard live page")) {
                         Label("Share", systemImage: "square.and.arrow.up")
                     }
                     .buttonStyle(.bordered)
+                    .minTouchTarget()
                     .tint(.white)
                     .foregroundStyle(.white)
                 }
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(.white.opacity(0.16))
+            .background(chipBed)
             .clipShape(RoundedRectangle(cornerRadius: 10))
         }
     }
@@ -508,13 +530,14 @@ struct ProtectView: View {
                     Spacer()
                     Button("Open in Maps") { model.openDestinationInMaps() }
                         .buttonStyle(.bordered)
+                        .minTouchTarget()
                         .tint(.white)
                         .foregroundStyle(.white)
                 }
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(.white.opacity(0.16))
+            .background(chipBed)
             .clipShape(RoundedRectangle(cornerRadius: 10))
         } else if let message = model.sosRouteMessage {
             Text(message)
@@ -533,6 +556,7 @@ struct ProtectView: View {
                 }
             }
             .buttonStyle(.borderedProminent)
+            .minTouchTarget()
             .tint(.white)
             .foregroundStyle(DS.Colors.danger)
             Text("Automatic police alerts are on the roadmap.")
@@ -546,6 +570,7 @@ struct ProtectView: View {
     private var holdToEndButton: some View {
         Button("Hold 3 s to end SOS") {}
             .buttonStyle(.bordered)
+            .minTouchTarget()
             .tint(.white)
             .foregroundStyle(.white)
             .scaleEffect(endingPressed ? 0.94 : 1.0)
@@ -569,6 +594,7 @@ struct ProtectView: View {
                 LabeledContent("Arrives in", value: model.cabCountdownText)
                 Button("Share cab details") { model.shareCabDetails() }
                     .buttonStyle(.borderedProminent)
+                    .minTouchTarget()
                 Spacer()
             }
             .padding()

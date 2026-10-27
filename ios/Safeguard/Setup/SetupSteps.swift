@@ -12,8 +12,7 @@ struct SetupPermissionsStep: View {
         VStack(alignment: .leading, spacing: DS.Spacing.medium) {
             Text("A few permissions")
                 .font(.system(.largeTitle, design: .rounded, weight: .bold))
-            Text("Each one is asked separately, with the reason first. " +
-                "Saying no never stops setup — but some features will not work.")
+            Text("Each one is asked separately, with the reason first. Saying no never stops setup — but some features will not work.")
                 .foregroundStyle(.secondary)
             ForEach(SetupPermission.allCases) { permission in
                 permissionRow(permission)
@@ -66,6 +65,7 @@ struct SetupPermissionsStep: View {
                 }
             }
             .buttonStyle(.borderedProminent)
+            .minTouchTarget()
         }
         if status == .denied {
             Label(permission.missingImpact, systemImage: "exclamationmark.triangle.fill")
@@ -77,6 +77,7 @@ struct SetupPermissionsStep: View {
                 }
             }
             .buttonStyle(.bordered)
+            .minTouchTarget()
         }
     }
 
@@ -84,7 +85,7 @@ struct SetupPermissionsStep: View {
     private func statusBadge(_ status: PermissionStatus) -> some View {
         if status == .granted {
             Label("On", systemImage: "checkmark.circle.fill")
-                .foregroundStyle(.green)
+                .foregroundStyle(DS.Colors.ok)
         } else if status == .denied {
             Label("Off", systemImage: "xmark.circle.fill")
                 .foregroundStyle(DS.Colors.danger)
@@ -101,8 +102,7 @@ struct SetupListeningStep: View {
         VStack(alignment: .leading, spacing: DS.Spacing.medium) {
             Text("Listening choices")
                 .font(.system(.largeTitle, design: .rounded, weight: .bold))
-            Text("Each choice says what it hears and what leaves your phone. " +
-                "You can change these anytime in Settings.")
+            Text("Each choice says what it hears and what leaves your phone. You can change these anytime in Settings.")
                 .foregroundStyle(.secondary)
             ForEach(ListeningChoices.all) { choice in
                 ListeningToggle(choice)

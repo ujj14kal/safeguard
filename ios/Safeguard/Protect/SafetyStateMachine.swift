@@ -66,7 +66,7 @@ public struct SafetyConfig: Sendable {
     /// On-device score at or above this skips the window: waiting is unsafe.
     public var listeningSkipScore: Double = 0.80
     /// Calm on-screen cue shown during the window (VoiceOver reads it once).
-    public var listeningCueText = "Stay quiet for a moment, listening to your surroundings"
+    public var listeningCueText = String(localized: "Stay quiet for a moment, listening to your surroundings")
 
     // MARK: - Auto-SOS (distress words)
 

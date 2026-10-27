@@ -15,14 +15,12 @@ struct SetupContactsStep: View {
         VStack(alignment: .leading, spacing: DS.Spacing.medium) {
             Text("Trusted contacts")
                 .font(.system(.largeTitle, design: .rounded, weight: .bold))
-            Text("Add at least 2 people who agreed to be alerted. " +
-                "A contact receives alerts ONLY after they open the invite link " +
-                "and press Start in Telegram.")
+            Text("Add at least 2 people who agreed to be alerted. A contact receives alerts ONLY after they open the invite link and press Start in Telegram.")
                 .foregroundStyle(.secondary)
             Text(format: "Agreed so far: %d of 2 needed", model.sosContacts.agreedCount)
                 .font(.headline)
                 .foregroundStyle(
-                    model.sosContacts.agreedCount >= 2 ? .green : DS.Colors.warning
+                    model.sosContacts.agreedCount >= 2 ? DS.Colors.ok : DS.Colors.warning
                 )
             ForEach(model.sosContacts.contacts, id: \.code) { contact in
                 contactRow(contact)
@@ -33,10 +31,11 @@ struct SetupContactsStep: View {
                     .textFieldStyle(.roundedBorder)
                     .textInputAutocapitalization(.words)
                     .disableAutocorrection(true)
-                Button(adding ? "Creating invite..." : "Add contact") {
+                Button(adding ? String(localized: "Creating invite...") : String(localized: "Add contact")) {
                     addContact()
                 }
                 .buttonStyle(.borderedProminent)
+                .minTouchTarget()
                 .disabled(
                     adding || model.sosContacts.isFull ||
                         newName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -73,6 +72,7 @@ struct SetupContactsStep: View {
                 } label: {
                     Image(systemName: "trash")
                 }
+                .minTouchTarget()
                 .accessibilityLabel(Text(format: "Remove %@", contact.name))
             }
             Toggle(
@@ -84,19 +84,19 @@ struct SetupContactsStep: View {
             )
             .font(.footnote)
             HStack {
-                Text(contact.linked ? "Linked" : "Waiting for them to press Start")
+                Text(contact.linked ? String(localized: "Linked") : String(localized: "Waiting for them to press Start"))
                     .font(.footnote)
-                    .foregroundStyle(contact.linked ? .green : .secondary)
+                    .foregroundStyle(contact.linked ? DS.Colors.ok : .secondary)
                 Spacer()
                 if !contact.linked, let link = contact.link, let url = URL(string: link) {
                     ShareLink(item: url) {
                         Label("Invite on Telegram", systemImage: "paperplane")
                     }
                     .font(.footnote)
+                    .minTouchTarget()
                 }
             }
         }
-        .accessibilityElement(children: .combine)
     }
 
     private func addContact() {
@@ -128,14 +128,14 @@ private struct SetupInviteSheet: View {
                     .foregroundStyle(.blue)
                 Text("Invite created")
                     .font(.title2.bold())
-                Text("Send this link to your contact. Only after they open it " +
-                    "and press Start will they receive your SOS alerts.")
+                Text("Send this link to your contact. Only after they open it and press Start will they receive your SOS alerts.")
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.secondary)
                 ShareLink(item: link) {
                     Label("Invite on Telegram", systemImage: "square.and.arrow.up")
                 }
                 .buttonStyle(.borderedProminent)
+                .minTouchTarget()
                 Spacer()
             }
             .padding()

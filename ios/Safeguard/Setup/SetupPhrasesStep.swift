@@ -12,8 +12,7 @@ struct SetupPhrasesStep: View {
         VStack(alignment: .leading, spacing: DS.Spacing.medium) {
             Text("Code phrases")
                 .font(.system(.largeTitle, design: .rounded, weight: .bold))
-            Text("A safe phrase answers “I'm OK”. An unsafe phrase starts an " +
-                "SOS at once — even mid-sentence, even with everything off.")
+            Text("A safe phrase answers “I'm OK”. An unsafe phrase starts an SOS at once — even mid-sentence, even with everything off.")
                 .foregroundStyle(.secondary)
             VStack(alignment: .leading, spacing: DS.Spacing.small) {
                 Text("Safe phrase")
@@ -34,12 +33,10 @@ struct SetupPhrasesStep: View {
                         .foregroundStyle(DS.Colors.danger)
                 }
             }
-            Text("Each phrase needs at least 2 words. They must differ, " +
-                "neither may contain the other, and neither may be a distress word.")
+            Text("Each phrase needs at least 2 words. They must differ, neither may contain the other, and neither may be a distress word.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
-            Text("A distress word starts a 5-second countdown you can cancel. " +
-                "No reply to the spoken check-in within 10 seconds starts an SOS.")
+            Text("A distress word starts a 5-second countdown you can cancel. No reply to the spoken check-in within 10 seconds starts an SOS.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
             PhrasePracticeView()
@@ -69,15 +66,15 @@ struct SetupPhrasesStep: View {
         failures().map { failure in
             switch failure {
             case .tooShort:
-                "Each phrase needs at least 2 words."
+                String(localized: "Each phrase needs at least 2 words.")
             case .same:
-                "The two phrases must differ."
+                String(localized: "The two phrases must differ.")
             case .containsOther:
-                "Neither phrase may contain the other."
+                String(localized: "Neither phrase may contain the other.")
             case .isDistressWord:
-                "A code phrase cannot be a distress word."
+                String(localized: "A code phrase cannot be a distress word.")
             case .collidesWithDefault:
-                "The safe phrase would always trigger Unsafe instead."
+                String(localized: "The safe phrase would always trigger Unsafe instead.")
             }
         }
     }
@@ -112,10 +109,11 @@ struct PhrasePracticeView: View {
                 .foregroundStyle(.secondary)
             if canListen {
                 HStack {
-                    Button(practicing ? "Stop" : "Start listening") {
+                    Button(practicing ? String(localized: "Stop") : String(localized: "Start listening")) {
                         practicing ? stop() : start()
                     }
                     .buttonStyle(.borderedProminent)
+                    .minTouchTarget()
                     Spacer()
                     Text(heardText)
                         .font(.headline)
@@ -123,8 +121,7 @@ struct PhrasePracticeView: View {
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel(Text(format: "Practice result: %@", heardText))
             } else {
-                Text("Microphone or speech recognition is off, so practice can't hear you. " +
-                    "Turn them on in Settings to practice.")
+                Text("Microphone or speech recognition is off, so practice can't hear you. Turn them on in Settings to practice.")
                     .font(.footnote)
                     .foregroundStyle(DS.Colors.warning)
             }

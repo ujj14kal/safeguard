@@ -131,6 +131,11 @@
 		A100000000000000000000D0 /* ActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000CF /* ActivityView.swift */; };
 		A100000000000000000000D2 /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000D1 /* L10n.swift */; };
 		B20000000000000000000050 /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000D1 /* L10n.swift */; };
+		A100000000000000000000D4 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000D3 /* Localizable.xcstrings */; };
+		B20000000000000000000051 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000D3 /* Localizable.xcstrings */; };
+		A100000000000000000000D6 /* InfoPlist.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000D5 /* InfoPlist.xcstrings */; };
+		B20000000000000000000052 /* InfoPlist.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000D5 /* InfoPlist.xcstrings */; };
+		B20000000000000000000053 /* LocalizationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000D7 /* LocalizationTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -224,6 +229,9 @@
 		A100000000000000000000CD /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		A100000000000000000000CF /* ActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityView.swift; sourceTree = "<group>"; };
 		A100000000000000000000D1 /* L10n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = L10n.swift; sourceTree = "<group>"; };
+		A100000000000000000000D3 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		A100000000000000000000D5 /* InfoPlist.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = InfoPlist.xcstrings; sourceTree = "<group>"; };
+		A100000000000000000000D7 /* LocalizationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -336,6 +344,8 @@
 			isa = PBXGroup;
 			children = (
 				A10000000000000000000036 /* Info.plist */,
+				A100000000000000000000D3 /* Localizable.xcstrings */,
+				A100000000000000000000D5 /* InfoPlist.xcstrings */,
 			);
 			path = Supporting;
 			sourceTree = "<group>";
@@ -377,6 +387,7 @@
 				A100000000000000000000A9 /* EscalationTests.swift */,
 				A100000000000000000000AA /* IncidentClientTests.swift */,
 				A100000000000000000000BC /* SetupTests.swift */,
+				A100000000000000000000D7 /* LocalizationTests.swift */,
 			);
 			path = SafeguardTests;
 			sourceTree = "<group>";
@@ -540,6 +551,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10000000000000000000071 /* Assets.xcassets in Resources */,
+				A100000000000000000000D4 /* Localizable.xcstrings in Resources */,
+				A100000000000000000000D6 /* InfoPlist.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -547,6 +560,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B20000000000000000000051 /* Localizable.xcstrings in Resources */,
+				B20000000000000000000052 /* InfoPlist.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -686,6 +701,7 @@
 				B2000000000000000000004E /* SetupTests.swift in Sources */,
 				B2000000000000000000004F /* AppLanguage.swift in Sources */,
 				B20000000000000000000050 /* L10n.swift in Sources */,
+				B20000000000000000000053 /* LocalizationTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -2,6 +2,43 @@
 
 Log of every deviation from the project brief, with reasons. Newest first.
 
+## Phase 7 (2026-10-27): first-run setup, Activity, Settings, Hindi, defaults
+
+Muse Code wrote the first six commits in a second clone (`~/safeguard`); it
+was stopped mid-task, its commits fast-forwarded here and its uncommitted
+edits copied over, then finished and checked here. Backend
+`cd backend && .venv/bin/python -m pytest` (137 passed, 1 skipped); iOS
+`./scripts/test.sh` (371/371 on the Simulator).
+
+What shipped: blocking 8-step setup as a pure tested state machine (resumes
+at the same step; "Run setup again" in Settings keeps data), local
+`IncidentHistory` (Documents JSON, 30-day purge at launch, no transcripts),
+Activity tab, Settings grouped Profile/People/Code phrases/Listening/Alerts/
+Permissions/Data/About/Developer, delete-all (local data + backend
+`DELETE /evidence/{session}` and `DELETE /contacts/{code}`), one `Defaults`
+type (release: everything off except distress words and on-device code
+phrases), String Catalog (English + Hindi, 368 app keys + 5 Info.plist keys,
+a test fails on any missing or empty Hindi value), Hindi "Are you safe?"
+voice, alerts to contacts in the wearer's language, contrast tests for new
+colour pairs, 44 pt touch targets, Reduce Motion/Transparency.
+
+Deviations and caveats:
+
+1. **Hindi is machine-written.** It needs a native speaker's review before
+   anyone relies on it.
+2. **Existing installs skip setup.** `showSetup` is `!setupComplete &&
+   !onboardingSeen`, so a phone that already passed the old one-screen
+   onboarding does not see the new flow until "Run setup again" in Settings.
+3. **Not verified on the real iPhone**: system permission prompts and the
+   "Turn on in Settings" return path, VoiceOver reading order, the largest
+   Dynamic Type sizes (setup and Settings scroll, but clipping was not
+   checked on a device), Hindi voice availability (a missing voice falls back
+   silently to the default), the Telegram invite step with a real bot, and
+   delete-all against a live backend while offline.
+4. **Machine spot-check only**: Simulator tests cover logic, localisation
+   completeness and contrast; nothing here was driven by hand through the
+   screens.
+
 ## Phase 6 (2026-10-27): SOS escalation, four parallel tracks
 
 Shipped in small commits (backend notify + linking + incidents + viewer +
@@ -224,7 +261,7 @@ Found by reviewing the real Phase 4 code, probing it, and running it:
    (`design/logo-source.png`, `scripts/make-brand-assets.py`): shield enlarged
    from 51%x58% to 70%x81% of a 1024 icon on pure white; the launch screen shows
    the same logo (Info.plist `UILaunchScreen`), and `SplashView` starts with it
-   fully visible in the same place, fades "SafeGuard" in beneath it, holds 3.5 s
+   fully visible in the same place, fades "Safeguard" in beneath it, holds 3.5 s
    and cross-fades out over 0.6 s (Reduce Motion respected, skippable in debug
    builds with `skipSplash`). Brand tests check icon size, opacity, centring and
    wiring. Not changed: the home-screen label is still "Safeguard".

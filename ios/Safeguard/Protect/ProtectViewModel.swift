@@ -187,10 +187,22 @@ final class ProtectViewModel: ObservableObject {
         // listener runs from here on (foreground only — iOS suspends the
         // mic in the background). Idle transcripts feed commands only: no
         // code phrases, no window, no threat scan, no backend call.
-        startListener()
+        // Pre-setup the mic stays off: setup asks each permission with its
+        // reason first, and starting the listener would prompt bare.
+        let standard = UserDefaults.standard
+        if standard.bool(forKey: "setupComplete")
+            || standard.bool(forKey: "onboardingSeen")
+        {
+            startListener()
+        }
         loadContacts()
         history = IncidentHistory.load()
         saveHistory() // persists the 30-day purge, if any
+    }
+
+    /// Setup finished: the idle hot mic may start now.
+    func setupFinished() {
+        startListener()
     }
 
     // CIContext is Sendable; shared for off-main replay frame conversion.
@@ -1275,6 +1287,7 @@ final class ProtectViewModel: ObservableObject {
     private func trackDone(_ track: EscalationTrack) {
         escalation.complete(track)
         AppLog.shared.event("sos_track", ["track": track.rawValue, "status": "done"])
+        UIAccessibility.post(notification: .announcement, argument: L10n.format("%@ done", track.title))
     }
 
     private func trackFailed(_ track: EscalationTrack, reason: String) {
@@ -1283,6 +1296,11 @@ final class ProtectViewModel: ObservableObject {
             "track": track.rawValue,
             "status": shortStatus(escalation.status(of: track)),
         ])
+        // A scheduled retry leaves the track running (silent); only a
+        // terminal failure is announced.
+        if case .failed = escalation.status(of: track) {
+            UIAccessibility.post(notification: .announcement, argument: L10n.format("%@ failed: %@", track.title, reason))
+        }
     }
 
     private func trackReason(for error: Error) -> String {
@@ -1601,6 +1619,7 @@ final class ProtectViewModel: ObservableObject {
     func startPhrasePractice() {
         practiceHeard = .none
         practicingPhrases = true
+        startListener() // permissions were granted in the setup step before
     }
 
     func stopPhrasePractice() {

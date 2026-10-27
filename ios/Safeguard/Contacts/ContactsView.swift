@@ -36,9 +36,10 @@ struct ContactsView: View {
                     TextField("Name", text: $newName)
                         .textInputAutocapitalization(.words)
                         .disableAutocorrection(true)
-                    Button(adding ? "Creating invite..." : "Add contact") {
+                    Button(adding ? String(localized: "Creating invite...") : String(localized: "Add contact")) {
                         addContact()
                     }
+                    .minTouchTarget()
                     .disabled(adding || model.sosContacts.isFull || newName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 } footer: {
                     if model.sosContacts.isFull {
@@ -70,19 +71,20 @@ struct ContactsView: View {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(contact.name)
-                    Text(contact.linked ? "Linked" : "Waiting")
+                    Text(contact.linked ? String(localized: "Linked") : String(localized: "Waiting"))
                         .font(.footnote)
-                        .foregroundStyle(contact.linked ? .green : .secondary)
+                        .foregroundStyle(contact.linked ? DS.Colors.ok : .secondary)
                 }
                 Spacer()
                 if contact.linked {
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
+                        .foregroundStyle(DS.Colors.ok)
                 } else if let link = contact.link, let url = URL(string: link) {
                     ShareLink(item: url) {
                         Label("Invite on Telegram", systemImage: "paperplane")
                     }
                     .font(.footnote)
+                    .minTouchTarget()
                 }
             }
             Toggle(
@@ -139,6 +141,7 @@ private struct ShareInviteView: View {
                     Label("Invite on Telegram", systemImage: "square.and.arrow.up")
                 }
                 .buttonStyle(.borderedProminent)
+                .minTouchTarget()
                 Spacer()
             }
             .padding()

@@ -1,0 +1,86 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "NSLocalNetworkUsageDescription": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safeguard sends a few frames to your own computer on the local network to double-check a possible threat."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safeguard संभावित खतरे की दोबारा जाँच के लिए स्थानीय नेटवर्क पर आपके अपने कंप्यूटर को कुछ फ्रेम भेजता है।"
+          }
+        }
+      }
+    },
+    "NSCameraUsageDescription": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safeguard watches for threatening behaviour by people nearby. Frames are analysed on-device and discarded."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safeguard आस-पास के लोगों के खतरनाक बर्ताव पर नज़र रखता है। फ्रेम ऑन-डिवाइस विश्लेषित होकर हटा दिए जाते हैं।"
+          }
+        }
+      }
+    },
+    "NSLocationWhenInUseUsageDescription": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safeguard shares your location with your emergency contacts only during an SOS."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safeguard सिर्फ़ SOS के दौरान आपके आपातकालीन संपर्कों से आपकी लोकेशन साझा करता है।"
+          }
+        }
+      }
+    },
+    "NSMicrophoneUsageDescription": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safeguard listens for your safety code phrases and, only if you opt in, for threatening speech nearby. Transcription happens on this phone; nothing is recorded."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safeguard आपके सेफ्टी कोड वाक्य सुनता है और, सिर्फ़ आपकी अनुमति पर, आस-पास की धमकी भरी बोली। ट्रांसक्रिप्शन इसी फ़ोन पर होता है; कुछ रिकॉर्ड नहीं होता।"
+          }
+        }
+      }
+    },
+    "NSSpeechRecognitionUsageDescription": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safeguard transcribes nearby speech on this phone to hear your code phrases and, only if you opt in, threatening talk. Audio never leaves this phone."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safeguard आपके कोड वाक्य सुनने के लिए आस-पास की बोली को इसी फ़ोन पर लिखता है और, सिर्फ़ आपकी अनुमति पर, धमकी भरी बात। ऑडियो कभी फ़ोन से बाहर नहीं जाता।"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

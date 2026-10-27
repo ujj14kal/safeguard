@@ -64,7 +64,7 @@ struct ActivityRow: View {
                 ActivityText.duration(entry.durationSeconds))
                 .font(.footnote)
                 .foregroundStyle(.secondary)
-            Text(format: "%d contacts alerted", entry.contactsAlerted)
+            Text(format: "Contacts alerted: %d", entry.contactsAlerted)
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }
@@ -119,6 +119,7 @@ struct ActivityDetailView: View {
                 )
                 if let link = entry.liveURL, let url = URL(string: link) {
                     Link("Open live link", destination: url)
+                        .minTouchTarget()
                 }
             }
             Section {
@@ -168,7 +169,7 @@ enum ActivityText {
 
     /// One VoiceOver sentence per row.
     static func voiceOver(_ entry: IncidentHistoryEntry) -> String {
-        String(format: String(localized: "SOS on %@: %@, %@, %d contacts alerted."),
+        String(format: String(localized: "SOS on %@: %@, %@. Contacts alerted: %d."),
             entry.startedAt.formatted(date: .abbreviated, time: .shortened) as NSString,
             causeTitle(entry.cause) as NSString,
             duration(entry.durationSeconds) as NSString,

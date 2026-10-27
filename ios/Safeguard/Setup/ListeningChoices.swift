@@ -14,46 +14,38 @@ enum ListeningChoices {
     static let all: [Choice] = [
         Choice(
             key: "listenerOptIn",
-            title: "Listen for threatening speech",
-            explanation: "Transcribes speech near you, on this phone only, to notice " +
-                "threatening or harassing talk. Raw audio is never stored or sent; " +
-                "transcripts live only in a short in-memory window.",
+            title: String(localized: "Listen for threatening speech"),
+            explanation: String(localized: "Transcribes speech near you, on this phone only, to notice threatening or harassing talk. Raw audio is never stored or sent; transcripts live only in a short in-memory window."),
             defaultValue: Defaults.current.listenerOptIn
         ),
         Choice(
             key: "cloudEarEnabled",
-            title: "Cloud ear",
-            explanation: "Streams live audio to your Safeguard backend, which relays " +
-                "it to Meta's speech model for accurate Hindi and Hinglish. " +
-                "Off keeps everything on this phone.",
+            title: String(localized: "Cloud ear"),
+            explanation: String(localized: "Streams live audio to your Safeguard backend, which relays it to Meta's speech model for accurate Hindi and Hinglish. Off keeps everything on this phone."),
             defaultValue: Defaults.current.cloudEarEnabled
         ),
         Choice(
             key: "aiJudgeEnabled",
-            title: "AI judge",
-            explanation: "Sends the last few seconds of conversation as text — never " +
-                "audio — to an AI model to judge danger.",
+            title: String(localized: "AI judge"),
+            explanation: String(localized: "Sends the last few seconds of conversation as text — never audio — to an AI model to judge danger."),
             defaultValue: Defaults.current.aiJudgeEnabled
         ),
         Choice(
             key: "distressWordsEnabled",
-            title: "Distress words",
-            explanation: "Words like “help” and “bachao” start a 5-second auto-SOS " +
-                "countdown you can cancel. On-device, always.",
+            title: String(localized: "Distress words"),
+            explanation: String(localized: "Words like “help” and “bachao” start a 5-second auto-SOS countdown you can cancel. On-device, always."),
             defaultValue: Defaults.current.distressWordsEnabled
         ),
         Choice(
             key: "shoutingTriggersSOS",
-            title: "Shouting",
-            explanation: "Sudden loud shouting near you starts the same auto-SOS " +
-                "countdown. On-device loudness only; no words leave the phone.",
+            title: String(localized: "Shouting"),
+            explanation: String(localized: "Sudden loud shouting near you starts the same auto-SOS countdown. On-device loudness only; no words leave the phone."),
             defaultValue: Defaults.current.shoutingTriggersSOS
         ),
         Choice(
             key: "recordOnSOS",
-            title: "SOS recording and upload",
-            explanation: "Records video and audio during an SOS and uploads it in " +
-                "parts so your contacts can watch. Nothing records at any other time.",
+            title: String(localized: "SOS recording and upload"),
+            explanation: String(localized: "Records video and audio during an SOS and uploads it in parts so your contacts can watch. Nothing records at any other time."),
             defaultValue: Defaults.current.recordOnSOS
         ),
     ]

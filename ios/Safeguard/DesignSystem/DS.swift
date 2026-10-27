@@ -49,6 +49,16 @@ enum DS {
             }
         }
     }
+
+    /// SOS scrim translucency. The contrast test blends these exact
+    /// opacities over the danger token, so edits here re-verify.
+    enum SOS {
+        /// Red scrim over the live camera (danger-dominated at 88%).
+        static let scrimOpacity: Double = 0.88
+        /// Black chip bed over the scrim (solid black with Reduce
+        /// Transparency, which only raises contrast).
+        static let chipBedOpacity: Double = 0.45
+    }
 }
 
 extension Color {

@@ -1,0 +1,5894 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    " • %d waiting to retry": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " • %d waiting to retry"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " • %d फिर से कोशिश बाकी"
+          }
+        }
+      }
+    },
+    "%@ done": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ done"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ हो गया"
+          }
+        }
+      }
+    },
+    "%@ failed: %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ failed: %@"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ विफल: %@"
+          }
+        }
+      }
+    },
+    "%@ granted": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ granted"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ चालू है"
+          }
+        }
+      }
+    },
+    "%@ • %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ • %@"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ • %@"
+          }
+        }
+      }
+    },
+    "%@ • %d fps • %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ • %d fps • %@"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ • %d fps • %@"
+          }
+        }
+      }
+    },
+    "%@. %@. %@. %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@. %@. %@. %@"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ %@ %@ %@"
+          }
+        }
+      }
+    },
+    "%@. Start the safety measures?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@. Start the safety measures?"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@। सुरक्षा उपाय शुरू करें?"
+          }
+        }
+      }
+    },
+    "%d min %d s": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d min %d s"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d मिनट %d सेकंड"
+          }
+        }
+      }
+    },
+    "%d min walk": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d min walk"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d मिनट पैदल"
+          }
+        }
+      }
+    },
+    "%d of 6 on": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d of 6 on"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "6 में से %d चालू"
+          }
+        }
+      }
+    },
+    "%d people": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d people"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d लोग"
+          }
+        }
+      }
+    },
+    "%d people nearby": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d people nearby"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आस-पास %d लोग"
+          }
+        }
+      }
+    },
+    "%d s": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d s"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d सेकंड"
+          }
+        }
+      }
+    },
+    "%d saved, %d waiting": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d saved, %d waiting"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d सहेजे गए, %d बाकी"
+          }
+        }
+      }
+    },
+    "%d seconds until auto SOS": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d seconds until auto SOS"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ऑटो SOS में %d सेकंड बाकी"
+          }
+        }
+      }
+    },
+    "1 person": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 person"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 व्यक्ति"
+          }
+        }
+      }
+    },
+    "1 person nearby": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 person nearby"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आस-पास 1 व्यक्ति"
+          }
+        }
+      }
+    },
+    "A call for help": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A call for help"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "मदद की पुकार"
+          }
+        }
+      }
+    },
+    "A code phrase cannot be a distress word.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A code phrase cannot be a distress word."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कोई कोड वाक्य परेशानी का शब्द नहीं हो सकता।"
+          }
+        }
+      }
+    },
+    "A distress word starts a 5-second countdown you can cancel. No reply to the spoken check-in within 10 seconds starts an SOS.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A distress word starts a 5-second countdown you can cancel. No reply to the spoken check-in within 10 seconds starts an SOS."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कोई परेशानी का शब्द 5 सेकंड की उलटी गिनती शुरू करता है जिसे आप रद्द कर सकते हैं। बोले गए सवाल का 10 सेकंड में जवाब न मिलने पर SOS शुरू हो जाता है।"
+          }
+        }
+      }
+    },
+    "A few permissions": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A few permissions"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कुछ अनुमतियाँ"
+          }
+        }
+      }
+    },
+    "A safe phrase answers “I'm OK”. An unsafe phrase starts an SOS at once — even mid-sentence, even with everything off.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A safe phrase answers “I'm OK”. An unsafe phrase starts an SOS at once — even mid-sentence, even with everything off."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सेफ वाक्य “मैं ठीक हूँ” का जवाब देता है। अनसेफ वाक्य तुरंत SOS शुरू करता है — बीच वाक्य में भी, सब कुछ बंद होने पर भी।"
+          }
+        }
+      }
+    },
+    "AI judge": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI judge"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI जज"
+          }
+        }
+      }
+    },
+    "AI judge failed: %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI judge failed: %@"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI जज विफल: %@"
+          }
+        }
+      }
+    },
+    "AI judge: %@ %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI judge: %@ %@"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI जज: %@ %@"
+          }
+        }
+      }
+    },
+    "AI judge: idle": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI judge: idle"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI जज: खाली"
+          }
+        }
+      }
+    },
+    "AI judge: sent %d words": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI judge: sent %d words"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI जज: %d शब्द भेजे"
+          }
+        }
+      }
+    },
+    "About": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "About"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "परिचय"
+          }
+        }
+      }
+    },
+    "Abusive or angry language": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abusive or angry language"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "गाली-गलौज या गुस्से वाली भाषा"
+          }
+        }
+      }
+    },
+    "Activity": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activity"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "गतिविधि"
+          }
+        }
+      }
+    },
+    "Add at least 2 people who agreed to be alerted. A contact receives alerts ONLY after they open the invite link and press Start in Telegram.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add at least 2 people who agreed to be alerted. A contact receives alerts ONLY after they open the invite link and press Start in Telegram."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कम से कम 2 ऐसे लोग जोड़ें जो अलर्ट पाने के लिए राज़ी हों। कोई संपर्क तभी अलर्ट पाएगा जब वह इनवाइट लिंक खोलेगा और Telegram में Start दबाएगा।"
+          }
+        }
+      }
+    },
+    "Add contact": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add contact"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "संपर्क जोड़ें"
+          }
+        }
+      }
+    },
+    "Agreed so far: %d of 2 needed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Agreed so far: %d of 2 needed"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अब तक राज़ी: 2 में से %d"
+          }
+        }
+      }
+    },
+    "Alerted": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alerted"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अलर्ट भेजा गया"
+          }
+        }
+      }
+    },
+    "Alerts": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alerts"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अलर्ट"
+          }
+        }
+      }
+    },
+    "Allow": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allow"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अनुमति दें"
+          }
+        }
+      }
+    },
+    "Apple ear on • %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple ear on • %@"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple ईयर चालू • %@"
+          }
+        }
+      }
+    },
+    "Are you safe?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Are you safe?"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "क्या आप सुरक्षित हैं?"
+          }
+        }
+      }
+    },
+    "Arrives in": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arrives in"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "पहुँचेगा"
+          }
+        }
+      }
+    },
+    "Ask me": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ask me"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "मुझसे पूछें"
+          }
+        }
+      }
+    },
+    "At most 5 contacts": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "At most 5 contacts"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अधिक से अधिक 5 संपर्क"
+          }
+        }
+      }
+    },
+    "At most 5 contacts. Remove one to add another.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "At most 5 contacts. Remove one to add another."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अधिक से अधिक 5 संपर्क। नया जोड़ने के लिए कोई एक हटाएँ।"
+          }
+        }
+      }
+    },
+    "Auto-SOS cancelled": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto-SOS cancelled"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ऑटो-SOS रद्द"
+          }
+        }
+      }
+    },
+    "Auto-SOS starting": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto-SOS starting"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ऑटो-SOS शुरू हो रहा है"
+          }
+        }
+      }
+    },
+    "Automatic": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "स्वचालित"
+          }
+        }
+      }
+    },
+    "Automatic police alerts are on the roadmap.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic police alerts are on the roadmap."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अपने-आप पुलिस अलर्ट भविष्य की योजना में है।"
+          }
+        }
+      }
+    },
+    "Back": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "पीछे"
+          }
+        }
+      }
+    },
+    "Backend: %d deleted, %d failed.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backend: %d deleted, %d failed."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "बैकएंड: %d हटाए गए, %d विफल।"
+          }
+        }
+      }
+    },
+    "Brighten the screen": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brighten the screen"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "स्क्रीन रोशन करें"
+          }
+        }
+      }
+    },
+    "Build": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Build"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "बिल्ड"
+          }
+        }
+      }
+    },
+    "Buttons": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buttons"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "बटन"
+          }
+        }
+      }
+    },
+    "Cab": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cab"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कैब"
+          }
+        }
+      }
+    },
+    "Cab (demo)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cab (demo)"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कैब (डेमो)"
+          }
+        }
+      }
+    },
+    "Cab details shared": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cab details shared"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कैब की जानकारी साझा की गई"
+          }
+        }
+      }
+    },
+    "Call 112": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Call 112"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "112 पर कॉल करें"
+          }
+        }
+      }
+    },
+    "Calling 112": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Calling 112"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "112 पर कॉल हो रही है"
+          }
+        }
+      }
+    },
+    "Camera": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Camera"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कैमरा"
+          }
+        }
+      }
+    },
+    "Camera access was denied. Enable it in Settings to start protecting.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Camera access was denied. Enable it in Settings to start protecting."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कैमरे की अनुमति नहीं मिली। सुरक्षा शुरू करने के लिए सेटिंग में इसे चालू करें।"
+          }
+        }
+      }
+    },
+    "Cancel": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "रद्द करें"
+          }
+        }
+      }
+    },
+    "Cannot reach %@. Check the URL, Wi-Fi, and that the backend listens on 0.0.0.0.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cannot reach %@. Check the URL, Wi-Fi, and that the backend listens on 0.0.0.0."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ से संपर्क नहीं हो सका। URL, Wi-Fi देखें, और यह कि बैकएंड 0.0.0.0 पर सुन रहा है।"
+          }
+        }
+      }
+    },
+    "Cause": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cause"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कारण"
+          }
+        }
+      }
+    },
+    "Checking what is happening around you.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Checking what is happening around you."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आपके आस-पास क्या हो रहा है, यह देखा जा रहा है।"
+          }
+        }
+      }
+    },
+    "Clear": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "साफ"
+          }
+        }
+      }
+    },
+    "Cloud ear": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cloud ear"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "क्लाउड ईयर"
+          }
+        }
+      }
+    },
+    "Cloud ear always on (demo)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cloud ear always on (demo)"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "क्लाउड ईयर हमेशा चालू (डेमो)"
+          }
+        }
+      }
+    },
+    "Cloud ear: %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cloud ear: %@"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "क्लाउड ईयर: %@"
+          }
+        }
+      }
+    },
+    "Cloud ear: connecting": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cloud ear: connecting"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "क्लाउड ईयर: जुड़ रहा है"
+          }
+        }
+      }
+    },
+    "Cloud ear: live": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cloud ear: live"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "क्लाउड ईयर: चालू है"
+          }
+        }
+      }
+    },
+    "Cloud ear: off": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cloud ear: off"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "क्लाउड ईयर: बंद"
+          }
+        }
+      }
+    },
+    "Code phrases": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Code phrases"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कोड वाक्य"
+          }
+        }
+      }
+    },
+    "Contact": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contact"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "संपर्क"
+          }
+        }
+      }
+    },
+    "Contacts": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contacts"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "संपर्क"
+          }
+        }
+      }
+    },
+    "Contacts alerted: %d": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contacts alerted: %d"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अलर्ट पाए संपर्क: %d"
+          }
+        }
+      }
+    },
+    "Contacts still waiting: %d": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contacts still waiting: %d"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अभी भी इंतज़ार करते संपर्क: %d"
+          }
+        }
+      }
+    },
+    "Conversation flag": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conversation flag"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "बातचीत का झंडा"
+          }
+        }
+      }
+    },
+    "Conversation rating is off: turn it on in Settings": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conversation rating is off: turn it on in Settings"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "बातचीत की रेटिंग बंद है: सेटिंग में चालू करें"
+          }
+        }
+      }
+    },
+    "Copy": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कॉपी करें"
+          }
+        }
+      }
+    },
+    "Could not configure capture: %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not configure capture: %@"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कैप्चर सेट नहीं हो सका: %@"
+          }
+        }
+      }
+    },
+    "Could not create invite": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not create invite"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "इनवाइट नहीं बन सका"
+          }
+        }
+      }
+    },
+    "Could not place the call on this device": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not place the call on this device"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "इस डिवाइस पर कॉल नहीं हो सकी"
+          }
+        }
+      }
+    },
+    "Could not read replay file: %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not read replay file: %@"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "रिप्ले फ़ाइल पढ़ी नहीं जा सकी: %@"
+          }
+        }
+      }
+    },
+    "Could not share cab details": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not share cab details"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कैब की जानकारी साझा नहीं हो सकी"
+          }
+        }
+      }
+    },
+    "Could not start audio (%@)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not start audio (%@)"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ऑडियो शुरू नहीं हो सका (%@)"
+          }
+        }
+      }
+    },
+    "Couldn't reach the backend, so there is no exact text to show. The real SOS retries automatically when offline.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't reach the backend, so there is no exact text to show. The real SOS retries automatically when offline."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "बैकएंड से संपर्क नहीं हो सका, इसलिए सही टेक्स्ट दिख नहीं सकता। असली SOS ऑफ़लाइन होने पर अपने-आप फिर कोशिश करता है।"
+          }
+        }
+      }
+    },
+    "Creating invite...": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Creating invite..."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "निमंत्रण बन रहा है…"
+          }
+        }
+      }
+    },
+    "DEMO — no real cab service is connected.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DEMO — no real cab service is connected."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DEMO — कोई असली कैब सेवा जुड़ी नहीं है।"
+          }
+        }
+      }
+    },
+    "Data": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Data"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "डेटा"
+          }
+        }
+      }
+    },
+    "Debug log (sends what is heard to your backend)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Debug log (sends what is heard to your backend)"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "डीबग लॉग (जो सुना वह आपके बैकएंड को भेजता है)"
+          }
+        }
+      }
+    },
+    "Defaults": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Defaults"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "डिफ़ॉल्ट"
+          }
+        }
+      }
+    },
+    "Delete": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "हटाएँ"
+          }
+        }
+      }
+    },
+    "Delete all": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete all"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सभी हटाएँ"
+          }
+        }
+      }
+    },
+    "Delete all events?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete all events?"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सभी इवेंट हटाएँ?"
+          }
+        }
+      }
+    },
+    "Delete all my data": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete all my data"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "मेरा सारा डेटा हटाएँ"
+          }
+        }
+      }
+    },
+    "Delete all my data?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete all my data?"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "मेरा सारा डेटा हटाएँ?"
+          }
+        }
+      }
+    },
+    "Delete everything": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete everything"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सब कुछ हटाएँ"
+          }
+        }
+      }
+    },
+    "Delete this event": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete this event"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "यह इवेंट हटाएँ"
+          }
+        }
+      }
+    },
+    "Delete this event?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete this event?"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "यह इवेंट हटाएँ?"
+          }
+        }
+      }
+    },
+    "Destructive": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Destructive"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "खतरनाक"
+          }
+        }
+      }
+    },
+    "Detection overlay": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Detection overlay"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "डिटेक्शन ओवरले"
+          }
+        }
+      }
+    },
+    "Developer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Developer"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "डेवलपर"
+          }
+        }
+      }
+    },
+    "Dim the screen": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dim the screen"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "स्क्रीन मंद करें"
+          }
+        }
+      }
+    },
+    "Dismiss": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dismiss"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "खारिज करें"
+          }
+        }
+      }
+    },
+    "Distress call — recording and help are starting": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Distress call — recording and help are starting"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "परेशानी की पुकार — रिकॉर्डिंग और मदद शुरू हो रही है"
+          }
+        }
+      }
+    },
+    "Distress word": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Distress word"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "परेशानी का शब्द"
+          }
+        }
+      }
+    },
+    "Distress words": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Distress words"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "परेशानी के शब्द"
+          }
+        }
+      }
+    },
+    "Done": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Done"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "हो गया"
+          }
+        }
+      }
+    },
+    "Done — restart setup": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Done — restart setup"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "हो गया — सेटअप फिर शुरू करें"
+          }
+        }
+      }
+    },
+    "Driver": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Driver"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ड्राइवर"
+          }
+        }
+      }
+    },
+    "Dry-run": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dry-run"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ड्राई-रन"
+          }
+        }
+      }
+    },
+    "Duration": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Duration"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अवधि"
+          }
+        }
+      }
+    },
+    "Each choice says what it hears and what leaves your phone. You can change these anytime in Settings.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Each choice says what it hears and what leaves your phone. You can change these anytime in Settings."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "हर विकल्प बताता है कि वह क्या सुनता है और आपके फ़ोन से क्या बाहर जाता है। आप इन्हें सेटिंग में कभी भी बदल सकते हैं।"
+          }
+        }
+      }
+    },
+    "Each one is asked separately, with the reason first. Saying no never stops setup — but some features will not work.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Each one is asked separately, with the reason first. Saying no never stops setup — but some features will not work."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "हर अनुमति अलग से, कारण सहित माँगी जाती है। मना करने से सेटअप नहीं रुकता — पर कुछ सुविधाएँ काम नहीं करेंगी।"
+          }
+        }
+      }
+    },
+    "Each phrase needs at least 2 words.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Each phrase needs at least 2 words."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "हर वाक्य में कम से कम 2 शब्द हों।"
+          }
+        }
+      }
+    },
+    "Each phrase needs at least 2 words. They must differ, neither may contain the other, and neither may be a distress word.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Each phrase needs at least 2 words. They must differ, neither may contain the other, and neither may be a distress word."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "हर वाक्य में कम से कम 2 शब्द हों। दोनों अलग हों, कोई एक दूसरे को समाए नहीं, और कोई परेशानी का शब्द न हो।"
+          }
+        }
+      }
+    },
+    "Emergency contacts": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Emergency contacts"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आपातकालीन संपर्क"
+          }
+        }
+      }
+    },
+    "Emergency contacts (%d/%d)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Emergency contacts (%d/%d)"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आपातकालीन संपर्क (%d/%d)"
+          }
+        }
+      }
+    },
+    "End the SOS first": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "End the SOS first"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "पहले SOS समाप्त करें"
+          }
+        }
+      }
+    },
+    "English (India)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "English (India)"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अंग्रेज़ी (भारत)"
+          }
+        }
+      }
+    },
+    "Evidence": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Evidence"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सबूत"
+          }
+        }
+      }
+    },
+    "Failed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Failed"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "विफल"
+          }
+        }
+      }
+    },
+    "Failed: %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Failed: %@"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "विफल: %@"
+          }
+        }
+      }
+    },
+    "Family can watch:": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Family can watch:"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "परिवार देख सकता है:"
+          }
+        }
+      }
+    },
+    "Finish": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finish"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "समाप्त करें"
+          }
+        }
+      }
+    },
+    "Going back": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Going back"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "वापस जा रहे हैं"
+          }
+        }
+      }
+    },
+    "HUD boxes (mock data)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HUD boxes (mock data)"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HUD बक्से (नकली डेटा)"
+          }
+        }
+      }
+    },
+    "HUD pills (mock data)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HUD pills (mock data)"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HUD पट्टियाँ (नकली डेटा)"
+          }
+        }
+      }
+    },
+    "Heard just now. Start the safety measures?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heard just now. Start the safety measures?"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अभी सुना। सुरक्षा उपाय शुरू करें?"
+          }
+        }
+      }
+    },
+    "Heard: %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heard: %@"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सुना: %@"
+          }
+        }
+      }
+    },
+    "Heard: (nothing yet)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heard: (nothing yet)"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सुना: (अभी कुछ नहीं)"
+          }
+        }
+      }
+    },
+    "Heard: nothing": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heard: nothing"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सुना: कुछ नहीं"
+          }
+        }
+      }
+    },
+    "Heard: safe phrase": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heard: safe phrase"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सुना: सेफ वाक्य"
+          }
+        }
+      }
+    },
+    "Heard: unsafe phrase": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heard: unsafe phrase"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सुना: अनसेफ वाक्य"
+          }
+        }
+      }
+    },
+    "Help is on the way": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Help is on the way"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "मदद आ रही है"
+          }
+        }
+      }
+    },
+    "Hindi": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hindi"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "हिन्दी"
+          }
+        }
+      }
+    },
+    "Hold 3 s to end SOS": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hold 3 s to end SOS"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SOS समाप्त करने के लिए 3 सेकंड दबाए रखें"
+          }
+        }
+      }
+    },
+    "Hold 3 seconds to end the SOS": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hold 3 seconds to end the SOS"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SOS समाप्त करने के लिए 3 सेकंड दबाए रखें"
+          }
+        }
+      }
+    },
+    "I need help": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I need help"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "मुझे मदद चाहिए"
+          }
+        }
+      }
+    },
+    "I'm OK, cancel": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I'm OK, cancel"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "मैं ठीक हूँ, रद्द करें"
+          }
+        }
+      }
+    },
+    "I'm safe": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I'm safe"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "मैं सुरक्षित हूँ"
+          }
+        }
+      }
+    },
+    "If you don't answer, it alerts your trusted contacts with your live location.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If you don't answer, it alerts your trusted contacts with your live location."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अगर आप जवाब नहीं देते, तो यह आपके भरोसेमंद संपर्कों को आपकी लाइव लोकेशन के साथ अलर्ट करता है।"
+          }
+        }
+      }
+    },
+    "Incident ended. Stay safe.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Incident ended. Stay safe."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "घटना समाप्त। सुरक्षित रहें।"
+          }
+        }
+      }
+    },
+    "Invite created": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invite created"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "इनवाइट बन गया"
+          }
+        }
+      }
+    },
+    "Invite on Telegram": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invite on Telegram"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Telegram पर इनवाइट करें"
+          }
+        }
+      }
+    },
+    "It checks in with you by voice when something seems off.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It checks in with you by voice when something seems off."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कुछ गड़बड़ लगने पर यह आपसे आवाज़ में पूछता है।"
+          }
+        }
+      }
+    },
+    "It is not a guarantee of safety.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It is not a guarantee of safety."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "यह सुरक्षा की गारंटी नहीं है।"
+          }
+        }
+      }
+    },
+    "Lilac clear, yellow near, red too close + alerting.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lilac clear, yellow near, red too close + alerting."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "हल्का बैंगनी साफ, पीला नज़दीक, लाल बहुत नज़दीक + अलर्ट।"
+          }
+        }
+      }
+    },
+    "Link a contact first": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Link a contact first"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "पहले कोई संपर्क जोड़ें"
+          }
+        }
+      }
+    },
+    "Link copied": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Link copied"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "लिंक कॉपी हो गया"
+          }
+        }
+      }
+    },
+    "Linked": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Linked"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "जुड़ा हुआ"
+          }
+        }
+      }
+    },
+    "Listen for threatening speech": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Listen for threatening speech"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "धमकी भरी बोली सुनें"
+          }
+        }
+      }
+    },
+    "Listening": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Listening"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सुन रहा है"
+          }
+        }
+      }
+    },
+    "Listening choices": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Listening choices"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सुनने के विकल्प"
+          }
+        }
+      }
+    },
+    "Live stream": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Live stream"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "लाइव स्ट्रीम"
+          }
+        }
+      }
+    },
+    "Location (while using the app)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Location (while using the app)"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "लोकेशन (ऐप इस्तेमाल करते समय)"
+          }
+        }
+      }
+    },
+    "Location unavailable": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Location unavailable"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "लोकेशन उपलब्ध नहीं"
+          }
+        }
+      }
+    },
+    "Microphone": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Microphone"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "माइक्रोफ़ोन"
+          }
+        }
+      }
+    },
+    "Microphone is listening": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Microphone is listening"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "माइक्रोफ़ोन सुन रहा है"
+          }
+        }
+      }
+    },
+    "Microphone off: %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Microphone off: %@"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "माइक्रोफ़ोन बंद: %@"
+          }
+        }
+      }
+    },
+    "Microphone or speech recognition denied: voice check-in unavailable.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Microphone or speech recognition denied: voice check-in unavailable."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "माइक्रोफ़ोन या स्पीच पहचान की अनुमति नहीं है: आवाज़ वाला चेक-इन उपलब्ध नहीं।"
+          }
+        }
+      }
+    },
+    "Microphone or speech recognition is off, so practice can't hear you. Turn them on in Settings to practice.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Microphone or speech recognition is off, so practice can't hear you. Turn them on in Settings to practice."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "माइक्रोफ़ोन या स्पीच पहचान बंद है, इसलिए अभ्यास सुन नहीं सकता। अभ्यास के लिए इन्हें सेटिंग में चालू करें।"
+          }
+        }
+      }
+    },
+    "Monitoring with phone camera": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Monitoring with phone camera"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "फ़ोन कैमरे से निगरानी"
+          }
+        }
+      }
+    },
+    "My Safeguard live page": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "My Safeguard live page"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "मेरा Safeguard लाइव पेज"
+          }
+        }
+      }
+    },
+    "Name": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "नाम"
+          }
+        }
+      }
+    },
+    "Neither phrase may contain the other.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neither phrase may contain the other."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कोई वाक्य दूसरे को समाए नहीं।"
+          }
+        }
+      }
+    },
+    "Next": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आगे"
+          }
+        }
+      }
+    },
+    "No SOS events yet. Finished SOS calls appear here.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No SOS events yet. Finished SOS calls appear here."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अभी कोई SOS इवेंट नहीं। पूरे हुए SOS यहाँ दिखेंगे।"
+          }
+        }
+      }
+    },
+    "No active SOS": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No active SOS"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कोई सक्रिय SOS नहीं"
+          }
+        }
+      }
+    },
+    "No camera is available on this device.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No camera is available on this device."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "इस डिवाइस पर कोई कैमरा नहीं है।"
+          }
+        }
+      }
+    },
+    "No contacts yet. Add up to 5 people you trust.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No contacts yet. Add up to 5 people you trust."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अभी कोई संपर्क नहीं। भरोसे के 5 लोग जोड़ें।"
+          }
+        }
+      }
+    },
+    "No local history or recordings.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No local history or recordings."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कोई स्थानीय इतिहास या रिकॉर्डिंग नहीं।"
+          }
+        }
+      }
+    },
+    "No reply": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No reply"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कोई जवाब नहीं"
+          }
+        }
+      }
+    },
+    "No reply in 10 seconds starts the SOS.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No reply in 10 seconds starts the SOS."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "10 सेकंड में जवाब न मिलने पर SOS शुरू होता है।"
+          }
+        }
+      }
+    },
+    "No reply — help is on the way": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No reply — help is on the way"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कोई जवाब नहीं — मदद आ रही है"
+          }
+        }
+      }
+    },
+    "No staffed places found nearby": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No staffed places found nearby"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आस-पास कोई स्टाफ वाली जगह नहीं मिली"
+          }
+        }
+      }
+    },
+    "No video track in %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No video track in %@"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ में कोई वीडियो ट्रैक नहीं"
+          }
+        }
+      }
+    },
+    "No walking route found": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No walking route found"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "पैदल रास्ता नहीं मिला"
+          }
+        }
+      }
+    },
+    "Not protecting": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not protecting"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सुरक्षा चालू नहीं है"
+          }
+        }
+      }
+    },
+    "Not protecting.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not protecting."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सुरक्षा चालू नहीं है।"
+          }
+        }
+      }
+    },
+    "Not set": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not set"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सेट नहीं है"
+          }
+        }
+      }
+    },
+    "Nothing stored on the backend.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing stored on the backend."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "बैकएंड पर कुछ नहीं है।"
+          }
+        }
+      }
+    },
+    "Off": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Off"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "बंद"
+          }
+        }
+      }
+    },
+    "On": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "चालू"
+          }
+        }
+      }
+    },
+    "On-device speech for %@ is not available on this iPhone": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On-device speech for %@ is not available on this iPhone"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "इस iPhone पर %@ के लिए ऑन-डिवाइस स्पीच उपलब्ध नहीं है"
+          }
+        }
+      }
+    },
+    "Only people who agree get alerts. They press Start once in Telegram; nothing is sent before that.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Only people who agree get alerts. They press Start once in Telegram; nothing is sent before that."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सिर्फ़ राज़ी लोग ही अलर्ट पाते हैं। वे Telegram में एक बार Start दबाते हैं; उससे पहले कुछ नहीं भेजा जाता।"
+          }
+        }
+      }
+    },
+    "Open Settings for %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Settings for %@"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ के लिए सेटिंग खोलें"
+          }
+        }
+      }
+    },
+    "Open in Maps": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open in Maps"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maps में खोलें"
+          }
+        }
+      }
+    },
+    "Open live link": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open live link"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "लाइव लिंक खोलें"
+          }
+        }
+      }
+    },
+    "Opening Settings": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opening Settings"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सेटिंग खोली जा रही है"
+          }
+        }
+      }
+    },
+    "Or say \"%@\", or double tap": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Or say \"%@\", or double tap"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "या \"%@\" कहें, या दो बार टैप करें"
+          }
+        }
+      }
+    },
+    "Parts": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parts"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "हिस्से"
+          }
+        }
+      }
+    },
+    "Pending": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pending"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "बाकी"
+          }
+        }
+      }
+    },
+    "People": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "People"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "लोग"
+          }
+        }
+      }
+    },
+    "Permissions": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permissions"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अनुमतियाँ"
+          }
+        }
+      }
+    },
+    "Plate": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plate"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "नंबर प्लेट"
+          }
+        }
+      }
+    },
+    "Practice": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Practice"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अभ्यास"
+          }
+        }
+      }
+    },
+    "Practice result: %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Practice result: %@"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अभ्यास का नतीजा: %@"
+          }
+        }
+      }
+    },
+    "Preview states": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preview states"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "प्रीव्यू स्थितियाँ"
+          }
+        }
+      }
+    },
+    "Primary": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Primary"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "मुख्य"
+          }
+        }
+      }
+    },
+    "Profile": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Profile"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "प्रोफ़ाइल"
+          }
+        }
+      }
+    },
+    "Protect": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Protect"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सुरक्षा"
+          }
+        }
+      }
+    },
+    "Protecting": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Protecting"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सुरक्षा चालू है"
+          }
+        }
+      }
+    },
+    "Protection stopped": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Protection stopped"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सुरक्षा बंद हो गई"
+          }
+        }
+      }
+    },
+    "Proximity (mock data)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proximity (mock data)"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "नज़दीकी (नकली डेटा)"
+          }
+        }
+      }
+    },
+    "Reachable: %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reachable: %@"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "संपर्क हो गया: %@"
+          }
+        }
+      }
+    },
+    "Recording and safety measures start when it reaches zero.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recording and safety measures start when it reaches zero."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "शून्य होते ही रिकॉर्डिंग और सुरक्षा उपाय शुरू होते हैं।"
+          }
+        }
+      }
+    },
+    "Recording laws differ by country: check yours before switching listening on.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recording laws differ by country: check yours before switching listening on."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "रिकॉर्डिंग के कानून हर देश में अलग हैं: सुनना चालू करने से पहले अपना कानून देखें।"
+          }
+        }
+      }
+    },
+    "Recording • %d of %d parts saved to the cloud": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recording • %d of %d parts saved to the cloud"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "रिकॉर्डिंग • %d में से %d हिस्से क्लाउड में सहेजे गए"
+          }
+        }
+      }
+    },
+    "Records video and audio during an SOS and uploads it in parts so your contacts can watch. Nothing records at any other time.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Records video and audio during an SOS and uploads it in parts so your contacts can watch. Nothing records at any other time."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SOS के दौरान वीडियो और ऑडियो रिकॉर्ड करता है और हिस्सों में अपलोड करता है ताकि आपके संपर्क देख सकें। किसी और समय कुछ रिकॉर्ड नहीं होता।"
+          }
+        }
+      }
+    },
+    "Remove %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove %@"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ हटाएँ"
+          }
+        }
+      }
+    },
+    "Removed: %@.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Removed: %@."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "हटाया गया: %@।"
+          }
+        }
+      }
+    },
+    "Replay a video…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Replay a video…"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कोई वीडियो चलाएँ…"
+          }
+        }
+      }
+    },
+    "Replay file not found: %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Replay file not found: %@"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "रिप्ले फ़ाइल नहीं मिली: %@"
+          }
+        }
+      }
+    },
+    "Replay mode: %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Replay mode: %@"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "रिप्ले मोड: %@"
+          }
+        }
+      }
+    },
+    "Replay video frame": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Replay video frame"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "रिप्ले वीडियो फ्रेम"
+          }
+        }
+      }
+    },
+    "Retrying (%d)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retrying (%d)"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "फिर कोशिश (%d)"
+          }
+        }
+      }
+    },
+    "Route": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Route"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "रास्ता"
+          }
+        }
+      }
+    },
+    "Route, contacts, live stream and cab are starting.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Route, contacts, live stream and cab are starting."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "रास्ता, संपर्क, लाइव स्ट्रीम और कैब शुरू हो रहे हैं।"
+          }
+        }
+      }
+    },
+    "Run sample SOS": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Run sample SOS"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "नमूना SOS चलाएँ"
+          }
+        }
+      }
+    },
+    "Run setup again": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Run setup again"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सेटअप फिर चलाएँ"
+          }
+        }
+      }
+    },
+    "Running": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Running"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "चल रहा है"
+          }
+        }
+      }
+    },
+    "Running sample...": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Running sample..."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "नमूना चल रहा है..."
+          }
+        }
+      }
+    },
+    "SAMPLE SOS — nothing was sent": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SAMPLE SOS — nothing was sent"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "नमूना SOS — कुछ नहीं भेजा गया"
+          }
+        }
+      }
+    },
+    "SOS": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SOS"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SOS"
+          }
+        }
+      }
+    },
+    "SOS ended": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SOS ended"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SOS समाप्त"
+          }
+        }
+      }
+    },
+    "SOS event": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SOS event"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SOS इवेंट"
+          }
+        }
+      }
+    },
+    "SOS on %@: %@, %@. Contacts alerted: %d.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SOS on %@: %@, %@. Contacts alerted: %d."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ को SOS: %@, %@। अलर्ट पाए संपर्क: %d।"
+          }
+        }
+      }
+    },
+    "SOS recording and upload": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SOS recording and upload"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SOS रिकॉर्डिंग और अपलोड"
+          }
+        }
+      }
+    },
+    "SOS tracks (mock data)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SOS tracks (mock data)"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SOS ट्रैक (नकली डेटा)"
+          }
+        }
+      }
+    },
+    "SOS — help is on the way": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SOS — help is on the way"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SOS — मदद आ रही है"
+          }
+        }
+      }
+    },
+    "SOS. Help is on the way.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SOS. Help is on the way."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SOS। मदद आ रही है।"
+          }
+        }
+      }
+    },
+    "Safe phrase": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safe phrase"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सेफ वाक्य"
+          }
+        }
+      }
+    },
+    "Safe place": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safe place"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सुरक्षित जगह"
+          }
+        }
+      }
+    },
+    "Safeguard": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safeguard"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safeguard"
+          }
+        }
+      }
+    },
+    "Safeguard cannot call the police for you.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safeguard cannot call the police for you."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safeguard आपके लिए पुलिस को कॉल नहीं कर सकता।"
+          }
+        }
+      }
+    },
+    "Safeguard watches for threatening behaviour by people nearby.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safeguard watches for threatening behaviour by people nearby."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safeguard आस-पास के लोगों के खतरनाक बर्ताव पर नज़र रखता है।"
+          }
+        }
+      }
+    },
+    "Safeguard watches for threatening behaviour — never appearance or identity. Transcripts stay on this phone unless you switch on a cloud helper; cloud features send data to your own Safeguard backend and on to Meta's models.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safeguard watches for threatening behaviour — never appearance or identity. Transcripts stay on this phone unless you switch on a cloud helper; cloud features send data to your own Safeguard backend and on to Meta's models."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safeguard खतरनाक बर्ताव पर नज़र रखता है — कभी रूप या पहचान पर नहीं। बातचीत का पाठ इस फ़ोन पर ही रहता है जब तक आप क्लाउड सहायक चालू न करें; क्लाउड सुविधाएँ आपका डेटा आपके अपने Safeguard बैकएंड और आगे Meta के मॉडलों को भेजती हैं।"
+          }
+        }
+      }
+    },
+    "Safeguard, stop • status • dim": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safeguard, stop • status • dim"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safeguard, stop • status • dim"
+          }
+        }
+      }
+    },
+    "Sample tracks: route, contacts, live stream, cab": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sample tracks: route, contacts, live stream, cab"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "नमूना ट्रैक: रास्ता, संपर्क, लाइव स्ट्रीम, कैब"
+          }
+        }
+      }
+    },
+    "Say \"open calculator\", tap Cancel, or double tap if you are OK.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Say \"open calculator\", tap Cancel, or double tap if you are OK."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अगर आप ठीक हैं तो \"open calculator\" कहें, Cancel दबाएँ, या दो बार टैप करें।"
+          }
+        }
+      }
+    },
+    "Say a code phrase and check Safeguard hears it.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Say a code phrase and check Safeguard hears it."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कोई कोड वाक्य कहें और देखें कि Safeguard सुनता है या नहीं।"
+          }
+        }
+      }
+    },
+    "Say a code phrase…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Say a code phrase…"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कोई कोड वाक्य कहें…"
+          }
+        }
+      }
+    },
+    "Say “help” / “bachao” for SOS": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Say “help” / “bachao” for SOS"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SOS के लिए “help” / “bachao” कहें"
+          }
+        }
+      }
+    },
+    "Say “help” or “bachao”, or shout: SOS starts by itself": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Say “help” or “bachao”, or shout: SOS starts by itself"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“help” या “bachao” कहें, या चिल्लाएँ: SOS अपने-आप शुरू होता है"
+          }
+        }
+      }
+    },
+    "Screen bright": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Screen bright"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "स्क्रीन रोशन"
+          }
+        }
+      }
+    },
+    "Screen dimmed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Screen dimmed"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "स्क्रीन धीमी"
+          }
+        }
+      }
+    },
+    "Secondary": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Secondary"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "दूसरा"
+          }
+        }
+      }
+    },
+    "Send real alerts": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send real alerts"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "असली अलर्ट भेजें"
+          }
+        }
+      }
+    },
+    "Send real alerts?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send real alerts?"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "असली अलर्ट भेजें?"
+          }
+        }
+      }
+    },
+    "Send test alert to my contacts": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send test alert to my contacts"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "मेरे संपर्कों को टेस्ट अलर्ट भेजें"
+          }
+        }
+      }
+    },
+    "Send this link to your contact. Only after they open it and press Start will they receive your SOS alerts.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send this link to your contact. Only after they open it and press Start will they receive your SOS alerts."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "यह लिंक अपने संपर्क को भेजें। इसे खोलकर Start दबाने के बाद ही उन्हें आपके SOS अलर्ट मिलेंगे।"
+          }
+        }
+      }
+    },
+    "Send this link to your contact. They press Start once in Telegram, then they will get your SOS alerts.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send this link to your contact. They press Start once in Telegram, then they will get your SOS alerts."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "यह लिंक अपने संपर्क को भेजें। Telegram में एक बार Start दबाने के बाद उन्हें आपके SOS अलर्ट मिलेंगे।"
+          }
+        }
+      }
+    },
+    "Sends the last few seconds of conversation as text — never audio — to an AI model to judge danger.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sends the last few seconds of conversation as text — never audio — to an AI model to judge danger."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "खतरा आँकने के लिए बातचीत के आखिरी कुछ सेकंड टेक्स्ट के रूप में — कभी ऑडियो नहीं — AI मॉडल को भेजता है।"
+          }
+        }
+      }
+    },
+    "Sent": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sent"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "भेजा गया"
+          }
+        }
+      }
+    },
+    "Settings": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सेटिंग"
+          }
+        }
+      }
+    },
+    "Settings cleared: %d.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings cleared: %d."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सेटिंग हटाई गईं: %d।"
+          }
+        }
+      }
+    },
+    "Setup": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Setup"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सेटअप"
+          }
+        }
+      }
+    },
+    "Setup step %d of %d": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Setup step %d of %d"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सेटअप चरण %d / %d"
+          }
+        }
+      }
+    },
+    "Share": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Share"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "साझा करें"
+          }
+        }
+      }
+    },
+    "Share cab details": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Share cab details"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कैब की जानकारी साझा करें"
+          }
+        }
+      }
+    },
+    "Sharing your location is not available yet.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sharing your location is not available yet."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आपकी लोकेशन साझा करना अभी उपलब्ध नहीं है।"
+          }
+        }
+      }
+    },
+    "Shouting": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shouting"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "चिल्लाना"
+          }
+        }
+      }
+    },
+    "Shown in SOS alerts to your contacts.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shown in SOS alerts to your contacts."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आपके संपर्कों के SOS अलर्ट में दिखता है।"
+          }
+        }
+      }
+    },
+    "Some backend items could not be deleted (offline?). Delete them from the backend directly.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Some backend items could not be deleted (offline?). Delete them from the backend directly."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कुछ बैकएंड आइटम हटाए नहीं जा सके (ऑफ़लाइन?)। उन्हें बैकएंड से सीधे हटाएँ।"
+          }
+        }
+      }
+    },
+    "Someone": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Someone"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कोई"
+          }
+        }
+      }
+    },
+    "Someone is near": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Someone is near"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कोई नज़दीक है"
+          }
+        }
+      }
+    },
+    "Someone is pressuring you": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Someone is pressuring you"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कोई आप पर दबाव डाल रहा है"
+          }
+        }
+      }
+    },
+    "Someone may be following you": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Someone may be following you"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कोई आपका पीछा कर रहा हो सकता है"
+          }
+        }
+      }
+    },
+    "Something seems off": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Something seems off"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कुछ गड़बड़ लग रहा है"
+          }
+        }
+      }
+    },
+    "Speech language": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speech language"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "बोलने की भाषा"
+          }
+        }
+      }
+    },
+    "Speech recognition": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speech recognition"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "स्पीच पहचान"
+          }
+        }
+      }
+    },
+    "Speech recognition unavailable for %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speech recognition unavailable for %@"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ के लिए स्पीच पहचान उपलब्ध नहीं"
+          }
+        }
+      }
+    },
+    "Speech: %@ on-device (verification offline)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speech: %@ on-device (verification offline)"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "स्पीच: %@ ऑन-डिवाइस (सत्यापन ऑफ़लाइन)"
+          }
+        }
+      }
+    },
+    "Start listening": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start listening"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सुनना शुरू करें"
+          }
+        }
+      }
+    },
+    "Start protecting": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start protecting"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सुरक्षा शुरू करें"
+          }
+        }
+      }
+    },
+    "Start protecting first": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start protecting first"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "पहले सुरक्षा शुरू करें"
+          }
+        }
+      }
+    },
+    "Start protecting to watch for threatening behaviour.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start protecting to watch for threatening behaviour."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "खतरनाक बर्ताव पर नज़र के लिए सुरक्षा शुरू करें।"
+          }
+        }
+      }
+    },
+    "Start safety measures": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start safety measures"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सुरक्षा उपाय शुरू करें"
+          }
+        }
+      }
+    },
+    "Started": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Started"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "शुरू हुआ"
+          }
+        }
+      }
+    },
+    "Status: %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Status: %@"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "स्थिति: %@"
+          }
+        }
+      }
+    },
+    "Stay quiet for a moment, listening to your surroundings": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stay quiet for a moment, listening to your surroundings"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "एक पल शांत रहें, आपके आस-पास सुना जा रहा है"
+          }
+        }
+      }
+    },
+    "Stay quiet, listening": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stay quiet, listening"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "चुप रहें, सुना जा रहा है"
+          }
+        }
+      }
+    },
+    "Stay-quiet cue (mock data)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stay-quiet cue (mock data)"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "चुप रहने का संकेत (नकली डेटा)"
+          }
+        }
+      }
+    },
+    "Step %d of %d": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Step %d of %d"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "चरण %d / %d"
+          }
+        }
+      }
+    },
+    "Still protecting": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Still protecting"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सुरक्षा अभी चालू है"
+          }
+        }
+      }
+    },
+    "Stop": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "रोकें"
+          }
+        }
+      }
+    },
+    "Stop protecting": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop protecting"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सुरक्षा बंद करें"
+          }
+        }
+      }
+    },
+    "Stop protecting? Say yes to confirm.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop protecting? Say yes to confirm."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सुरक्षा बंद करें? पुष्टि के लिए yes कहें।"
+          }
+        }
+      }
+    },
+    "Streams live audio to your Safeguard backend, which relays it to Meta's speech model for accurate Hindi and Hinglish. Off keeps everything on this phone.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Streams live audio to your Safeguard backend, which relays it to Meta's speech model for accurate Hindi and Hinglish. Off keeps everything on this phone."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सटीक हिन्दी और Hinglish के लिए लाइव ऑडियो आपके Safeguard बैकएंड को भेजता है, जो इसे Meta के स्पीच मॉडल तक पहुँचाता है। बंद रखने पर सब कुछ इसी फ़ोन पर रहता है।"
+          }
+        }
+      }
+    },
+    "Sudden loud shouting near you starts the same auto-SOS countdown. On-device loudness only; no words leave the phone.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sudden loud shouting near you starts the same auto-SOS countdown. On-device loudness only; no words leave the phone."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आपके पास अचानक तेज़ चिल्लाना वही ऑटो-SOS उलटी गिनती शुरू करता है। सिर्फ़ ऑन-डिवाइस आवाज़ नापी जाती है; कोई शब्द फ़ोन से बाहर नहीं जाता।"
+          }
+        }
+      }
+    },
+    "Test alert failed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Test alert failed"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "टेस्ट अलर्ट विफल"
+          }
+        }
+      }
+    },
+    "Test alert logged (dry-run)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Test alert logged (dry-run)"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "टेस्ट अलर्ट दर्ज (ड्राई-रन)"
+          }
+        }
+      }
+    },
+    "Test alert sent": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Test alert sent"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "टेस्ट अलर्ट भेजा गया"
+          }
+        }
+      }
+    },
+    "Test connection": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Test connection"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कनेक्शन जाँचें"
+          }
+        }
+      }
+    },
+    "The Mac running the backend, on the same Wi-Fi. Leave empty to use the build-time URL. 127.0.0.1 only works in the Simulator.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The Mac running the backend, on the same Wi-Fi. Leave empty to use the build-time URL. 127.0.0.1 only works in the Simulator."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "बैकएंड चलाने वाला Mac, उसी Wi-Fi पर। बिल्ड-टाइम URL के लिए खाली छोड़ें। 127.0.0.1 सिर्फ़ Simulator में चलता है।"
+          }
+        }
+      }
+    },
+    "The safe phrase would always trigger Unsafe instead.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The safe phrase would always trigger Unsafe instead."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सेफ वाक्य हमेशा Unsafe ही ट्रिगर करेगा।"
+          }
+        }
+      }
+    },
+    "The two phrases must differ.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The two phrases must differ."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "दोनों वाक्य अलग होने चाहिए।"
+          }
+        }
+      }
+    },
+    "They get no alerts until they press Start.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "They get no alerts until they press Start."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start दबाए बिना उन्हें कोई अलर्ट नहीं मिलेगा।"
+          }
+        }
+      }
+    },
+    "This cannot be undone. Contacts, history, recordings, settings and backend evidence are all deleted.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This cannot be undone. Contacts, history, recordings, settings and backend evidence are all deleted."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "यह वापस नहीं होगा। संपर्क, इतिहास, रिकॉर्डिंग, सेटिंग और बैकएंड सबूत सब हट जाएँगे।"
+          }
+        }
+      }
+    },
+    "This cannot be undone. Only this phone's history is deleted.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This cannot be undone. Only this phone's history is deleted."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "यह वापस नहीं होगा। सिर्फ़ इस फ़ोन का इतिहास हटेगा।"
+          }
+        }
+      }
+    },
+    "This person agreed to be alerted": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This person agreed to be alerted"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "यह व्यक्ति अलर्ट पाने के लिए राज़ी है"
+          }
+        }
+      }
+    },
+    "This runs a SAMPLE SOS: no real message, no recording, no location sent. You will see the red screen, the four track chips and exactly the text your contacts would receive.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This runs a SAMPLE SOS: no real message, no recording, no location sent. You will see the red screen, the four track chips and exactly the text your contacts would receive."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "यह एक नमूना SOS है: कोई असली संदेश नहीं, कोई रिकॉर्डिंग नहीं, कोई लोकेशन नहीं भेजी जाती। आपको लाल स्क्रीन, चारों ट्रैक चिप और वही टेक्स्ट दिखेगा जो आपके संपर्कों को मिलेगा।"
+          }
+        }
+      }
+    },
+    "This setup takes about 3 minutes.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This setup takes about 3 minutes."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "इस सेटअप में लगभग 3 मिनट लगते हैं।"
+          }
+        }
+      }
+    },
+    "Threatening words": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Threatening words"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "धमकी भरे शब्द"
+          }
+        }
+      }
+    },
+    "To hear your answers, distress words and shouting.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To hear your answers, distress words and shouting."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आपके जवाब, परेशानी के शब्द और चिल्लाना सुनने के लिए।"
+          }
+        }
+      }
+    },
+    "To share your location with your contacts during an SOS only.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To share your location with your contacts during an SOS only."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सिर्फ़ SOS के दौरान आपके संपर्कों से आपकी लोकेशन साझा करने के लिए।"
+          }
+        }
+      }
+    },
+    "To turn speech into text, on this phone only.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To turn speech into text, on this phone only."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "बोली को टेक्स्ट में बदलने के लिए, सिर्फ़ इसी फ़ोन पर।"
+          }
+        }
+      }
+    },
+    "To watch for threatening behaviour by people nearby.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To watch for threatening behaviour by people nearby."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आस-पास के लोगों के खतरनाक बर्ताव पर नज़र रखने के लिए।"
+          }
+        }
+      }
+    },
+    "Too close": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Too close"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "बहुत नज़दीक"
+          }
+        }
+      }
+    },
+    "Tracks": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tracks"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ट्रैक"
+          }
+        }
+      }
+    },
+    "Transcribes speech near you, on this phone only, to notice threatening or harassing talk. Raw audio is never stored or sent; transcripts live only in a short in-memory window.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcribes speech near you, on this phone only, to notice threatening or harassing talk. Raw audio is never stored or sent; transcripts live only in a short in-memory window."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "धमकी या परेशान करने वाली बात पकड़ने के लिए आपके आस-पास की बोली को सिर्फ़ इसी फ़ोन पर लिखता है। कच्चा ऑडियो कभी सहेजा या भेजा नहीं जाता; टेक्स्ट सिर्फ़ छोटे इन-मेमोरी विंडो में रहता है।"
+          }
+        }
+      }
+    },
+    "Trusted contacts": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trusted contacts"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "भरोसेमंद संपर्क"
+          }
+        }
+      }
+    },
+    "Try a sample SOS": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Try a sample SOS"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "नमूना SOS आज़माएँ"
+          }
+        }
+      }
+    },
+    "Turn on in Settings": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn on in Settings"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सेटिंग में चालू करें"
+          }
+        }
+      }
+    },
+    "Unsafe phrase": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unsafe phrase"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अनसेफ वाक्य"
+          }
+        }
+      }
+    },
+    "Unwanted advances": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unwanted advances"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अवांछित बढ़त"
+          }
+        }
+      }
+    },
+    "Use 1 to 40 characters.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use 1 to 40 characters."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 से 40 अक्षर रखें।"
+          }
+        }
+      }
+    },
+    "Used in alerts to your contacts.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Used in alerts to your contacts."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आपके संपर्कों के अलर्ट में इस्तेमाल होता है।"
+          }
+        }
+      }
+    },
+    "Verification backend offline": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verification backend offline"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सत्यापन बैकएंड ऑफ़लाइन है"
+          }
+        }
+      }
+    },
+    "Verification backend reachable": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verification backend reachable"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सत्यापन बैकएंड उपलब्ध है"
+          }
+        }
+      }
+    },
+    "Verification is offline": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verification is offline"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सत्यापन ऑफ़लाइन है"
+          }
+        }
+      }
+    },
+    "Verification is offline: backend unreachable. On-device protection only.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verification is offline: backend unreachable. On-device protection only."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सत्यापन ऑफ़लाइन है: बैकएंड नहीं मिल रहा। सिर्फ़ ऑन-डिवाइस सुरक्षा।"
+          }
+        }
+      }
+    },
+    "Verification offline.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verification offline."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सत्यापन ऑफ़लाइन।"
+          }
+        }
+      }
+    },
+    "Verification online.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verification online."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सत्यापन ऑनलाइन।"
+          }
+        }
+      }
+    },
+    "Verification rate-limited: too many checks in a minute.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verification rate-limited: too many checks in a minute."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सत्यापन सीमित: एक मिनट में बहुत ज़्यादा जाँच।"
+          }
+        }
+      }
+    },
+    "Verification server error (%@). On-device protection only.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verification server error (%@). On-device protection only."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सत्यापन सर्वर त्रुटि (%@)। सिर्फ़ ऑन-डिवाइस सुरक्षा।"
+          }
+        }
+      }
+    },
+    "Verification unavailable: the backend has no API key.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verification unavailable: the backend has no API key."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सत्यापन उपलब्ध नहीं: बैकएंड के पास API कुंजी नहीं है।"
+          }
+        }
+      }
+    },
+    "Verify: %@ via %@ (%@)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verify: %@ via %@ (%@)"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सत्यापित: %@, %@ (%@) द्वारा"
+          }
+        }
+      }
+    },
+    "Version": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "वर्शन"
+          }
+        }
+      }
+    },
+    "Voice commands": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voice commands"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "वॉइस कमांड"
+          }
+        }
+      }
+    },
+    "Voice commands ready": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voice commands ready"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "वॉइस कमांड तैयार"
+          }
+        }
+      }
+    },
+    "Voice commands unavailable: %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voice commands unavailable: %@"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "वॉइस कमांड उपलब्ध नहीं: %@"
+          }
+        }
+      }
+    },
+    "Waiting": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waiting"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "इंतज़ार"
+          }
+        }
+      }
+    },
+    "Waiting for location…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waiting for location…"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "लोकेशन का इंतज़ार…"
+          }
+        }
+      }
+    },
+    "Waiting for them to press Start": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waiting for them to press Start"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "उनके Start दबाने की प्रतीक्षा है"
+          }
+        }
+      }
+    },
+    "Walks through first-run setup again without deleting anything.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Walks through first-run setup again without deleting anything."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "बिना कुछ हटाए पहली बार वाला सेटअप फिर चलाता है।"
+          }
+        }
+      }
+    },
+    "Watching for threatening behaviour nearby.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Watching for threatening behaviour nearby."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आस-पास खतरनाक बर्ताव पर नज़र है।"
+          }
+        }
+      }
+    },
+    "Welcome to Safeguard": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Welcome to Safeguard"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safeguard में आपका स्वागत है"
+          }
+        }
+      }
+    },
+    "What happened": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What happened"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "क्या हुआ"
+          }
+        }
+      }
+    },
+    "What should we call you?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What should we call you?"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "हम आपको क्या कहें?"
+          }
+        }
+      }
+    },
+    "Wipes contacts, history, saved recordings and settings on this phone, and asks the backend to delete your evidence and contacts. Setup will restart.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wipes contacts, history, saved recordings and settings on this phone, and asks the backend to delete your evidence and contacts. Setup will restart."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "इस फ़ोन पर संपर्क, इतिहास, सहेजी गई रिकॉर्डिंग और सेटिंग मिटाता है, और बैकएंड से आपका सबूत और संपर्क हटाने को कहता है। सेटअप फिर से शुरू होगा।"
+          }
+        }
+      }
+    },
+    "Without location, the SOS route and live location will not work.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Without location, the SOS route and live location will not work."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "लोकेशन के बिना SOS रास्ता और लाइव लोकेशन काम नहीं करेंगे।"
+          }
+        }
+      }
+    },
+    "Without speech recognition, voice features will not work.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Without speech recognition, voice features will not work."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "स्पीच पहचान के बिना आवाज़ वाली सुविधाएँ काम नहीं करेंगी।"
+          }
+        }
+      }
+    },
+    "Without the camera, Safeguard cannot watch for threats.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Without the camera, Safeguard cannot watch for threats."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कैमरे के बिना Safeguard खतरों पर नज़र नहीं रख सकता।"
+          }
+        }
+      }
+    },
+    "Without the microphone, voice answers and distress words will not work.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Without the microphone, voice answers and distress words will not work."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "माइक्रोफ़ोन के बिना आवाज़ वाले जवाब और परेशानी के शब्द काम नहीं करेंगे।"
+          }
+        }
+      }
+    },
+    "Words like “help” and “bachao” start a 5-second auto-SOS countdown you can cancel. On-device, always.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Words like “help” and “bachao” start a 5-second auto-SOS countdown you can cancel. On-device, always."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“help” और “bachao” जैसे शब्द 5 सेकंड की ऑटो-SOS उलटी गिनती शुरू करते हैं जिसे आप रद्द कर सकते हैं। हमेशा ऑन-डिवाइस।"
+          }
+        }
+      }
+    },
+    "You can change anything later in Settings.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can change anything later in Settings."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आप बाद में सेटिंग में सब कुछ बदल सकते हैं।"
+          }
+        }
+      }
+    },
+    "You're safe": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You're safe"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आप सुरक्षित हैं"
+          }
+        }
+      }
+    },
+    "You're set up": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You're set up"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आपका सेटअप हो गया"
+          }
+        }
+      }
+    },
+    "Your contacts will get real Telegram alerts on the next SOS. Only people who pressed Start get them.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your contacts will get real Telegram alerts on the next SOS. Only people who pressed Start get them."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अगले SOS पर आपके संपर्कों को असली Telegram अलर्ट मिलेंगे। सिर्फ़ Start दबाने वालों को ही मिलते हैं।"
+          }
+        }
+      }
+    },
+    "Your contacts would receive:": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your contacts would receive:"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आपके संपर्कों को मिलेगा:"
+          }
+        }
+      }
+    },
+    "Your display name": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your display name"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आपका दिखने वाला नाम"
+          }
+        }
+      }
+    },
+    "Your name": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your name"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आपका नाम"
+          }
+        }
+      }
+    },
+    "Yours": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yours"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आपके"
+          }
+        }
+      }
+    },
+    "backend unreachable": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "backend unreachable"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "बैकएंड नहीं मिल रहा"
+          }
+        }
+      }
+    },
+    "bad app token": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "bad app token"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "गलत ऐप टोकन"
+          }
+        }
+      }
+    },
+    "bad response": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "bad response"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "गलत जवाब"
+          }
+        }
+      }
+    },
+    "could not reach backend": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "could not reach backend"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "बैकएंड से संपर्क नहीं हो सका"
+          }
+        }
+      }
+    },
+    "failed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "failed"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "विफल"
+          }
+        }
+      }
+    },
+    "live page unavailable": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "live page unavailable"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "लाइव पेज उपलब्ध नहीं"
+          }
+        }
+      }
+    },
+    "no route": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "no route"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कोई रास्ता नहीं"
+          }
+        }
+      }
+    },
+    "none found": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "none found"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कुछ नहीं मिला"
+          }
+        }
+      }
+    },
+    "rate limited": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "rate limited"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "दर सीमित"
+          }
+        }
+      }
+    },
+    "ready": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ready"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "तैयार"
+          }
+        }
+      }
+    },
+    "search failed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "search failed"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "खोज विफल"
+          }
+        }
+      }
+    },
+    "server error %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "server error %@"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सर्वर त्रुटि %@"
+          }
+        }
+      }
+    },
+    "unavailable": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "unavailable"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "उपलब्ध नहीं"
+          }
+        }
+      }
+    },
+    "waiting for incident": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "waiting for incident"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "घटना का इंतज़ार"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

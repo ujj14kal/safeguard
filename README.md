@@ -181,6 +181,15 @@ defaults write io.github.ujj14kal.safeguard debugInitialRoute preview-states
 
 CLI alternative: `DEVELOPMENT_TEAM=<TeamID> ./scripts/build.sh device`.
 
+### First-run setup, and running it again
+
+A fresh install opens an 8-step setup (welcome, name, permissions, contacts,
+code phrases, listening choices, sample SOS, summary) and the app is not
+reachable until it is finished; closing the app mid-flow resumes at the same
+step. To see it again without deleting data, use Settings → "Run setup again".
+To see it as a brand-new user, use Settings → "Delete all my data" or delete
+the app and reinstall.
+
 ## Status
 
 Phase 1 written, **not yet verified in Xcode**: Xcode project, DesignSystem,

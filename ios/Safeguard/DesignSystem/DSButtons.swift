@@ -80,6 +80,14 @@ struct DestructiveButtonStyle: ButtonStyle {
     }
 }
 
+/// Guarantees the 44 pt minimum touch target for small system-styled
+/// buttons, links and icon buttons (the DS styles already exceed it).
+extension View {
+    func minTouchTarget() -> some View {
+        frame(minWidth: 44, minHeight: 44)
+    }
+}
+
 /// Circular 56 pt glass icon button.
 struct IconButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled

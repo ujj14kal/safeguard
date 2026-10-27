@@ -7,6 +7,7 @@ struct SettingsView: View {
     @ObservedObject private var model = ProtectViewModel.shared
     @AppStorage("debugOverlayEnabled") private var debugOverlayEnabled = false
     @AppStorage(VerifierConfig.backendURLDefaultsKey) private var backendURL = ""
+    @AppStorage("speechLanguage") private var speechLanguage = "auto"
     @AppStorage("cloudEarAlwaysOn") private var cloudEarAlwaysOn = Defaults.current.cloudEarAlwaysOn
     @AppStorage("debugLogEnabled") private var debugLogEnabled = Defaults.current.debugLogEnabled
     @State private var showingRealAlertsConfirm = false
@@ -122,6 +123,11 @@ struct SettingsView: View {
                         ForEach(ListeningChoices.all) { choice in
                             ListeningToggle(choice)
                         }
+                        Picker("Speech language", selection: $speechLanguage) {
+                            Text("Automatic").tag("auto")
+                            Text("English (India)").tag("en")
+                            Text("Hindi").tag("hi")
+                        }
                     } header: {
                         Text("Listening")
                     } footer: {
@@ -208,7 +214,7 @@ struct SettingsView: View {
                                     )
                                 }
                                 .font(.footnote)
-                                .foregroundStyle(connectionOK ? Color.green : Color.red)
+                                .foregroundStyle(connectionOK ? DS.Colors.ok : DS.Colors.danger)
                             }
                         } header: {
                             Text("Developer")
@@ -240,7 +246,7 @@ struct SettingsView: View {
             Spacer()
             if SetupPermissions.status(of: permission) == .granted {
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
+                    .foregroundStyle(DS.Colors.ok)
                     .accessibilityLabel(Text(format: "%@ granted", permission.title))
             } else {
                 Button("Settings") {
@@ -249,6 +255,7 @@ struct SettingsView: View {
                     }
                 }
                 .buttonStyle(.bordered)
+                .minTouchTarget()
                 .accessibilityLabel(Text(format: "Open Settings for %@", permission.title))
             }
         }
@@ -271,7 +278,7 @@ struct SettingsView: View {
         guard let report = wipeReport else { return "" }
         var parts: [String] = []
         parts.append(String(
-            format: String(localized: "%d settings cleared."),
+            format: String(localized: "Settings cleared: %d."),
             report.removedKeys.count
         ))
         if report.removedFiles.isEmpty {
@@ -319,15 +326,9 @@ struct SettingsView: View {
 }
 
 extension SettingsView {
-    static let dataExplanation =
-        "Wipes contacts, history, saved recordings and settings on this phone, " +
-        "and asks the backend to delete your evidence and contacts. Setup will restart."
+    static let dataExplanation = String(localized: "Wipes contacts, history, saved recordings and settings on this phone, and asks the backend to delete your evidence and contacts. Setup will restart.")
 
-    static let aboutPrivacy =
-        "Safeguard watches for threatening behaviour — never appearance or " +
-        "identity. Transcripts stay on this phone unless you switch on a cloud " +
-        "helper; cloud features send data to your own Safeguard backend and on " +
-        "to Meta's models."
+    static let aboutPrivacy = String(localized: "Safeguard watches for threatening behaviour — never appearance or identity. Transcripts stay on this phone unless you switch on a cloud helper; cloud features send data to your own Safeguard backend and on to Meta's models.")
 }
 
 /// Version and build read from the bundle (never a hard-coded label).

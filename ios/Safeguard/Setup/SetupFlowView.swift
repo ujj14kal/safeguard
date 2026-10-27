@@ -89,14 +89,17 @@ struct SetupFlowView: View {
             if !machine.isFirst {
                 Button("Back") { machine.back() }
                     .buttonStyle(.bordered)
+                    .minTouchTarget()
             }
             Spacer()
             if machine.isLast {
                 Button("Finish") { finish() }
                     .buttonStyle(.borderedProminent)
+                    .minTouchTarget()
             } else {
                 Button("Next") { advance() }
                     .buttonStyle(.borderedProminent)
+                    .minTouchTarget()
                     .disabled(!canAdvance)
             }
         }
@@ -114,6 +117,7 @@ struct SetupFlowView: View {
         savedStep = SetupStep.welcome.rawValue
         setupComplete = true
         rerun = false
+        model.setupFinished()
     }
 }
 
@@ -181,7 +185,7 @@ struct SetupDoneStep: View {
         VStack(alignment: .leading, spacing: DS.Spacing.medium) {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 56))
-                .foregroundStyle(.green)
+                .foregroundStyle(DS.Colors.ok)
                 .accessibilityHidden(true)
             Text("You're set up")
                 .font(.system(.largeTitle, design: .rounded, weight: .bold))
