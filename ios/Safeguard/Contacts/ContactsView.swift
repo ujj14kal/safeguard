@@ -8,6 +8,7 @@ struct ContactsView: View {
     @State private var adding = false
     @State private var justAddedLink: URL?
     @State private var showingInviteSheet = false
+    @State private var showingPhonePicker = false
 
     private let refreshTick = Timer.publish(every: 10, on: .main, in: .common).autoconnect()
 
@@ -33,6 +34,13 @@ struct ContactsView: View {
                 }
 
                 Section {
+                    Button {
+                        showingPhonePicker = true
+                    } label: {
+                        Label("Choose from your contacts", systemImage: "person.crop.circle.badge.plus")
+                    }
+                    .minTouchTarget()
+                    .disabled(model.sosContacts.isFull)
                     TextField("Name", text: $newName)
                         .textInputAutocapitalization(.words)
                         .disableAutocorrection(true)
@@ -55,6 +63,21 @@ struct ContactsView: View {
                     model.refreshContacts()
                 }
             }
+            .sheet(isPresented: $showingPhonePicker) {
+                PhoneContactPicker(
+                    onPick: { person, agreed in
+                        let link = await model.inviteContact(name: person.name, phone: person.phone)
+                        await MainActor.run {
+                            if link != nil, let code = model.sosContacts.contacts.last?.code {
+                                model.setContactAgreed(code: code, agreed: agreed)
+                            }
+                            justAddedLink = link
+                            showingInviteSheet = link != nil
+                        }
+                    },
+                    isAdded: { model.sosContacts.containsPhone($0.phone) }
+                )
+            }
             .sheet(isPresented: $showingInviteSheet) {
                 if let link = justAddedLink {
                     ShareInviteView(link: link) {
@@ -71,6 +94,9 @@ struct ContactsView: View {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(contact.name)
+                    if let phone = contact.phone {
+                        Text(phone).font(.footnote).foregroundStyle(.secondary)
+                    }
                     Text(contact.linked ? String(localized: "Linked") : String(localized: "Waiting"))
                         .font(.footnote)
                         .foregroundStyle(contact.linked ? DS.Colors.ok : .secondary)

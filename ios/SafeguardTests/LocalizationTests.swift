@@ -44,9 +44,12 @@ final class LocalizationTests: XCTestCase {
     private func specifiers(in text: String) -> [String] {
         let pattern = try! NSRegularExpression(pattern: "%(\\d+\\$)?[@d]")
         let range = NSRange(text.startIndex..., in: text)
+        // Positional specifiers (%2$d) let Hindi reorder arguments, so
+        // compare the multiset of specifier kinds, not their order.
         return pattern.matches(in: text, range: range).map {
             (text as NSString).substring(with: $0.range)
-        }
+                .replacingOccurrences(of: "\\d+\\$", with: "", options: .regularExpression)
+        }.sorted()
     }
 
     func testSpotCheck() throws {

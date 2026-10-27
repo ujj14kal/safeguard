@@ -154,4 +154,6 @@ extension Notification.Name {
     public static let safeguardRunSetup = Notification.Name("SafeguardRunSetup")
     /// Settings "Emergency contacts": ContentView switches to the tab.
     public static let safeguardOpenContacts = Notification.Name("SafeguardOpenContacts")
+    public static let safeguardOpenActivity = Notification.Name("SafeguardOpenActivity")
+    public static let safeguardOpenDashboard = Notification.Name("SafeguardOpenDashboard")
 }

@@ -6,6 +6,7 @@ import UIKit
 struct SettingsView: View {
     @ObservedObject private var model = ProtectViewModel.shared
     @AppStorage("debugOverlayEnabled") private var debugOverlayEnabled = false
+    @AppStorage("autoStartProtecting") private var autoStartProtecting = Defaults.autoStartProtectingDefault
     @AppStorage(VerifierConfig.backendURLDefaultsKey) private var backendURL = ""
     @AppStorage("speechLanguage") private var speechLanguage = "auto"
     @AppStorage("cloudEarAlwaysOn") private var cloudEarAlwaysOn = Defaults.current.cloudEarAlwaysOn
@@ -123,6 +124,7 @@ struct SettingsView: View {
                         ForEach(ListeningChoices.all) { choice in
                             ListeningToggle(choice)
                         }
+                        Toggle("Start protecting when the app opens", isOn: $autoStartProtecting)
                         Picker("Speech language", selection: $speechLanguage) {
                             Text("Automatic").tag("auto")
                             Text("English (India)").tag("en")
@@ -184,6 +186,7 @@ struct SettingsView: View {
                             NavigationLink("Preview states") {
                                 PreviewStatesView()
                             }
+                            Button("Simulate SOS (no camera)") { model.debugSimulateSOS() }
                             Toggle("Detection overlay", isOn: $debugOverlayEnabled)
                             Toggle("Cloud ear always on (demo)", isOn: $cloudEarAlwaysOn)
                             Toggle(

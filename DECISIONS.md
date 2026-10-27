@@ -2,6 +2,61 @@
 
 Log of every deviation from the project brief, with reasons. Newest first.
 
+## Phase 7.5 (2026-10-27): location fix, SOS redesign, Dashboard, loading, contacts, live viewer
+
+Written directly (not by Muse). iOS `./scripts/test.sh` 398/398; backend 137
+passed, 1 skipped. Looked at in the Simulator (Delhi location) for the
+Dashboard, Protect idle and the SOS screen; nothing here has run on the iPhone.
+
+1. **Location was wrong** because the tracker took the first Core Location
+   callback (often cached or cell-tower, hundreds of metres to km off) and
+   never refined it. Now `LocationFixPolicy` rejects fixes older than 15 s,
+   never lets a coarse fix replace an accurate one, and waits up to 8 s for a
+   precise (<=65 m) fix before the route search; the route re-runs by itself
+   when the fix gets precise or the wearer moves 150 m. If Precise Location
+   is off for the app it asks for temporary full accuracy during an SOS
+   (`NSLocationTemporaryUsageDescriptionDictionary`, key `SOS`). The SOS map
+   shows the accuracy circle and a "Location: about N m" chip.
+2. **Nearest help**: Apple's point-of-interest search (police, hospital)
+   plus a text search, widening 3 -> 8 -> 20 km until something is found;
+   with no walking route it still points at the nearest place.
+3. **Google Maps**: an in-app Google Maps view and Google place search need
+   the Maps SDK and a Google API key (a new dependency and a secret), so they
+   are NOT used. The SOS map is MapKit; "Google Maps" opens walking
+   directions in the Google Maps app (or its web page) with no key.
+4. **SOS screen** redesigned: everything runs by itself (contacts, live page,
+   route, demo cab, recording); the only manual action is Call police (112),
+   pinned at the bottom with a 3 s hold-to-end beside it.
+5. **Dashboard tab** (first tab): readiness checklist (four permissions,
+   server, contacts linked, alert mode) with a fix action on each row, 30-day
+   stats from local history, recent SOS, the 112 button. Pure rules in
+   `Readiness.swift`, tested.
+6. **Loading and motion**: shared skeletons/shimmer, a branded loading screen
+   while the camera warms up and while the dashboard loads, springs and
+   numeric transitions; Reduce Motion respected.
+7. **Auto-start protecting** when the app opens (camera already allowed, setup
+   done): ON in DEBUG builds, OFF in release (Settings → Listening). A camera
+   that starts by itself must be the wearer's own choice.
+8. **Contacts from the phone**: asked with a reason first (`NSContactsUsageDescription`),
+   searchable picker, the person's name and number are saved ON THIS PHONE
+   only (never uploaded); duplicates by number are blocked; the wearer must
+   confirm the person agreed, which sets the consent tick.
+9. **Live viewer page** restyled; it always plays the newest two parts (it
+   used to play from the start and fall behind), shows the accuracy circle,
+   last update age and Google Maps links. Still segment-based, "about 10-15 s
+   behind", never "real-time". `scripts/live.sh` starts a free Cloudflare quick
+   tunnel plus the backend with `PUBLIC_BASE_URL`; it refuses to run without
+   `SAFEGUARD_APP_TOKEN` because the tunnel is public. Needs `cloudflared`
+   installed. Verified with a throwaway backend (fake token, temp data) behind a
+   quick tunnel: incident start needs the token (401 without), the live URL
+   uses the tunnel host, the page, state, trail and media segments load for an
+   unauthenticated viewer, and the page renders on a phone-sized viewport. That
+   test found a real bug (the page fetched `state` relative to
+   `/live/<token>`, resolving to `/live/state`); fixed and pinned by a test.
+   Not run with the iPhone as the sender, and not through `live.sh` itself
+   (it needs your keys and the port your backend already holds).
+10. **Hindi** for all new strings is machine-written (same review caveat).
+
 ## Phase 7 (2026-10-27): first-run setup, Activity, Settings, Hindi, defaults
 
 Muse Code wrote the first six commits in a second clone (`~/safeguard`); it

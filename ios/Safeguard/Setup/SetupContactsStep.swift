@@ -8,6 +8,7 @@ struct SetupContactsStep: View {
     @State private var adding = false
     @State private var showingInviteSheet = false
     @State private var justAddedLink: URL?
+    @State private var showingPhonePicker = false
 
     private let refreshTick = Timer.publish(every: 10, on: .main, in: .common).autoconnect()
 
@@ -27,6 +28,14 @@ struct SetupContactsStep: View {
                 Divider()
             }
             VStack(alignment: .leading, spacing: DS.Spacing.small) {
+                Button {
+                    showingPhonePicker = true
+                } label: {
+                    Label("Choose from your contacts", systemImage: "person.crop.circle.badge.plus")
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                }
+                .buttonStyle(.bordered)
+                .disabled(model.sosContacts.isFull)
                 TextField("Name", text: $newName)
                     .textFieldStyle(.roundedBorder)
                     .textInputAutocapitalization(.words)
@@ -53,6 +62,21 @@ struct SetupContactsStep: View {
             if model.sosContacts.contacts.contains(where: { !$0.linked }) {
                 model.refreshContacts()
             }
+        }
+        .sheet(isPresented: $showingPhonePicker) {
+            PhoneContactPicker(
+                onPick: { person, agreed in
+                    let link = await model.inviteContact(name: person.name, phone: person.phone)
+                    await MainActor.run {
+                        if link != nil, let code = model.sosContacts.contacts.last?.code {
+                            model.setContactAgreed(code: code, agreed: agreed)
+                        }
+                        justAddedLink = link
+                        showingInviteSheet = link != nil
+                    }
+                },
+                isAdded: { model.sosContacts.containsPhone($0.phone) }
+            )
         }
         .sheet(isPresented: $showingInviteSheet) {
             if let link = justAddedLink {

@@ -7,6 +7,21 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D36E9C1B465B70B195B95EC2 /* PhoneContactPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = D32E4235114BDEA9F78F78B1 /* PhoneContactPicker.swift */; };
+		D48D77B16759F7ECADC5C0F7 /* PhoneContacts.swift in Sources */ = {isa = PBXBuildFile; fileRef = D36C19AF0ACE697CF2C93551 /* PhoneContacts.swift */; };
+		D38A2D43FF12D83A6DC9C373 /* PhoneContacts.swift in Sources */ = {isa = PBXBuildFile; fileRef = D36C19AF0ACE697CF2C93551 /* PhoneContacts.swift */; };
+		D47395ABCBF474909EE348C3 /* Readiness.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3755B6E7787565AC33A8D91 /* Readiness.swift */; };
+		D34F9BA5A02D755E3115D889 /* Readiness.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3755B6E7787565AC33A8D91 /* Readiness.swift */; };
+		D4656C76178F2AAACBB7609A /* LocationFixPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3B95933BB2350AAAEB8AC15 /* LocationFixPolicy.swift */; };
+		D400A6C6F91BE385EBB9BC5A /* PermissionTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = D327172309E8226507050546 /* PermissionTypes.swift */; };
+		D35976D3D616DBA91910ED1F /* PermissionTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = D327172309E8226507050546 /* PermissionTypes.swift */; };
+		D35F448166C75B9FA11A8BEC /* DashboardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3DE8F5A24FC5286B203D42A /* DashboardTests.swift */; };
+		D3139A87226DEC8CC665A8BC /* LocationFixPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3DC7C69BD9D77607774B042 /* LocationFixPolicyTests.swift */; };
+		D3B36E572734A25B01A4705E /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D34E73CF3271830AD2BB74B0 /* DashboardView.swift */; };
+		D328E017F85ECE3ED96F65B3 /* DSComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3E28BF546666F7F0A516B63 /* DSComponents.swift */; };
+		D388F429E25EC082D174454D /* SOSView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D36C727CAF242A5F8D4D135A /* SOSView.swift */; };
+		D33376B4D12661736904355E /* SOSMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D34577B76C1159ED6CD72E0C /* SOSMapView.swift */; };
+		D31B08EE6B4231052AF9B5FE /* LocationFixPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3B95933BB2350AAAEB8AC15 /* LocationFixPolicy.swift */; };
 		A10000000000000000000071 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000037 /* Assets.xcassets */; };
 		A10000000000000000000051 /* SafeguardApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000021 /* SafeguardApp.swift */; };
 		A10000000000000000000052 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000022 /* ContentView.swift */; };
@@ -139,6 +154,17 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		D32E4235114BDEA9F78F78B1 /* PhoneContactPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneContactPicker.swift; sourceTree = "<group>"; };
+		D36C19AF0ACE697CF2C93551 /* PhoneContacts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneContacts.swift; sourceTree = "<group>"; };
+		D3755B6E7787565AC33A8D91 /* Readiness.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Readiness.swift; sourceTree = "<group>"; };
+		D327172309E8226507050546 /* PermissionTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionTypes.swift; sourceTree = "<group>"; };
+		D3DE8F5A24FC5286B203D42A /* DashboardTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardTests.swift; sourceTree = "<group>"; };
+		D3DC7C69BD9D77607774B042 /* LocationFixPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationFixPolicyTests.swift; sourceTree = "<group>"; };
+		D34E73CF3271830AD2BB74B0 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+		D3E28BF546666F7F0A516B63 /* DSComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSComponents.swift; sourceTree = "<group>"; };
+		D36C727CAF242A5F8D4D135A /* SOSView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SOSView.swift; sourceTree = "<group>"; };
+		D34577B76C1159ED6CD72E0C /* SOSMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SOSMapView.swift; sourceTree = "<group>"; };
+		D3B95933BB2350AAAEB8AC15 /* LocationFixPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationFixPolicy.swift; sourceTree = "<group>"; };
 		A10000000000000000000037 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A10000000000000000000020 /* Safeguard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Safeguard.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A10000000000000000000021 /* SafeguardApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafeguardApp.swift; sourceTree = "<group>"; };
@@ -289,6 +315,7 @@
 		A10000000000000000000013 /* DesignSystem */ = {
 			isa = PBXGroup;
 			children = (
+				D3E28BF546666F7F0A516B63 /* DSComponents.swift */,
 				A10000000000000000000023 /* DS.swift */,
 				A10000000000000000000024 /* ShieldRingView.swift */,
 				A10000000000000000000025 /* StatusCardView.swift */,
@@ -313,6 +340,8 @@
 		A10000000000000000000015 /* Protect */ = {
 			isa = PBXGroup;
 			children = (
+				D36C727CAF242A5F8D4D135A /* SOSView.swift */,
+				D34577B76C1159ED6CD72E0C /* SOSMapView.swift */,
 				A1000000000000000000002C /* ProtectionState.swift */,
 				A1000000000000000000002D /* ProtectView.swift */,
 				A1000000000000000000002E /* ProtectViewModel.swift */,
@@ -327,6 +356,8 @@
 		A10000000000000000000016 /* Tabs */ = {
 			isa = PBXGroup;
 			children = (
+				D3755B6E7787565AC33A8D91 /* Readiness.swift */,
+				D34E73CF3271830AD2BB74B0 /* DashboardView.swift */,
 				A100000000000000000000CD /* SettingsView.swift */,
 			);
 			path = Tabs;
@@ -368,6 +399,8 @@
 		B20000000000000000000004 /* SafeguardTests */ = {
 			isa = PBXGroup;
 			children = (
+				D3DE8F5A24FC5286B203D42A /* DashboardTests.swift */,
+				D3DC7C69BD9D77607774B042 /* LocationFixPolicyTests.swift */,
 				B20000000000000000000006 /* TestHelpers.swift */,
 				B20000000000000000000007 /* TrackerTests.swift */,
 				B20000000000000000000008 /* PersonDetectorTests.swift */,
@@ -411,6 +444,7 @@
 		A1000000000000000000009E /* Escalation */ = {
 			isa = PBXGroup;
 			children = (
+				D3B95933BB2350AAAEB8AC15 /* LocationFixPolicy.swift */,
 				A1000000000000000000009F /* EscalationCoordinator.swift */,
 				A100000000000000000000A1 /* SOSContacts.swift */,
 				A100000000000000000000A3 /* RouteChoice.swift */,
@@ -424,6 +458,8 @@
 		A100000000000000000000AB /* Contacts */ = {
 			isa = PBXGroup;
 			children = (
+				D32E4235114BDEA9F78F78B1 /* PhoneContactPicker.swift */,
+				D36C19AF0ACE697CF2C93551 /* PhoneContacts.swift */,
 				A100000000000000000000AE /* ContactsView.swift */,
 			);
 			path = Contacts;
@@ -432,6 +468,7 @@
 		A100000000000000000000B0 /* Setup */ = {
 			isa = PBXGroup;
 			children = (
+				D327172309E8226507050546 /* PermissionTypes.swift */,
 				A100000000000000000000B2 /* Defaults.swift */,
 				A100000000000000000000B4 /* CodePhrases.swift */,
 				A100000000000000000000B6 /* SetupMachine.swift */,
@@ -572,6 +609,15 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D36E9C1B465B70B195B95EC2 /* PhoneContactPicker.swift in Sources */,
+				D38A2D43FF12D83A6DC9C373 /* PhoneContacts.swift in Sources */,
+				D34F9BA5A02D755E3115D889 /* Readiness.swift in Sources */,
+				D35976D3D616DBA91910ED1F /* PermissionTypes.swift in Sources */,
+				D3B36E572734A25B01A4705E /* DashboardView.swift in Sources */,
+				D328E017F85ECE3ED96F65B3 /* DSComponents.swift in Sources */,
+				D388F429E25EC082D174454D /* SOSView.swift in Sources */,
+				D33376B4D12661736904355E /* SOSMapView.swift in Sources */,
+				D31B08EE6B4231052AF9B5FE /* LocationFixPolicy.swift in Sources */,
 				A10000000000000000000051 /* SafeguardApp.swift in Sources */,
 				A10000000000000000000052 /* ContentView.swift in Sources */,
 				A10000000000000000000053 /* DS.swift in Sources */,
@@ -645,6 +691,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D48D77B16759F7ECADC5C0F7 /* PhoneContacts.swift in Sources */,
+				D47395ABCBF474909EE348C3 /* Readiness.swift in Sources */,
+				D4656C76178F2AAACBB7609A /* LocationFixPolicy.swift in Sources */,
+				D400A6C6F91BE385EBB9BC5A /* PermissionTypes.swift in Sources */,
+				D35F448166C75B9FA11A8BEC /* DashboardTests.swift in Sources */,
+				D3139A87226DEC8CC665A8BC /* LocationFixPolicyTests.swift in Sources */,
 				B20000000000000000000009 /* TestHelpers.swift in Sources */,
 				B2000000000000000000000A /* TrackerTests.swift in Sources */,
 				B2000000000000000000000B /* PersonDetectorTests.swift in Sources */,

@@ -314,6 +314,9 @@ def test_viewer_page_and_state(stores, tmp_path):
     assert page.status_code == 200
     assert "leaflet@1.9.4" in page.text
     assert "10-15 s behind" in page.text
+    # /live/<token> has no trailing slash: fetches must not be relative.
+    assert 'fetch(BASE + "/state"' in page.text
+    assert 'fetch("state"' not in page.text
     lowered = page.text.lower()
     assert "real-time" not in lowered and "realtime" not in lowered
     state = stores.get(f"/live/{incident['share_token']}/state").json()

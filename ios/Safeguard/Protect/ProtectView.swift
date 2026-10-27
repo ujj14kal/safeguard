@@ -8,20 +8,37 @@ struct ProtectView: View {
     @AppStorage("listenerOptIn") private var listenerOptIn = Defaults.current.listenerOptIn
     @Environment(\.openURL) private var openURL
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-    @State private var endingPressed = false
-
-    /// Chip bed on the red scrim: near-black normally, solid with Reduce
-    /// Transparency.
-    private var chipBed: Color {
-        reduceTransparency ? .black : .black.opacity(DS.SOS.chipBedOpacity)
-    }
+    @AppStorage("autoStartProtecting") private var autoStart = Defaults.autoStartProtectingDefault
+    @AppStorage("setupComplete") private var setupComplete = false
+    @State private var autoStartTried = false
+    @State private var breathing = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        if model.isProtecting {
-            hudView
-        } else {
-            idleView
+        ZStack {
+            if model.isProtecting {
+                hudView
+                    .transition(.opacity)
+            } else {
+                idleView
+                    .transition(.opacity)
+            }
         }
+        .animation(DS.Motion.smooth, value: model.isProtecting)
+        .task { await autoStartIfWanted() }
+    }
+
+    /// "Everything automatic": protection starts when the app opens, once
+    /// setup is done and the camera is already allowed (never a surprise
+    /// permission prompt). Off in Settings if unwanted.
+    private func autoStartIfWanted() async {
+        guard autoStart, setupComplete, !autoStartTried, !model.isProtecting,
+              SetupPermissions.status(of: .camera) == .granted
+        else { return }
+        autoStartTried = true
+        try? await Task.sleep(for: .milliseconds(3900)) // after the splash
+        guard !model.isProtecting else { return }
+        await model.startCamera()
     }
 
     // MARK: - HUD (protecting): full-screen camera plus light chrome
@@ -70,12 +87,28 @@ struct ProtectView: View {
                 hudBottomBar
             }
             if model.state == .unsafe {
-                sosScrim
+                SOSView(model: model)
+                    .transition(.opacity.combined(with: .scale(scale: 0.98)))
+                    .zIndex(2)
             }
             if model.dimmed {
                 dimOverlay
             }
+            if model.isStarting {
+                ZStack {
+                    DS.Colors.background.opacity(0.92).ignoresSafeArea()
+                    LoadingScreen(
+                        title: String(localized: "Starting protection"),
+                        subtitle: String(localized: "Warming up the camera and microphone")
+                    )
+                }
+                .transition(.opacity)
+                .zIndex(3)
+            }
         }
+        .animation(DS.Motion.smooth, value: model.state)
+        .animation(DS.Motion.smooth, value: model.isStarting)
+        .animation(DS.Motion.smooth, value: model.conversationFlag?.label)
         .toolbar(.hidden, for: .tabBar)
         .onTapGesture(count: 2) { model.tapCheckIn() }
     }
@@ -298,374 +331,149 @@ struct ProtectView: View {
             .accessibilityAddTraits(.isHeader)
     }
 
-    /// Unsafe: full SOS screen. Four escalation tracks run in parallel;
-    /// each chip shows its own status, one failing never stops the rest.
-    private var sosScrim: some View {
-        ZStack {
-            (reduceTransparency ? DS.Colors.danger : DS.Colors.danger.opacity(DS.SOS.scrimOpacity))
-                .ignoresSafeArea()
-            ScrollView {
-                VStack(spacing: DS.Spacing.medium) {
-                    Image(systemName: "sos.circle.fill")
-                        .font(.system(size: 64))
-                        .foregroundStyle(.white)
-                    Text("SOS")
-                        .font(.system(.largeTitle, design: .rounded, weight: .bold))
-                        .foregroundStyle(.white)
-                    Text(sosCauseText)
-                        .foregroundStyle(.white)
-                        .multilineTextAlignment(.center)
-                    trackChips
-                    deliveryRows
-                    liveLinkRow
-                    if let status = model.evidenceStatus {
-                        Label(status, systemImage: "record.circle")
-                            .font(.footnote)
-                            .foregroundStyle(.white)
-                            .multilineTextAlignment(.center)
-                    }
-                    routeCard
-                    if model.escalation.status(of: .cab) == .done {
-                        Button("Cab (demo)") { model.showingCabSheet = true }
-                            .buttonStyle(.bordered)
-                            .minTouchTarget()
-                            .tint(.white)
-                            .foregroundStyle(.white)
-                    }
-                    call112Section
-                    holdToEndButton
-                }
-                .padding()
-            }
-        }
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("SOS. Help is on the way.")
-        .sheet(isPresented: $model.showingCabSheet) { cabSheet }
-    }
-
-    private var sosCauseText: String {
-        if model.unsafeCause == .noReply {
-            return String(localized: "No reply — help is on the way")
-        }
-        if model.unsafeCause == .distressWord {
-            return String(localized: "Distress call — recording and help are starting")
-        }
-        return String(localized: "Help is on the way")
-    }
-
-    /// One chip per track: icon + name + status word.
-    private var trackChips: some View {
-        VStack(spacing: DS.Spacing.small) {
-            ForEach(EscalationTrack.allCases, id: \.self) { track in
-                trackChip(track)
-            }
-        }
-    }
-
-    private func trackChip(_ track: EscalationTrack) -> some View {
-        let status = model.escalation.status(of: track)
-        return HStack(spacing: 8) {
-            Image(systemName: trackStatusIcon(status))
-                .foregroundStyle(.white)
-            Text(track.title)
-                .foregroundStyle(.white)
-            Spacer()
-            Text(trackStatusText(track, status: status))
-                .font(.footnote)
-                .foregroundStyle(.white.opacity(0.9))
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(chipBed)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-    }
-
-    private func trackStatusIcon(_ status: TrackStatus) -> String {
-        switch status {
-        case .pending:
-            return "clock"
-        case .running:
-            return "arrow.triangle.2.circlepath"
-        case .done:
-            return "checkmark.circle.fill"
-        case .failed:
-            return "exclamationmark.circle.fill"
-        }
-    }
-
-    private func trackStatusText(_ track: EscalationTrack, status: TrackStatus) -> String {
-        switch status {
-        case .pending:
-            return String(localized: "Pending")
-        case .running:
-            let attempt = model.escalation.attempts(of: track)
-            return attempt > 1 ? L10n.format("Retrying (%d)", attempt) : String(localized: "Running")
-        case .done:
-            return String(localized: "Done")
-        case .failed:
-            if let reason = model.escalation.reason(of: track) {
-                return L10n.format("Failed: %@", reason)
-            }
-            return String(localized: "Failed")
-        }
-    }
-
-    /// Per-contact outcomes from /incident/start (Sent / Failed / Dry-run).
-    @ViewBuilder
-    private var deliveryRows: some View {
-        if !model.deliveryStatus.isEmpty {
-            VStack(spacing: 4) {
-                ForEach(model.deliveryStatus, id: \.code) { outcome in
-                    HStack {
-                        Text(outcome.name ?? String(localized: "Contact"))
-                            .foregroundStyle(.white)
-                        Spacer()
-                        Text(deliveryText(outcome.status))
-                            .font(.footnote.bold())
-                            .foregroundStyle(deliveryColor(outcome.status))
-                    }
-                }
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(chipBed)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-        }
-    }
-
-    private func deliveryText(_ status: String) -> String {
-        switch status {
-        case "sent":
-            return String(localized: "Sent")
-        case "dry-run":
-            return String(localized: "Dry-run")
-        case "failed":
-            return String(localized: "Failed")
-        default:
-            return String(localized: "Waiting")
-        }
-    }
-
-    /// Delivery words on the dark SOS chip: DS tokens, so the contrast
-    /// test pins the real pairs (white "Failed" — the word carries it).
-    private func deliveryColor(_ status: String) -> Color {
-        switch status {
-        case "sent":
-            return DS.Colors.ok
-        case "dry-run":
-            return DS.Colors.warning
-        case "failed":
-            return .white
-        default:
-            return .white.opacity(0.8)
-        }
-    }
-
-    /// "Family can watch" + Copy + Share, once the incident mints the page.
-    @ViewBuilder
-    private var liveLinkRow: some View {
-        if let link = model.liveURL, let url = URL(string: link) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Family can watch:")
-                    .font(.footnote)
-                    .foregroundStyle(.white.opacity(0.9))
-                Text(link)
-                    .font(.footnote)
-                    .foregroundStyle(.white)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                HStack {
-                    Button("Copy") {
-                        UIPasteboard.general.string = link
-                        model.showToast(String(localized: "Link copied"))
-                    }
-                    .buttonStyle(.bordered)
-                    .minTouchTarget()
-                    .tint(.white)
-                    .foregroundStyle(.white)
-                    ShareLink(item: url, message: Text("My Safeguard live page")) {
-                        Label("Share", systemImage: "square.and.arrow.up")
-                    }
-                    .buttonStyle(.bordered)
-                    .minTouchTarget()
-                    .tint(.white)
-                    .foregroundStyle(.white)
-                }
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(chipBed)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-        }
-    }
-
-    /// Safest route: nearest staffed/public place by walking ETA, or why
-    /// there is no route yet.
-    @ViewBuilder
-    private var routeCard: some View {
-        if let route = model.sosRoute, let region = model.sosRegion {
-            VStack(alignment: .leading, spacing: 6) {
-                Map(initialPosition: .region(region)) {
-                    MapPolyline(route.polyline)
-                        .stroke(.white, lineWidth: 4)
-                    if let name = model.sosDestinationName,
-                       let point = model.sosDestinationCoordinate
-                    {
-                        Marker(name, coordinate: point)
-                    }
-                }
-                .frame(height: 200)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                HStack {
-                    VStack(alignment: .leading) {
-                        Text(model.sosDestinationName ?? String(localized: "Safe place"))
-                            .font(.headline)
-                            .foregroundStyle(.white)
-                        if let eta = model.sosDestinationETA {
-                            Text(eta)
-                                .font(.footnote)
-                                .foregroundStyle(.white.opacity(0.9))
-                        }
-                    }
-                    Spacer()
-                    Button("Open in Maps") { model.openDestinationInMaps() }
-                        .buttonStyle(.bordered)
-                        .minTouchTarget()
-                        .tint(.white)
-                        .foregroundStyle(.white)
-                }
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(chipBed)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-        } else if let message = model.sosRouteMessage {
-            Text(message)
-                .font(.footnote)
-                .foregroundStyle(.white)
-                .multilineTextAlignment(.center)
-        }
-    }
-
-    /// Emergency call: the wearer taps; nothing dials on its own.
-    private var call112Section: some View {
-        VStack(spacing: 4) {
-            Button("Call 112") {
-                if let url = URL(string: "tel:112") {
-                    openURL(url)
-                }
-            }
-            .buttonStyle(.borderedProminent)
-            .minTouchTarget()
-            .tint(.white)
-            .foregroundStyle(DS.Colors.danger)
-            Text("Automatic police alerts are on the roadmap.")
-                .font(.footnote)
-                .foregroundStyle(.white.opacity(0.9))
-        }
-    }
-
-    /// Deliberate end: hold 3 s (or say the safe phrase). Stopping
-    /// protection mid-SOS goes through this same flow.
-    private var holdToEndButton: some View {
-        Button("Hold 3 s to end SOS") {}
-            .buttonStyle(.bordered)
-            .minTouchTarget()
-            .tint(.white)
-            .foregroundStyle(.white)
-            .scaleEffect(endingPressed ? 0.94 : 1.0)
-            .onLongPressGesture(
-                minimumDuration: 3,
-                pressing: { pressing in endingPressed = pressing },
-                perform: { model.endSOSButtonHeld() }
-            )
-            .accessibilityLabel("Hold 3 seconds to end the SOS")
-    }
-
-    /// Mock cab sheet: clearly a demo, never a real booking.
-    private var cabSheet: some View {
-        NavigationStack {
-            VStack(spacing: DS.Spacing.medium) {
-                Label(SOSMessageBuilder.demoBanner, systemImage: "exclamationmark.triangle.fill")
-                    .font(.headline)
-                    .multilineTextAlignment(.center)
-                LabeledContent("Driver", value: model.cabDriver)
-                LabeledContent("Plate", value: model.cabPlate)
-                LabeledContent("Arrives in", value: model.cabCountdownText)
-                Button("Share cab details") { model.shareCabDetails() }
-                    .buttonStyle(.borderedProminent)
-                    .minTouchTarget()
-                Spacer()
-            }
-            .padding()
-            .navigationTitle("Cab (demo)")
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { model.showingCabSheet = false }
-                }
-            }
-        }
-    }
-
     // MARK: - Idle
 
     private var idleView: some View {
         NavigationStack {
             ZStack(alignment: .top) {
+                DS.Colors.background.ignoresSafeArea()
+                RadialGradient(
+                    colors: [DS.Colors.brandPurple.opacity(0.45), .clear],
+                    center: .top, startRadius: 20, endRadius: 420
+                )
+                .ignoresSafeArea()
                 ScrollView {
-                VStack(spacing: DS.Spacing.large) {
-                    // Outline shield in the accent colour: the dark purple
-                    // logo fades on the dark background.
-                    Image(systemName: "shield")
-                        .font(.system(size: 96, weight: .light))
-                        .foregroundStyle(DS.Colors.accent)
-                        .accessibilityHidden(true)
-                        .padding(.top, DS.Spacing.medium)
-                    VStack(spacing: DS.Spacing.small) {
-                        Text("Safeguard")
-                            .font(.system(.largeTitle, design: .rounded, weight: .bold))
-                            .foregroundStyle(DS.Colors.accent)
-                        Text(model.statusLine)
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                        if let verify = model.lastVerifyResult {
-                            Text(verify)
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                        }
-                        if let speech = model.lastSpeechInfo {
-                            Text(speech)
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    VStack(spacing: DS.Spacing.medium) {
-                        Button("Start protecting") { Task { await model.startCamera() } }
+                    VStack(spacing: DS.Spacing.large) {
+                        hero
+                        VStack(spacing: DS.Spacing.medium) {
+                            Button {
+                                Task { await model.startCamera() }
+                            } label: {
+                                Label("Start protecting", systemImage: "play.fill")
+                            }
                             .buttonStyle(PrimaryButtonStyle())
-                        Button("Replay a video…") { model.showingPicker = true }
-                            .buttonStyle(SecondaryButtonStyle())
+                            Button("Replay a video…") { model.showingPicker = true }
+                                .font(.subheadline.weight(.semibold))
+                                .tint(DS.Colors.accent)
+                                .minTouchTarget()
+                        }
+                        readinessPill
+                        voiceCommandsCard
+                        if let error = model.errorMessage {
+                            Label(error, systemImage: "exclamationmark.triangle.fill")
+                                .font(.footnote)
+                                .foregroundStyle(DS.Colors.danger)
+                                .multilineTextAlignment(.center)
+                        }
                     }
-                    voiceCommandsCard
-                    if let error = model.errorMessage {
-                        Label(error, systemImage: "exclamationmark.triangle.fill")
-                            .font(.footnote)
-                            .foregroundStyle(DS.Colors.danger)
-                            .multilineTextAlignment(.center)
-                    }
+                    .padding()
                 }
-                .padding()
-                }
+                .scrollIndicators(.hidden)
                 if let toast = model.toast {
                     toastBubble(toast)
                         .padding(.top, DS.Spacing.small)
                 }
+                if model.isStarting {
+                    ZStack {
+                        DS.Colors.background.opacity(0.94).ignoresSafeArea()
+                        LoadingScreen(
+                            title: String(localized: "Starting protection"),
+                            subtitle: String(localized: "Warming up the camera and microphone")
+                        )
+                    }
+                    .transition(.opacity)
+                }
             }
-            .background(DS.Colors.background)
-            .navigationTitle("Protect")
+            .animation(DS.Motion.smooth, value: model.isStarting)
+            .toolbar(.hidden, for: .navigationBar)
             .sheet(isPresented: $model.showingPicker) {
                 DocumentPicker { url in model.startReplay(url: url) }
             }
         }
+    }
+
+    /// Big calm shield with a soft glow that breathes.
+    private var hero: some View {
+        VStack(spacing: DS.Spacing.medium) {
+            ZStack {
+                Circle()
+                    .fill(RadialGradient(
+                        colors: [DS.Colors.accent.opacity(0.4), .clear],
+                        center: .center, startRadius: 10, endRadius: 150
+                    ))
+                    .frame(width: 280, height: 280)
+                    .scaleEffect(breathing && !reduceMotion ? 1.06 : 0.96)
+                Circle()
+                    .strokeBorder(
+                        AngularGradient(
+                            colors: [DS.Colors.accent, DS.Colors.buttonFill, DS.Colors.accent],
+                            center: .center
+                        ),
+                        lineWidth: 5
+                    )
+                    .frame(width: 150, height: 150)
+                Image(systemName: "shield.lefthalf.filled")
+                    .font(.system(size: 66, weight: .medium))
+                    .foregroundStyle(DS.Colors.accent)
+                    .symbolRenderingMode(.hierarchical)
+            }
+            .frame(height: 230)
+            .accessibilityHidden(true)
+            .onAppear {
+                guard !reduceMotion else { return }
+                withAnimation(.easeInOut(duration: 3).repeatForever(autoreverses: true)) {
+                    breathing = true
+                }
+            }
+            Text("Safeguard")
+                .font(.system(.largeTitle, design: .rounded, weight: .bold))
+                .foregroundStyle(DS.Colors.accent)
+            Text(model.statusLine)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            if let verify = model.lastVerifyResult {
+                Text(verify).font(.footnote).foregroundStyle(.secondary)
+            }
+            if let speech = model.lastSpeechInfo {
+                Text(speech).font(.footnote).foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    /// One line on readiness, linking to the Dashboard for details.
+    private var readinessPill: some View {
+        let items = Readiness.items(ReadinessInput(
+            camera: SetupPermissions.status(of: .camera),
+            microphone: SetupPermissions.status(of: .microphone),
+            speech: SetupPermissions.status(of: .speech),
+            location: SetupPermissions.status(of: .location),
+            backendReachable: model.idleBackendReachable,
+            contactCount: model.sosContacts.contacts.count,
+            linkedCount: model.sosContacts.linkedCodes.count,
+            sendsRealAlerts: model.sendRealAlerts
+        ))
+        let problems = items.filter { $0.level == .problem }.count
+        return Button {
+            NotificationCenter.default.post(name: .safeguardOpenDashboard, object: nil)
+        } label: {
+            HStack {
+                StatusPill(
+                    text: problems == 0
+                        ? String(localized: "Ready to protect")
+                        : L10n.format("Items needing attention: %d", problems),
+                    symbol: problems == 0 ? "checkmark.seal.fill" : "exclamationmark.triangle.fill",
+                    color: problems == 0 ? DS.Colors.ok : DS.Colors.warning
+                )
+                Spacer()
+                Text("Details")
+                    .font(.footnote.weight(.semibold))
+                Image(systemName: "chevron.right").font(.footnote.weight(.semibold))
+            }
+            .foregroundStyle(DS.Colors.accent)
+            .dsCard()
+        }
+        .buttonStyle(.plain)
+        .onAppear { model.checkBackend() }
     }
 
     /// Short voice-command list. Keep in sync with VoiceCommandParser.
@@ -698,9 +506,7 @@ struct ProtectView: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .background(DS.Colors.surface, in: RoundedRectangle(cornerRadius: DS.cornerRadius))
+        .dsCard()
     }
 }
 

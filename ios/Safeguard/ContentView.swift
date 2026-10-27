@@ -1,17 +1,17 @@
 import SwiftUI
 
-/// Main tab structure: Protect, Contacts, Activity, Settings.
+/// Main tab structure: Dashboard, Protect, Contacts, Activity, Settings.
 /// First launch shows the blocking setup flow instead (old installs that
 /// saw the one-screen onboarding go straight to the tabs).
 struct ContentView: View {
-    @State private var selection: Tab = .protect
+    @State private var selection: Tab = .dashboard
     @AppStorage("onboardingSeen") private var onboardingSeen = false
     @AppStorage("setupComplete") private var setupComplete = false
     @AppStorage("setupStep") private var savedStep = SetupStep.welcome.rawValue
     @State private var rerunSetup = false
 
     enum Tab: Hashable {
-        case protect, contacts, activity, settings
+        case dashboard, protect, contacts, activity, settings
     }
 
     #if DEBUG
@@ -41,7 +41,10 @@ struct ContentView: View {
     }
 
     private var tabsView: some View {
-        TabView(selection: $selection) {
+        TabView(selection: $selection.animation(DS.Motion.snappy)) {
+            DashboardView()
+                .tabItem { Label("Dashboard", systemImage: "square.grid.2x2.fill") }
+                .tag(Tab.dashboard)
             ProtectView()
                 .tabItem { Label("Protect", systemImage: "shield.fill") }
                 .tag(Tab.protect)
@@ -69,12 +72,24 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .safeguardOpenContacts)) { _ in
             selection = .contacts
         }
+        .onReceive(NotificationCenter.default.publisher(for: .safeguardOpenActivity)) { _ in
+            selection = .activity
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .safeguardOpenDashboard)) { _ in
+            selection = .dashboard
+        }
         .onAppear {
             #if DEBUG
                 // Headless screenshot hook (Simulator):
                 // defaults write io.github.ujj14kal.safeguard debugInitialTab settings
-                if UserDefaults.standard.string(forKey: "debugInitialTab") == "settings" {
+                let initial = UserDefaults.standard.string(forKey: "debugInitialTab")
+                if initial == "settings" {
                     selection = .settings
+                } else if initial == "protect" {
+                    selection = .protect
+                } else if initial == "sos" {
+                    selection = .protect
+                    ProtectViewModel.shared.debugSimulateSOS()
                 }
             #endif
         }

@@ -59,6 +59,18 @@ public enum Defaults {
         #endif
     }
 
+    /// Start protecting when the app opens (camera already allowed, setup
+    /// done). A developer convenience in DEBUG; off in release because a
+    /// camera that starts by itself must be the wearer's own choice
+    /// (Settings → Listening → Start protecting when the app opens).
+    public static var autoStartProtectingDefault: Bool {
+        #if DEBUG
+            true
+        #else
+            false
+        #endif
+    }
+
     // MARK: - Owned UserDefaults keys
 
     /// Every UserDefaults key the app writes. "Delete all my data" removes
@@ -79,6 +91,7 @@ public enum Defaults {
         "shoutingTriggersSOS",
         "recordOnSOS",
         "debugLogEnabled",
+        "autoStartProtecting",
         "customSafePhrase",
         "customUnsafePhrase",
         "backendBaseURL",

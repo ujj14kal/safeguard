@@ -112,7 +112,10 @@ DEMO cab sheet. Integrated police alerts are roadmap; the SOS screen has a
    `telegram` plus `TELEGRAM_BOT_TOKEN` from [@BotFather](https://t.me/BotFather)
    for real sends.
 2. **Run the backend** on `0.0.0.0:8000` (above).
-3. **Tunnel** (contacts and the live page need a public URL): e.g.
+3. **Tunnel** (contacts and the live page need a public URL). One command
+   does tunnel + backend: `brew install cloudflared`, then
+   `./scripts/live.sh` (free quick tunnel, no account; it refuses to start
+   without `SAFEGUARD_APP_TOKEN` because the tunnel is public). By hand:
    `cloudflared tunnel --url http://127.0.0.1:8000` or
    `ngrok http 8000`. Copy the `https://…` URL into `PUBLIC_BASE_URL` and
    restart the backend so links bake it in.

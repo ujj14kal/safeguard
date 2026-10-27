@@ -70,6 +70,11 @@ final class ProtectViewModel: ObservableObject {
     @Published var sosDestinationCoordinate: CLLocationCoordinate2D?
     @Published var sosDestinationETA: String?
     @Published var sosRegion: MKCoordinateRegion?
+    /// Best fresh fix of the wearer (mirrors the tracker), for the SOS map.
+    @Published var sosFix: CLLocation?
+    @Published var sosPlaces: [SOSPlace] = []
+    @Published var sosRouteSearching = false
+    @Published var sosPreciseOffHint = false
     @Published var showingCabSheet = false
     @Published var sosContacts = SOSContactStore()
     /// Wearer's display name for SOS messages (Settings).
@@ -84,6 +89,8 @@ final class ProtectViewModel: ObservableObject {
     private var sosLocationTimer: Timer?
     private var sosDestinationItem: MKMapItem?
     private var routeWaitStart: TimeInterval?
+    private var routeOrigin: LocationSample?
+    private var routeRefreshing = false
     /// Mock cab details (DEMO): fixed fake driver/plate + countdown end.
     private(set) var cabDeadline: TimeInterval?
     let cabDriver = "Demo Driver"
@@ -176,6 +183,8 @@ final class ProtectViewModel: ObservableObject {
         listener.$isLive.removeDuplicates().dropFirst().sink { live in
             AppLog.shared.event("mic", ["live": String(live)])
         }.store(in: &cancellables)
+        locationTracker.$latest.assign(to: &$sosFix)
+        locationTracker.$reducedAccuracy.assign(to: &$sosPreciseOffHint)
         listener.$deafReason.assign(to: &$listenerDeafReason)
         listener.$lastHeard.assign(to: &$lastHeard)
         listener.$cloudStatus.assign(to: &$cloudStatus)
@@ -262,8 +271,10 @@ final class ProtectViewModel: ObservableObject {
 
     func startCamera() async {
         errorMessage = nil
+        isStarting = true
         guard await PhoneCameraSource.requestPermission() else {
             errorMessage = FrameSourceError.permissionDenied.localizedDescription
+            isStarting = false
             return
         }
         do {
@@ -277,12 +288,19 @@ final class ProtectViewModel: ObservableObject {
             state = .monitoring
             beginSession(status: String(localized: "Monitoring with phone camera"))
             startEgoMotion()
+            Task {
+                // Let the preview produce its first frames behind the
+                // loading screen instead of flashing black.
+                try? await Task.sleep(for: .milliseconds(1100))
+                isStarting = false
+            }
             if pendingDistressStart {
                 pendingDistressStart = false
                 distressHeard()
             }
         } catch {
             pendingDistressStart = false
+            isStarting = false
             errorMessage = error.localizedDescription
         }
     }
@@ -305,6 +323,7 @@ final class ProtectViewModel: ObservableObject {
     }
 
     func stop() {
+        isStarting = false
         // Stopping during an SOS goes through the same end flow as the
         // hold-to-End button: contacts hear "SOS ended" once, tracks stop.
         if sosActive {
@@ -467,6 +486,19 @@ final class ProtectViewModel: ObservableObject {
         syncProtectionState()
     }
 
+    #if DEBUG
+        /// Simulator/demo helper (Settings → Developer): runs a real SOS
+        /// without a camera, so the SOS screen, route and tracks can be
+        /// reviewed. Same code path as the unsafe phrase.
+        func debugSimulateSOS() {
+            if state == .idle {
+                state = .monitoring
+                beginSession(status: "Debug SOS")
+            }
+            answerUnsafe()
+        }
+    #endif
+
     func tapCheckIn() {
         safety.noteReply(.tap, at: Self.now)
         drainAskSpeech()
@@ -476,6 +508,26 @@ final class ProtectViewModel: ObservableObject {
     // MARK: - Safety plumbing
 
     private static var now: TimeInterval { ProcessInfo.processInfo.systemUptime }
+
+    /// Backend health for the Dashboard while idle (no protecting session
+    /// needed). Reachability only; latency is measured here too.
+    @Published var idleBackendReachable: Bool?
+    @Published var idleBackendLatencyMs: Int?
+    @Published var idleMuseConfigured: Bool?
+    /// True from the tap on "Start protecting" until the camera has had a
+    /// moment to warm up: drives the branded loading screen.
+    @Published var isStarting = false
+
+    func checkBackend() {
+        Task {
+            let started = ProcessInfo.processInfo.systemUptime
+            let status = await VerifierClient().fetchStatus()
+            idleBackendReachable = status.reachable
+            idleMuseConfigured = status.museConfigured
+            idleBackendLatencyMs = status.reachable
+                ? Int((ProcessInfo.processInfo.systemUptime - started) * 1000) : nil
+        }
+    }
 
     private func refreshBackendStatus() {
         Task {
@@ -1190,6 +1242,10 @@ final class ProtectViewModel: ObservableObject {
         sosDestinationETA = nil
         sosRegion = nil
         sosDestinationItem = nil
+        sosPlaces = []
+        sosRouteSearching = false
+        routeOrigin = nil
+        routeRefreshing = false
         routeWaitStart = nil
         if evidenceSessionID == nil {
             // Recording off or replay: the incident still needs a session
@@ -1243,6 +1299,10 @@ final class ProtectViewModel: ObservableObject {
         sosDestinationETA = nil
         sosRegion = nil
         sosDestinationItem = nil
+        sosPlaces = []
+        sosRouteSearching = false
+        routeOrigin = nil
+        routeRefreshing = false
         routeWaitStart = nil
         cabDeadline = nil
         showingCabSheet = false
@@ -1369,47 +1429,79 @@ final class ProtectViewModel: ObservableObject {
     }
 
     /// Route track: nearest staffed/public places by walking ETA, drawn on
-    /// the SOS map. Waits for the first fix; without one it says so.
+    /// the SOS map. Waits briefly for an accurate fix (a cold start often
+    /// delivers a cell-tower reading first), then refines on its own as the
+    /// fix improves or the wearer moves.
     private func runRouteTrack() async {
         guard sosActive else { return }
-        guard let fix = locationTracker.latest else {
+        guard let first = locationTracker.latest else {
             if routeWaitStart == nil { routeWaitStart = Self.now }
-            trackFailed(.route, reason: RouteChoice.noLocationMessage)
+            trackFailed(.route, reason: locationTracker.denied
+                ? String(localized: "location permission is off") : RouteChoice.noLocationMessage)
             sosRouteMessage = escalation.status(of: .route) == .running
                 ? RouteChoice.waitingForLocationMessage : RouteChoice.noLocationMessage
             return
         }
         routeWaitStart = nil
+        sosRouteSearching = true
+        sosRouteMessage = RouteChoice.waitingForLocationMessage
+        // Give GPS a few seconds to settle on a precise fix.
+        let waitUntil = Self.now + LocationFixPolicy.preciseWaitSeconds
+        while sosActive, Self.now < waitUntil,
+              let fix = locationTracker.latest,
+              LocationFixPolicy.quality(accuracy: fix.horizontalAccuracy) != .precise
+        {
+            try? await Task.sleep(for: .milliseconds(500))
+        }
+        guard sosActive, let fix = locationTracker.latest else {
+            sosRouteSearching = false
+            return
+        }
         do {
-            let places = try await searchStaffedPlaces(near: fix.coordinate)
-            let nearest = places.sorted { $0.distance < $1.distance }.prefix(3)
-            guard !nearest.isEmpty else {
-                sosRouteMessage = RouteChoice.noPlacesMessage
+            let outcome = try await computeRoute(from: fix)
+            sosRouteSearching = false
+            guard outcome else {
                 trackFailed(.route, reason: String(localized: "none found"))
                 return
             }
-            var options: [(candidate: RouteCandidate, route: MKRoute, item: MKMapItem)] = []
-            for place in nearest {
-                if let found = try? await walkingRoute(
-                    from: fix.coordinate, to: place.item
-                ) {
-                    options.append((
-                        RouteCandidate(
-                            name: place.name, distanceMeters: place.distance,
-                            etaSeconds: found.route.expectedTravelTime
-                        ),
-                        found.route, place.item
-                    ))
-                }
+            trackDone(.route)
+        } catch {
+            sosRouteSearching = false
+            sosRouteMessage = RouteChoice.noPlacesMessage
+            trackFailed(.route, reason: String(localized: "search failed"))
+        }
+    }
+
+    /// Finds help near `fix` and publishes the result. False when nothing
+    /// staffed was found anywhere in range.
+    private func computeRoute(from fix: CLLocation) async throws -> Bool {
+        let origin = LocationSample(
+            latitude: fix.coordinate.latitude, longitude: fix.coordinate.longitude,
+            accuracy: fix.horizontalAccuracy, timestamp: fix.timestamp
+        )
+        let places = try await searchStaffedPlaces(near: fix.coordinate)
+        let nearest = Array(places.sorted { $0.place.distance < $1.place.distance }.prefix(3))
+        guard !nearest.isEmpty else {
+            sosRouteMessage = RouteChoice.noPlacesMessage
+            return false
+        }
+        sosPlaces = nearest.map { $0.place }
+        var options: [(candidate: RouteCandidate, route: MKRoute, item: MKMapItem)] = []
+        for entry in nearest {
+            if let found = try? await walkingRoute(from: fix.coordinate, to: entry.item) {
+                options.append((
+                    RouteCandidate(
+                        name: entry.place.name, distanceMeters: entry.place.distance,
+                        etaSeconds: found.route.expectedTravelTime
+                    ),
+                    found.route, entry.item
+                ))
             }
-            let candidates = options.map(\.candidate)
-            guard let pick = RouteChoice.pick(from: candidates),
-                  let won = options.first(where: { $0.candidate == pick })
-            else {
-                sosRouteMessage = RouteChoice.noRouteMessage
-                trackFailed(.route, reason: String(localized: "no route"))
-                return
-            }
+        }
+        routeOrigin = origin
+        if let pick = RouteChoice.pick(from: options.map { $0.candidate }),
+           let won = options.first(where: { $0.candidate == pick })
+        {
             sosRoute = won.route
             sosDestinationName = pick.name
             sosDestinationCoordinate = won.item.placemark.coordinate
@@ -1417,37 +1509,93 @@ final class ProtectViewModel: ObservableObject {
             sosDestinationItem = won.item
             sosRegion = regionCovering(fix.coordinate, won.item.placemark.coordinate)
             sosRouteMessage = nil
-            trackDone(.route)
-        } catch {
-            trackFailed(.route, reason: String(localized: "search failed"))
+            return true
+        }
+        // No walking route (maps data thin here): still point at the
+        // nearest place with its straight-line distance.
+        let closest = nearest[0]
+        sosRoute = nil
+        sosDestinationName = closest.place.name
+        sosDestinationCoordinate = closest.item.placemark.coordinate
+        sosDestinationETA = L10n.format("%d m away", Int(closest.place.distance))
+        sosDestinationItem = closest.item
+        sosRegion = regionCovering(fix.coordinate, closest.item.placemark.coordinate)
+        sosRouteMessage = nil
+        return true
+    }
+
+    /// Silent re-run when the fix got accurate or the wearer moved; a
+    /// failure keeps the route already on screen.
+    private func refreshRouteIfNeeded() {
+        guard sosActive, escalation.status(of: .route) == .done, !routeRefreshing,
+              let origin = routeOrigin, let fix = locationTracker.latest
+        else { return }
+        let current = LocationSample(
+            latitude: fix.coordinate.latitude, longitude: fix.coordinate.longitude,
+            accuracy: fix.horizontalAccuracy, timestamp: fix.timestamp
+        )
+        guard LocationFixPolicy.shouldReroute(from: origin, to: current) else { return }
+        routeRefreshing = true
+        Task {
+            _ = try? await computeRoute(from: fix)
+            routeRefreshing = false
         }
     }
 
+    /// Police and hospitals near `coordinate`, widening the radius until
+    /// something turns up (maps data is thin in many places). Uses Apple's
+    /// point-of-interest search first, then a text search as a backstop.
     private func searchStaffedPlaces(
         near coordinate: CLLocationCoordinate2D
-    ) async throws -> [(name: String, distance: Double, item: MKMapItem)] {
+    ) async throws -> [(place: SOSPlace, item: MKMapItem)] {
         let here = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
-        var found: [(name: String, distance: Double, item: MKMapItem)] = []
-        for query in ["police station", "hospital"] {
-            let request = MKLocalSearch.Request()
-            request.naturalLanguageQuery = query
-            request.region = MKCoordinateRegion(
-                center: coordinate, latitudinalMeters: 3000, longitudinalMeters: 3000
-            )
-            let response = try await MKLocalSearch(request: request).start()
-            for item in response.mapItems.prefix(5) {
-                let there = CLLocation(
-                    latitude: item.placemark.coordinate.latitude,
-                    longitude: item.placemark.coordinate.longitude
-                )
-                found.append((
-                    name: item.name ?? query.capitalized,
-                    distance: here.distance(from: there),
-                    item: item
-                ))
+        var lastError: Error?
+        for radius in [3000.0, 8000, 20000] {
+            var found: [(place: SOSPlace, item: MKMapItem)] = []
+            var seen = Set<String>()
+            func add(_ items: [MKMapItem], fallback: SOSPlaceKind) {
+                for item in items.prefix(8) {
+                    let point = item.placemark.coordinate
+                    let name = item.name ?? (fallback == .police
+                        ? String(localized: "Police station") : String(localized: "Hospital"))
+                    let id = "\(name.lowercased())|\(Int(point.latitude * 2000))|\(Int(point.longitude * 2000))"
+                    guard seen.insert(id).inserted else { continue }
+                    let kind: SOSPlaceKind = item.pointOfInterestCategory == .police
+                        ? .police : (item.pointOfInterestCategory == .hospital ? .hospital : fallback)
+                    let distance = here.distance(
+                        from: CLLocation(latitude: point.latitude, longitude: point.longitude)
+                    )
+                    found.append((
+                        SOSPlace(id: id, name: name, kind: kind, coordinate: point, distance: distance),
+                        item
+                    ))
+                }
             }
+            do {
+                let poi = MKLocalPointsOfInterestRequest(center: coordinate, radius: radius)
+                poi.pointOfInterestFilter = MKPointOfInterestFilter(including: [.police, .hospital])
+                let response = try await MKLocalSearch(request: poi).start()
+                add(response.mapItems, fallback: .police)
+            } catch {
+                lastError = error
+            }
+            for (query, kind) in [("police station", SOSPlaceKind.police), ("hospital", .hospital)] {
+                let request = MKLocalSearch.Request()
+                request.naturalLanguageQuery = query
+                request.region = MKCoordinateRegion(
+                    center: coordinate, latitudinalMeters: radius * 2, longitudinalMeters: radius * 2
+                )
+                do {
+                    let response = try await MKLocalSearch(request: request).start()
+                    add(response.mapItems, fallback: kind)
+                } catch {
+                    lastError = error
+                }
+            }
+            if !found.isEmpty { return found }
         }
-        return found
+        if let lastError { throw lastError }
+        return []
     }
 
     private func walkingRoute(
@@ -1476,6 +1624,25 @@ final class ProtectViewModel: ObservableObject {
             ),
             span: MKCoordinateSpan(latitudeDelta: latDelta, longitudeDelta: lonDelta)
         )
+    }
+
+    /// Walking directions in Google Maps (the app when installed, else the
+    /// web page, which iOS hands to the app on its own). No API key needed.
+    func openDestinationInGoogleMaps() {
+        guard let point = sosDestinationCoordinate else { return }
+        let origin = locationTracker.latest.map {
+            "\($0.coordinate.latitude),\($0.coordinate.longitude)"
+        }
+        let destination = "\(point.latitude),\(point.longitude)"
+        var web = "https://www.google.com/maps/dir/?api=1&destination=\(destination)&travelmode=walking"
+        if let origin { web += "&origin=\(origin)" }
+        if let url = URL(string: "comgooglemaps://?daddr=\(destination)&directionsmode=walking"),
+           UIApplication.shared.canOpenURL(url)
+        {
+            UIApplication.shared.open(url)
+        } else if let url = URL(string: web) {
+            UIApplication.shared.open(url)
+        }
     }
 
     func openDestinationInMaps() {
@@ -1532,6 +1699,7 @@ final class ProtectViewModel: ObservableObject {
     }
 
     private func streamSOSLocation() {
+        refreshRouteIfNeeded()
         guard sosActive, let id = incidentID,
               let fix = locationTracker.latest
         else {
@@ -1568,14 +1736,14 @@ final class ProtectViewModel: ObservableObject {
     }
 
     /// Creates a backend invite and adds the contact. Returns the share link.
-    func inviteContact(name: String) async -> URL? {
+    func inviteContact(name: String, phone: String? = nil) async -> URL? {
         guard !sosContacts.isFull else {
             showToast(String(localized: "At most 5 contacts"))
             return nil
         }
         do {
             let invite = try await incidentClient.inviteContact(name: name)
-            if sosContacts.add(name: invite.name, code: invite.code, link: invite.link) {
+            if sosContacts.add(name: invite.name, code: invite.code, link: invite.link, phone: phone) {
                 saveContacts()
                 AppLog.shared.event("contact_invite", ["linked": "false"])
                 return URL(string: invite.link)
@@ -1646,7 +1814,7 @@ final class ProtectViewModel: ObservableObject {
     // MARK: - Incident history (Activity tab)
 
     @Published var history = IncidentHistory()
-    private var sosStartedAt: Date?
+    @Published private(set) var sosStartedAt: Date?
     private var sosCause: String?
     private var lastEvidenceProgress = EvidenceProgress()
     /// Set when shouting triggers the distress path; consumed at SOS start.
