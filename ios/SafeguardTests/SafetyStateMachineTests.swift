@@ -464,6 +464,28 @@ final class AutoSOSCountdownTests: XCTestCase {
         XCTAssertEqual(m.state, .idle)
     }
 
+    // MARK: - SOS end flow (Phase 6)
+
+    func testSafePhraseEndsUnsafe() {
+        var m = protecting()
+        m.noteReply(.unsafePhrase, at: 100)
+        XCTAssertEqual(m.state, .unsafe)
+        m.noteReply(.safePhrase, at: 101)
+        XCTAssertEqual(m.state, .safe)
+    }
+
+    func testEndUnsafeButton() {
+        var m = protecting()
+        m.endUnsafe(at: 100)
+        XCTAssertEqual(m.state, .monitoring, "no-op outside Unsafe")
+        m.noteReply(.unsafePhrase, at: 101)
+        m.endUnsafe(at: 102)
+        XCTAssertEqual(m.state, .safe)
+        // ...with the usual cooldown afterwards.
+        m.noteMovementAlert(score: 0.9, at: 103)
+        XCTAssertEqual(m.state, .safe)
+    }
+
     func testDistressMatcherEnglishHindiAndSpelling() {
         let matcher = DistressMatcher()
         for text in ["bachao", "bachaao bachaao", "help", "please help me", "बचाओ", "मदद करो", "madad karo koi", "SAVE ME"] {

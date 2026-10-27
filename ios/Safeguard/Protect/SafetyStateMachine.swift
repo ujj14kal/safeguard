@@ -265,6 +265,9 @@ public struct SafetyStateMachine: Sendable {
                 enterSafe(at: time)
             } else if state == .countdown {
                 cancelCountdown(at: time)
+            } else if state == .unsafe {
+                // Phase 6 end flow: the safe phrase is a deliberate SOS end.
+                endUnsafe(at: time)
             }
         case .tap:
             switch state {
@@ -340,6 +343,13 @@ public struct SafetyStateMachine: Sendable {
         askDeadline = nil
         state = .asking
         askSpeechDue = true
+    }
+
+    /// Deliberate SOS end (hold-to-End button or safe phrase): Unsafe →
+    /// Safe with the usual cooldown. No-op anywhere else.
+    public mutating func endUnsafe(at time: TimeInterval) {
+        guard state == .unsafe else { return }
+        enterSafe(at: time)
     }
 
     private mutating func enterSafe(at time: TimeInterval) {
