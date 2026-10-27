@@ -120,7 +120,11 @@ def get_contact_store() -> ContactStore:
 def get_incidents() -> IncidentStore:
     global _incidents
     if _incidents is None:
-        _incidents = IncidentStore()
+        _incidents = IncidentStore(
+            path=SETTINGS.incidents_path,
+            ttl_after_end_s=SETTINGS.incident_token_ttl_hours * 3600,
+            max_active_s=SETTINGS.incident_max_active_hours * 3600,
+        )
     return _incidents
 
 
@@ -167,10 +171,13 @@ class VerifyResponse(BaseModel):
 
 
 @app.get("/health")
-def health() -> dict:
-    # muse_configured tells the app whether a 5xx means "no API key" (setup
-    # problem) rather than a crash. The key itself never leaves the backend.
-    return {"status": "ok", "muse_configured": bool(SETTINGS.meta_model_api_key)}
+def health(x_safeguard_token: str | None = Header(default=None)) -> dict:
+    # Open to anyone, but only a caller with the app token learns whether the
+    # Muse key is set. That flag tells the app whether a 5xx means "no API
+    # key" (setup problem) rather than a crash. The key itself never leaves.
+    if app_token_ok(x_safeguard_token):
+        return {"status": "ok", "muse_configured": bool(SETTINGS.meta_model_api_key)}
+    return {"status": "ok"}
 
 
 @app.post("/verify", response_model=VerifyResponse)
@@ -491,11 +498,11 @@ async def asr_relay(client: WebSocket) -> None:
 
     import websockets
 
-    await client.accept()
+    # Refuse BEFORE accepting: a wrong or missing token never gets a socket.
     if not app_token_ok(client.headers.get("x-safeguard-token")):
-        await client.send_text(json.dumps({"type": "error", "message": "missing or wrong app token"}))
-        await client.close(code=4401)
+        await client.close(code=1008)
         return
+    await client.accept()
     if not SETTINGS.meta_model_api_key:
         await client.send_text(json.dumps({"type": "error", "message": "META_MODEL_API_KEY is not set"}))
         await client.close(code=1011)
@@ -708,6 +715,7 @@ def incident_start(
         url_button=("Open live view", live), pin=pin,
     )
     incident.alerted = True
+    store.save()
     sent = sum(1 for item in delivery if item["status"] in ("sent", "dry-run"))
     logger.info(
         "incident started id=%s contacts=%d sent=%d test=%s",
@@ -759,6 +767,7 @@ def incident_end(
             text = "[TEST] " + text
         delivery = _send_to_codes(incident.contact_codes, text, incident.dry_run)
         incident.end_sent = True
+        get_incidents().save()
         logger.info("incident ended id=%s contacts=%d", incident.id, len(delivery))
     return {"ended": True, "already_ended": False, "delivery": delivery}
 

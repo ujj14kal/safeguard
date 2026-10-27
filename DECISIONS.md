@@ -39,8 +39,13 @@ Deviations and judgment calls:
 1. **"Safest" means staffed/public by ETA, not a crime-risk model**: the
    route answers "where can people help me fastest". Documented here, in
    the code, and nowhere near a risk claim.
-2. **Incidents are in-memory**: a backend restart drops active incidents
-   (evidence files + contacts survive). Persistence is roadmap.
+2. **Incidents are saved to `data/incidents.json`** (gitignored) so a backend
+   restart mid-SOS keeps the family's live link working. **Share links
+   expire**: an ended incident's link stops `INCIDENT_TOKEN_TTL_HOURS` (6 h)
+   after the end, an active one after `INCIDENT_MAX_ACTIVE_HOURS` (24 h).
+   Fixed after the Phase 6 review. Also from that review: `/asr` refuses a
+   wrong or missing app token before accepting the socket, and `/health`
+   only reveals `muse_configured` to a caller holding the app token.
 3. **The route waits through its retries for a first fix** ("Waiting for
    location…" while retryable, "Location unavailable" when terminal): on a
    cold start the fix often lands seconds after Unsafe.

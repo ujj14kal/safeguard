@@ -467,8 +467,9 @@ def test_token_accepted_and_viewer_exempt(locked):
     assert locked.get("/health").status_code == 200
 
 
-def test_asr_rejects_without_the_token(locked):
-    with locked.websocket_connect("/asr") as ws:
-        message = json.loads(ws.receive_text())
-        assert message["type"] == "error"
-        assert "app token" in message["message"]
+def test_asr_rejects_before_accepting_without_the_token(locked):
+    from starlette.websockets import WebSocketDisconnect
+
+    with pytest.raises(WebSocketDisconnect):
+        with locked.websocket_connect("/asr"):
+            pass

@@ -59,6 +59,18 @@ class Settings:
         default_factory=lambda: os.environ.get("VERIFY_REASONING_EFFORT", "low")
     )
 
+    # Live-link lifetime. An ended incident's link stops working this many
+    # hours after the SOS ended; an active one after the maximum below.
+    incident_token_ttl_hours: float = field(
+        default_factory=lambda: _float("INCIDENT_TOKEN_TTL_HOURS", 6.0)
+    )
+    incident_max_active_hours: float = field(
+        default_factory=lambda: _float("INCIDENT_MAX_ACTIVE_HOURS", 24.0)
+    )
+    incidents_path: str = field(
+        default_factory=lambda: os.environ.get("INCIDENTS_PATH", "data/incidents.json")
+    )
+
     # Muse Voice Transcribe (realtime speech to text). The key stays here;
     # the phone streams audio to /asr and this relays it to Meta.
     asr_upstream_url: str = field(
