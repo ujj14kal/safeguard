@@ -355,6 +355,8 @@ final class ProtectViewModel: ObservableObject {
         endCountdown()
         evidenceStatus = nil
         window.clear()
+        gestureCounter.reset()
+        unwantedGestureCount = 0
         conversationFlag = nil
         judgeSchedule.reset()
         speechGate.reset()
@@ -381,6 +383,8 @@ final class ProtectViewModel: ObservableObject {
         verifyFailure = nil
         lastSpeechInfo = nil
         window.clear()
+        gestureCounter.reset()
+        unwantedGestureCount = 0
         speechGate.reset()
         offlineMessageSaid = false
         safety.startProtecting(at: Self.now)
@@ -392,6 +396,52 @@ final class ProtectViewModel: ObservableObject {
         fpsTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in self?.tickFps() }
         }
+    }
+
+    // MARK: - Gestures and expressions (MediaPipe)
+
+    /// More than 5 unwanted gestures starts the auto-SOS countdown.
+    @AppStorage("gesturesTriggerSOS") var gesturesTriggerSOS = true
+    /// What the classifiers saw in the last frame, for the debug overlay.
+    @Published var cueLine = ""
+    @Published private(set) var unwantedGestureCount = 0
+    private var gestureCounter = UnwantedGestureCounter()
+    private var lastGestureLog: [String: TimeInterval] = [:]
+    private var pendingGestureCause = false
+
+    fileprivate func publishFrameCues(_ cues: FrameCues, at time: TimeInterval) {
+        guard isProtecting else { return }
+        cueLine = cues.summary
+        // Log what was seen (rate-limited per kind) so a session can be
+        // read back off the backend log.
+        for gesture in cues.gestures where gesture.kind != .other {
+            logCue("gesture", kind: gesture.kind.rawValue, score: gesture.score, at: time, every: 1.5)
+        }
+        if let expression = cues.expression, expression.kind != .neutral, expression.score >= 0.45 {
+            logCue("expression", kind: expression.kind.rawValue, score: expression.score, at: time, every: 2)
+        }
+        let hostile = cues.hostile(minScore: pipeline.config.gestureMinScore)
+        guard let event = gestureCounter.feed(hostile: hostile != nil, at: time) else { return }
+        switch event {
+        case .counted(let total):
+            unwantedGestureCount = total
+            AppLog.shared.event("gesture_counted", ["total": String(total), "limit": String(gestureCounter.limit)])
+            showToast(L10n.format("Unwanted gesture noted (%d)", total))
+            UINotificationFeedbackGenerator().notificationOccurred(.warning)
+        case .exceeded(let total):
+            unwantedGestureCount = 0
+            AppLog.shared.event("gesture_sos", ["total": String(total), "enabled": String(gesturesTriggerSOS)])
+            guard gesturesTriggerSOS else { return }
+            pendingGestureCause = true
+            distressHeard()
+        }
+    }
+
+    private func logCue(_ event: String, kind: String, score: Double, at time: TimeInterval, every: TimeInterval) {
+        let key = "\(event):\(kind)"
+        guard time - (lastGestureLog[key] ?? -.infinity) >= every else { return }
+        lastGestureLog[key] = time
+        AppLog.shared.event(event, ["kind": kind, "score": String(format: "%.2f", score)])
     }
 
     /// Per-stage detection timing for the debug overlay, and a log line
@@ -719,6 +769,7 @@ final class ProtectViewModel: ObservableObject {
                 if mapped != .unsafe {
                     // Cancelled countdown: a later SOS is not shout-caused.
                     pendingShoutCause = false
+                    pendingGestureCause = false
                 }
             }
             if mapped == .asking, previous != .asking {
@@ -1250,6 +1301,7 @@ final class ProtectViewModel: ObservableObject {
         sosStartedAt = Date()
         sosCause = resolveSosCause()
         pendingShoutCause = false
+        pendingGestureCause = false
         escalation = EscalationCoordinator()
         escalation.start()
         incidentID = nil
@@ -1671,21 +1723,51 @@ final class ProtectViewModel: ObservableObject {
         ])
     }
 
-    /// Cab track (DEMO): shares the fake details with the contacts.
+    /// Cab track: the Uber ride is prepared (pickup = where the wearer is,
+    /// drop-off = the nearest police station or hospital). It never opens
+    /// Uber by itself (that would pull the app to the background and stop
+    /// the camera and recording); the SOS screen has one button for it, and
+    /// contacts get their own "send a cab" link in the alert.
     private func runCabTrack() async {
         guard sosActive else { return }
-        guard await ensureIncident(), let id = incidentID else {
-            trackFailed(.cab, reason: String(localized: "waiting for incident"))
+        guard locationTracker.latest != nil else {
+            trackFailed(.cab, reason: RouteChoice.noLocationMessage)
             return
         }
-        do {
-            let etaMinutes = max(1, Int(((cabDeadline ?? Self.now) - Self.now) / 60))
-            _ = try await incidentClient.shareCab(
-                incidentID: id, driver: cabDriver, plate: cabPlate, etaMinutes: etaMinutes
-            )
-            trackDone(.cab)
-        } catch {
-            trackFailed(.cab, reason: trackReason(for: error))
+        trackDone(.cab)
+    }
+
+    /// Where the Uber trip would start and end, for the SOS screen.
+    var ridePickup: UberDeepLink.Place? {
+        guard let fix = locationTracker.latest else { return nil }
+        return UberDeepLink.Place(
+            latitude: fix.coordinate.latitude, longitude: fix.coordinate.longitude,
+            nickname: String(localized: "SOS: my location")
+        )
+    }
+
+    var rideDropoff: UberDeepLink.Place? {
+        guard let point = sosDestinationCoordinate else { return nil }
+        return UberDeepLink.Place(
+            latitude: point.latitude, longitude: point.longitude,
+            nickname: sosDestinationName ?? String(localized: "Safe place")
+        )
+    }
+
+    /// Opens Uber with the trip filled in (app first, web page as the
+    /// fallback). The rider confirms the booking inside Uber.
+    func openUberRide() {
+        guard let pickup = ridePickup else {
+            showToast(RouteChoice.noLocationMessage)
+            return
+        }
+        AppLog.shared.event("uber_open", ["dropoff": rideDropoff == nil ? "none" : "set"])
+        if let url = UberDeepLink.appURL(pickup: pickup, dropoff: rideDropoff),
+           UIApplication.shared.canOpenURL(url)
+        {
+            UIApplication.shared.open(url)
+        } else if let url = UberDeepLink.webURL(pickup: pickup, dropoff: rideDropoff) {
+            UIApplication.shared.open(url)
         }
     }
 
@@ -1891,6 +1973,7 @@ final class ProtectViewModel: ObservableObject {
         case .unsafePhrase:
             return "unsafePhrase"
         case .distressWord:
+            if pendingGestureCause { return "gestures" }
             return pendingShoutCause ? "shouting" : "distressWord"
         case .noReply, .none:
             return askTrigger == "flag" ? "flag" : "noReply"
@@ -2020,7 +2103,8 @@ private final class DetectionPipeline {
     var sweepGate: NearSweepGate
     let frameBuffer = FrameBuffer()
     var lastDetect = Date.distantPast
-    let detectInterval: TimeInterval = 0.2
+    // 10 detections a second (was 5): the vision pass takes about 65 ms.
+    let detectInterval: TimeInterval = 0.1
 
     init(config: ThreatConfig = ThreatConfig()) {
         self.config = config
@@ -2058,6 +2142,8 @@ private final class DetectionPipeline {
         lastDetect = now
         let nowSeconds = ProcessInfo.processInfo.systemUptime
         guard let people = try? detector.detect(in: frame.pixelBuffer) else { return }
+        let frameCues = detector.lastFrameCues
+        Task { await owner.publishFrameCues(frameCues, at: nowSeconds) }
         let tracks = tracker.update(detections: people)
         let live = tracks.filter { $0.missed == 0 }
         // Store the boxes WITH their frame so a verify clip can prompt SAM 2 on

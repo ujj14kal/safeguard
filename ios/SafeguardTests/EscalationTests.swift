@@ -215,3 +215,30 @@ final class SOSMessageBuilderTests: XCTestCase {
         XCTAssertTrue(SOSMessageBuilder.demoBanner.contains("no real cab service"))
     }
 }
+
+final class UberDeepLinkTests: XCTestCase {
+    private let pickup = UberDeepLink.Place(latitude: 28.6139, longitude: 77.2090, nickname: "SOS: my location")
+    private let dropoff = UberDeepLink.Place(latitude: 28.6141, longitude: 77.2093, nickname: "Police Station")
+
+    func testAppLinkCarriesPickupAndDropoff() throws {
+        let url = try XCTUnwrap(UberDeepLink.appURL(pickup: pickup, dropoff: dropoff))
+        XCTAssertEqual(url.scheme, "uber")
+        let text = url.absoluteString.removingPercentEncoding ?? ""
+        XCTAssertTrue(text.contains("action=setPickup"))
+        XCTAssertTrue(text.contains("pickup[latitude]=28.61390"))
+        XCTAssertTrue(text.contains("pickup[longitude]=77.20900"))
+        XCTAssertTrue(text.contains("dropoff[latitude]=28.61410"))
+        XCTAssertTrue(text.contains("dropoff[nickname]=Police Station"))
+    }
+
+    func testWebLinkUsesTheUniversalLink() throws {
+        let url = try XCTUnwrap(UberDeepLink.webURL(pickup: pickup, dropoff: dropoff))
+        XCTAssertEqual(url.host, "m.uber.com")
+        XCTAssertTrue(url.absoluteString.hasPrefix("https://m.uber.com/ul/?"))
+    }
+
+    func testDropoffIsOptional() throws {
+        let url = try XCTUnwrap(UberDeepLink.webURL(pickup: pickup, dropoff: nil))
+        XCTAssertFalse(url.absoluteString.contains("dropoff"))
+    }
+}

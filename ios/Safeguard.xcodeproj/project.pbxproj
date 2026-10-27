@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D4B5D57CDE8235244ED89383 /* UberDeepLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3212D41F7A01FC88794D27C /* UberDeepLink.swift */; };
+		D3A8492215BC8F40A588827C /* UberDeepLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3212D41F7A01FC88794D27C /* UberDeepLink.swift */; };
+		D4B416DE4A9E7DD1640105AF /* UnwantedGestureCounter.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3AA48741B5CCBBCA91B37A8 /* UnwantedGestureCounter.swift */; };
+		D3DD9E720FB00671515DE1B0 /* UnwantedGestureCounter.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3AA48741B5CCBBCA91B37A8 /* UnwantedGestureCounter.swift */; };
 		D3B04A6B6BAA7C8FFE3B8697 /* MediaPipeCueEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3535E2B9271729BAE77DC1E /* MediaPipeCueEngine.swift */; };
 		D4056915C495DA434CD43945 /* LatencyMeter.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3ACE305E7487346F8006686 /* LatencyMeter.swift */; };
 		D33F9DB34BB37900940AB391 /* LatencyMeter.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3ACE305E7487346F8006686 /* LatencyMeter.swift */; };
@@ -173,6 +177,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		D3212D41F7A01FC88794D27C /* UberDeepLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UberDeepLink.swift; sourceTree = "<group>"; };
+		D3AA48741B5CCBBCA91B37A8 /* UnwantedGestureCounter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnwantedGestureCounter.swift; sourceTree = "<group>"; };
 		D3535E2B9271729BAE77DC1E /* MediaPipeCueEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaPipeCueEngine.swift; sourceTree = "<group>"; };
 		D3ACE305E7487346F8006686 /* LatencyMeter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LatencyMeter.swift; sourceTree = "<group>"; };
 		D397449DDB49A2AC3DE15F80 /* GestureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureTests.swift; sourceTree = "<group>"; };
@@ -439,6 +445,7 @@
 		A10000000000000000000019 /* Detection */ = {
 			isa = PBXGroup;
 			children = (
+				D3AA48741B5CCBBCA91B37A8 /* UnwantedGestureCounter.swift */,
 				D3535E2B9271729BAE77DC1E /* MediaPipeCueEngine.swift */,
 				D3ACE305E7487346F8006686 /* LatencyMeter.swift */,
 				D35A42EA2B1B7096564FB5D0 /* GestureModels.swift */,
@@ -504,6 +511,7 @@
 		A1000000000000000000009E /* Escalation */ = {
 			isa = PBXGroup;
 			children = (
+				D3212D41F7A01FC88794D27C /* UberDeepLink.swift */,
 				D3B95933BB2350AAAEB8AC15 /* LocationFixPolicy.swift */,
 				A1000000000000000000009F /* EscalationCoordinator.swift */,
 				A100000000000000000000A1 /* SOSContacts.swift */,
@@ -677,6 +685,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D3A8492215BC8F40A588827C /* UberDeepLink.swift in Sources */,
+				D3DD9E720FB00671515DE1B0 /* UnwantedGestureCounter.swift in Sources */,
 				D3B04A6B6BAA7C8FFE3B8697 /* MediaPipeCueEngine.swift in Sources */,
 				D33F9DB34BB37900940AB391 /* LatencyMeter.swift in Sources */,
 				D30A4542A247ACDC42D51B6D /* GestureModels.swift in Sources */,
@@ -767,6 +777,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D4B5D57CDE8235244ED89383 /* UberDeepLink.swift in Sources */,
+				D4B416DE4A9E7DD1640105AF /* UnwantedGestureCounter.swift in Sources */,
 				D4056915C495DA434CD43945 /* LatencyMeter.swift in Sources */,
 				D3D043C7D94A66AD593C1719 /* GestureTests.swift in Sources */,
 				D467D050F084DE5917E8BAB7 /* GestureModels.swift in Sources */,

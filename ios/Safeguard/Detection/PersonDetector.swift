@@ -15,6 +15,8 @@ public final class PersonDetector {
     /// MediaPipe hands/face (gestures + expressions). Nil when the models
     /// are missing or failed to start: the Vision cues below take over.
     private lazy var cueEngine: CueEngine? = CueEngineFactory.make()
+    /// What the last frame's classifiers saw, owned by a person or not.
+    public private(set) var lastFrameCues = FrameCues()
 
     /// - Parameter poseMatchDistance: fallback pose-to-detection matching
     ///   radius (normalized units). Defaults to ThreatConfig's value so all
@@ -70,11 +72,17 @@ public final class PersonDetector {
         to detections: inout [DetectedPerson], handler: VNImageRequestHandler,
         pixelBuffer: CVPixelBuffer
     ) {
-        guard !detections.isEmpty else { return }
+        // MediaPipe runs even with no person box: a hand or face near the
+        // camera is often too close for the person detector.
         if let engine = cueEngine, let frame = engine.process(pixelBuffer) {
-            attachMediaPipeCues(frame, to: &detections, pixelBuffer: pixelBuffer)
+            lastFrameCues = Self.frameCues(from: frame)
+            if !detections.isEmpty {
+                attachMediaPipeCues(frame, to: &detections, pixelBuffer: pixelBuffer)
+            }
             return
         }
+        lastFrameCues = FrameCues()
+        guard !detections.isEmpty else { return }
         let handRequest = VNDetectHumanHandPoseRequest()
         handRequest.maximumHandCount = 6
         let faceRequest = VNDetectFaceLandmarksRequest()
@@ -104,6 +112,20 @@ public final class PersonDetector {
         for index in detections.indices where !cues[index].isEmpty {
             detections[index].cues = cues[index]
         }
+    }
+
+    static func frameCues(from frame: MPFrame) -> FrameCues {
+        let gestures = frame.hands.compactMap {
+            HandGestureClassifier.classify(
+                points: $0.points, cannedLabel: $0.cannedLabel,
+                cannedScore: $0.cannedScore, box: $0.box
+            )
+        }
+        let expression = frame.faces
+            .filter { !$0.blendshapes.isEmpty }
+            .map { ExpressionClassifier.classify(blendshapes: $0.blendshapes) }
+            .max { $0.score < $1.score }
+        return FrameCues(gestures: gestures, expression: expression)
     }
 
     /// Maps MediaPipe hands and faces to their people and classifies them.

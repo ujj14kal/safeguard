@@ -201,3 +201,67 @@ final class LatencyMeterTests: XCTestCase {
         XCTAssertFalse(text.contains("persons"))
     }
 }
+
+final class UnwantedGestureCounterTests: XCTestCase {
+    /// Feeds `frames` hostile frames at 10 per second starting at `start`.
+    private func episode(_ c: inout UnwantedGestureCounter, start: TimeInterval, frames: Int = 5) -> [UnwantedGestureCounter.Event] {
+        var events: [UnwantedGestureCounter.Event] = []
+        for i in 0..<frames {
+            if let e = c.feed(hostile: true, at: start + Double(i) * 0.1) { events.append(e) }
+        }
+        // Then a clean stretch so the next episode is separate.
+        for i in 0..<12 { _ = c.feed(hostile: false, at: start + Double(frames) * 0.1 + Double(i) * 0.1) }
+        return events
+    }
+
+    func testOneLongGestureIsOneEpisode() {
+        var c = UnwantedGestureCounter()
+        XCTAssertEqual(episode(&c, start: 0, frames: 40), [.counted(total: 1)])
+    }
+
+    func testTooFewFramesDoNotCount() {
+        var c = UnwantedGestureCounter()
+        XCTAssertEqual(episode(&c, start: 0, frames: 2), [])
+        XCTAssertEqual(c.total, 0)
+    }
+
+    func testSixthEpisodeFiresOnceAndResets() {
+        var c = UnwantedGestureCounter()
+        var all: [UnwantedGestureCounter.Event] = []
+        for i in 0..<6 { all += episode(&c, start: Double(i) * 5) }
+        XCTAssertEqual(all.prefix(5).map { $0 }, [
+            .counted(total: 1), .counted(total: 2), .counted(total: 3), .counted(total: 4), .counted(total: 5),
+        ])
+        XCTAssertEqual(all.last, .exceeded(total: 6))
+        XCTAssertEqual(c.total, 0, "fires once, then starts over")
+    }
+
+    func testExactlyFiveDoesNotFire() {
+        var c = UnwantedGestureCounter()
+        var fired = false
+        for i in 0..<5 {
+            for event in episode(&c, start: Double(i) * 5) {
+                if case .exceeded = event { fired = true }
+            }
+        }
+        XCTAssertFalse(fired)
+        XCTAssertEqual(c.total, 5)
+    }
+
+    func testOldEpisodesDropOutOfTheWindow() {
+        var c = UnwantedGestureCounter()
+        for i in 0..<5 { _ = episode(&c, start: Double(i) * 5) }
+        // Much later, one more: the old five have expired.
+        XCTAssertEqual(episode(&c, start: 1000), [.counted(total: 1)])
+    }
+
+    func testBriefDropoutInsideAGestureIsStillOneEpisode() {
+        var c = UnwantedGestureCounter()
+        var events: [UnwantedGestureCounter.Event] = []
+        for t in stride(from: 0.0, to: 1.0, by: 0.1) {
+            let hostile = !(0.4...0.5).contains(t) // two missed frames
+            if let e = c.feed(hostile: hostile, at: t) { events.append(e) }
+        }
+        XCTAssertEqual(events, [.counted(total: 1)])
+    }
+}

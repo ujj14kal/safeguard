@@ -11,6 +11,7 @@ import logging
 import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from urllib.parse import urlencode
 
 import httpx
 
@@ -151,10 +152,27 @@ def maps_link(lat: float, lon: float) -> str:
     return f"https://maps.google.com/?q={lat:.5f},{lon:.5f}"
 
 
+def ride_link(lat: float, lon: float) -> str:
+    """Uber universal link for a CONTACT: their pickup is wherever they are
+    (`my_location`), the drop-off is the wearer's position, so one tap opens
+    Uber ready to send a cab to her. Opens in the Uber app or the web page;
+    no API key. Uber's deep links have no field for a note to the driver."""
+    query = urlencode({
+        "action": "setPickup",
+        "pickup": "my_location",
+        "dropoff[latitude]": f"{lat:.5f}",
+        "dropoff[longitude]": f"{lon:.5f}",
+        "dropoff[nickname]": "SOS",
+    })
+    return f"https://m.uber.com/ul/?{query}"
+
+
 # Contact alerts go out in the wearer's app language ("en" or "hi").
 # Hindi strings are machine-written: a native speaker should review them
 # before real use (see DECISIONS.md).
-def alert_text(wearer_name: str, live_url: str, maps_url=None, lang: str = "en") -> str:
+def alert_text(
+    wearer_name: str, live_url: str, maps_url=None, lang: str = "en", ride_url=None
+) -> str:
     if lang == "hi":
         lines = [
             f"{wearer_name} की ओर से SOS। उन्हें मदद की ज़रूरत हो सकती है।",
@@ -162,6 +180,8 @@ def alert_text(wearer_name: str, live_url: str, maps_url=None, lang: str = "en")
         ]
         if maps_url:
             lines.append(f"नक्शे का पिन: {maps_url}")
+        if ride_url:
+            lines.append(f"उन तक कैब भेजें (Uber): {ride_url}")
         return "\n".join(lines)
     lines = [
         f"SOS from {wearer_name}. They may need help.",
@@ -169,6 +189,8 @@ def alert_text(wearer_name: str, live_url: str, maps_url=None, lang: str = "en")
     ]
     if maps_url:
         lines.append(f"Map pin: {maps_url}")
+    if ride_url:
+        lines.append(f"Send a cab to them (Uber): {ride_url}")
     return "\n".join(lines)
 
 

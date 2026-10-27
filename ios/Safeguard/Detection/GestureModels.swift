@@ -201,6 +201,37 @@ public enum ExpressionClassifier {
     private static func clamp(_ x: Double) -> Double { max(0, min(1, x)) }
 }
 
+/// Everything the classifiers saw in one frame, whether or not a person
+/// box owns it (a hand or face close to the camera often has no person
+/// detection). Drives logging, the overlay line and the gesture counter.
+public struct FrameCues: Sendable, Equatable {
+    public var gestures: [HandGestureCue]
+    public var expression: ExpressionCue?
+
+    public init(gestures: [HandGestureCue] = [], expression: ExpressionCue? = nil) {
+        self.gestures = gestures
+        self.expression = expression
+    }
+
+    public var isEmpty: Bool { gestures.isEmpty && expression == nil }
+
+    /// The most sure hostile gesture this frame, if any.
+    public func hostile(minScore: Double) -> HandGestureCue? {
+        gestures.filter { $0.isHostile && $0.score >= minScore }.max { $0.score < $1.score }
+    }
+
+    /// "middle finger 0.91 • angry 0.62" (overlay text).
+    public var summary: String {
+        var parts = gestures.filter { $0.kind != .other }.map {
+            String(format: "%@ %.2f", $0.kind.rawValue, $0.score)
+        }
+        if let expression, expression.kind != .neutral {
+            parts.append(String(format: "%@ %.2f", expression.kind.rawValue, expression.score))
+        }
+        return parts.joined(separator: " • ")
+    }
+}
+
 // MARK: - Cue engine seam
 
 /// One hand as MediaPipe saw it, in PIXEL units with y pointing UP (the

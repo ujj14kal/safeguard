@@ -50,6 +50,7 @@
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>comgooglemaps</string>
+		<string>uber</string>
 	</array>
 	<key>NSContactsUsageDescription</key>
 	<string>Safeguard reads your contacts only so you can pick the people to alert in an SOS. They are not uploaded.</string>

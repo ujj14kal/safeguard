@@ -59,6 +59,17 @@ public enum Defaults {
         #endif
     }
 
+    /// The detection overlay (gesture and expression labels, per-stage
+    /// timings) is ON in DEBUG builds so a developer sees what the vision
+    /// layer sees; OFF in release.
+    public static var debugOverlayDefault: Bool {
+        #if DEBUG
+            true
+        #else
+            false
+        #endif
+    }
+
     /// Start protecting when the app opens (camera already allowed, setup
     /// done). A developer convenience in DEBUG; off in release because a
     /// camera that starts by itself must be the wearer's own choice
@@ -94,6 +105,7 @@ public enum Defaults {
         "debugLogEnabled",
         "autoStartProtecting",
         "listenSensitivity",
+        "gesturesTriggerSOS",
         "customSafePhrase",
         "customUnsafePhrase",
         "backendBaseURL",

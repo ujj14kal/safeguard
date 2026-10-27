@@ -4,7 +4,7 @@ import UIKit
 
 struct ProtectView: View {
     @StateObject private var model = ProtectViewModel.shared
-    @AppStorage("debugOverlayEnabled") private var debugOverlay = false
+    @AppStorage("debugOverlayEnabled") private var debugOverlay = Defaults.debugOverlayDefault
     @AppStorage("listenerOptIn") private var listenerOptIn = Defaults.current.listenerOptIn
     @Environment(\.openURL) private var openURL
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
@@ -200,7 +200,7 @@ struct ProtectView: View {
             if debugOverlay {
                 // Debug only: what the recogniser just heard, so you can see
                 // whether Hindi/English is being picked up at all.
-                (Text(verbatim: heardLine + "\n\(model.judgeStatus)\n\(model.latencyLine)\n")
+                (Text(verbatim: heardLine + "\n\(model.judgeStatus)\n\(model.latencyLine)\nCues: \(model.cueLine.isEmpty ? "none" : model.cueLine) • rude gestures: \(model.unwantedGestureCount)/5\n")
                     + Text(format: "Apple ear on • %@", model.cloudStatus))
                     .font(.footnote.monospaced())
                     .lineLimit(6)

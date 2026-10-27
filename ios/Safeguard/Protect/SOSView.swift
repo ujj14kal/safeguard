@@ -176,14 +176,14 @@ struct SOSView: View {
             case .route: return String(localized: "Finding the nearest help")
             case .contacts: return String(localized: "Alerting your contacts")
             case .stream: return String(localized: "Starting the live page")
-            case .cab: return String(localized: "Arranging a ride")
+            case .cab: return String(localized: "Preparing your ride")
             }
         case .done:
             switch track {
             case .route: return model.sosDestinationName ?? String(localized: "Route ready")
             case .contacts: return contactsSummary
             case .stream: return String(localized: "Live page is up")
-            case .cab: return String(localized: "Demo ride shared")
+            case .cab: return String(localized: "Uber ride ready")
             }
         case .failed(let reason):
             return L10n.format("Failed: %@", reason)
@@ -406,30 +406,43 @@ struct SOSView: View {
 
     @ViewBuilder
     private var cabCard: some View {
-        if model.escalation.status(of: .cab) == .done {
+        if model.ridePickup != nil {
             VStack(alignment: .leading, spacing: DS.Spacing.small) {
-                Label(SOSMessageBuilder.demoBanner, systemImage: "exclamationmark.triangle.fill")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(DS.Colors.warning)
-                TimelineView(.periodic(from: .now, by: 1)) { _ in
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(model.cabDriver).font(.headline)
-                            Text(model.cabPlate).font(.subheadline.monospaced()).foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        VStack(alignment: .trailing, spacing: 2) {
-                            Text("Arrives in").font(.caption).foregroundStyle(.secondary)
-                            Text(model.cabCountdownText)
-                                .font(.system(.title2, design: .rounded, weight: .bold))
-                                .monospacedDigit()
-                        }
+                HStack(spacing: DS.Spacing.medium) {
+                    Image(systemName: "car.fill")
+                        .font(.title2)
+                        .foregroundStyle(DS.Colors.accent)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Get a ride").font(.headline)
+                        Text(rideSummary)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
+                Button {
+                    UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                    model.openUberRide()
+                } label: {
+                    Label("Open Uber with the trip filled in", systemImage: "arrow.up.forward.app.fill")
+                        .frame(maxWidth: .infinity, minHeight: 48)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(DS.Colors.buttonFill)
+                Text("Your contacts also got a link to send a cab to you. You confirm the booking inside Uber; Safeguard keeps recording only while it is open.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             }
             .dsCard()
             .transition(.move(edge: .bottom).combined(with: .opacity))
         }
+    }
+
+    private var rideSummary: String {
+        if let dropoff = model.rideDropoff {
+            return L10n.format("From your location to %@", dropoff.nickname)
+        }
+        return String(localized: "From your location (choose where to in Uber)")
     }
 
     @ViewBuilder

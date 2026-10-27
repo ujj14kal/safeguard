@@ -47,6 +47,7 @@ from .notify import (
     end_text,
     make_notifier,
     maps_link,
+    ride_link,
     test_text,
 )
 from .ratelimit import RateLimiter
@@ -759,7 +760,8 @@ def incident_start(
         text = test_text(wearer, live, lang=body.lang)
     else:
         maps = maps_link(*pin) if pin else None
-        text = alert_text(wearer, live, maps_url=maps, lang=body.lang)
+        ride = ride_link(body.lat, body.lon) if body.lat is not None and body.lon is not None else None
+        text = alert_text(wearer, live, maps_url=maps, lang=body.lang, ride_url=ride)
     delivery = _send_to_codes(
         incident.contact_codes, text, incident.dry_run,
         url_button=("Open live view", live), pin=pin,

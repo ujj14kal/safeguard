@@ -2833,6 +2833,54 @@
         }
       }
     },
+    "From your location (choose where to in Uber)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "From your location (choose where to in Uber)"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आपकी लोकेशन से (कहाँ जाना है, Uber में चुनें)"
+          }
+        }
+      }
+    },
+    "From your location to %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "From your location to %@"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आपकी लोकेशन से %@ तक"
+          }
+        }
+      }
+    },
+    "Get a ride": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Get a ride"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सवारी लें"
+          }
+        }
+      }
+    },
     "Going back": {
       "localizations": {
         "en": {
@@ -3761,6 +3809,22 @@
         }
       }
     },
+    "More than 5 rude gestures starts an SOS": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "More than 5 rude gestures starts an SOS"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "5 से ज़्यादा अभद्र इशारों पर SOS शुरू हो"
+          }
+        }
+      }
+    },
     "Move to an open area if it takes long": {
       "localizations": {
         "en": {
@@ -4273,6 +4337,22 @@
         }
       }
     },
+    "Open Uber with the trip filled in": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Uber with the trip filled in"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "यात्रा भरकर Uber खोलें"
+          }
+        }
+      }
+    },
     "Open in Maps": {
       "localizations": {
         "en": {
@@ -4557,6 +4637,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Safeguard के लिए सटीक लोकेशन बंद है"
+          }
+        }
+      }
+    },
+    "Preparing your ride": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preparing your ride"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आपकी सवारी तैयार हो रही है"
           }
         }
       }
@@ -5277,6 +5373,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "SOS। मदद आ रही है।"
+          }
+        }
+      }
+    },
+    "SOS: my location": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SOS: my location"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SOS: मेरी लोकेशन"
           }
         }
       }
@@ -6897,6 +7009,22 @@
         }
       }
     },
+    "Uber ride ready": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uber ride ready"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uber सवारी तैयार है"
+          }
+        }
+      }
+    },
     "Unexpected reply from the server.": {
       "localizations": {
         "en": {
@@ -6941,6 +7069,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "अवांछित बढ़त"
+          }
+        }
+      }
+    },
+    "Unwanted gesture noted (%d)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unwanted gesture noted (%d)"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अनचाहा इशारा दर्ज हुआ (%d)"
+          }
+        }
+      }
+    },
+    "Unwanted gestures": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unwanted gestures"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अनचाहे इशारे"
           }
         }
       }
@@ -7677,6 +7837,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "आपके संपर्क"
+          }
+        }
+      }
+    },
+    "Your contacts also got a link to send a cab to you. You confirm the booking inside Uber; Safeguard keeps recording only while it is open.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your contacts also got a link to send a cab to you. You confirm the booking inside Uber; Safeguard keeps recording only while it is open."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आपके संपर्कों को भी आपके पास कैब भेजने का लिंक मिला है। बुकिंग की पुष्टि आप Uber के अंदर करते हैं; Safeguard तभी तक रिकॉर्ड करता है जब तक वह खुला है।"
           }
         }
       }

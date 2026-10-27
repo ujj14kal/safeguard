@@ -192,3 +192,22 @@ def test_message_builders_carry_no_appearance_or_transcript():
     assert live in texts[0] and "maps.google.com" in texts[0]
     assert "[TEST]" in texts[2]
     assert "DEMO" in texts[3] and "no real cab service" in texts[3]
+
+
+def test_ride_link_is_an_uber_universal_link_to_the_wearer():
+    link = notify.ride_link(12.9716, 77.5946)
+    assert link.startswith("https://m.uber.com/ul/?")
+    assert "action=setPickup" in link and "pickup=my_location" in link
+    assert "dropoff%5Blatitude%5D=12.97160" in link
+    assert "dropoff%5Blongitude%5D=77.59460" in link
+    assert " " not in link
+
+
+def test_alert_text_adds_the_ride_line_only_when_given():
+    live = "https://example.test/live/abc123"
+    plain = notify.alert_text("Aarav", live)
+    assert "Uber" not in plain
+    with_ride = notify.alert_text("Aarav", live, ride_url=notify.ride_link(1.0, 2.0))
+    assert "Send a cab to them (Uber): https://m.uber.com/ul/" in with_ride
+    hindi = notify.alert_text("Aarav", live, lang="hi", ride_url="https://m.uber.com/ul/?x=1")
+    assert "Uber" in hindi and "https://m.uber.com/ul/?x=1" in hindi

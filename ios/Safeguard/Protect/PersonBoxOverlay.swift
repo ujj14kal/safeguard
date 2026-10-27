@@ -9,7 +9,7 @@ struct PersonBoxOverlay: View {
     let frameSize: CGSize
     let scores: [Int: Double]
     let config: ThreatConfig
-    @AppStorage("debugOverlayEnabled") private var debugDetails = false
+    @AppStorage("debugOverlayEnabled") private var debugDetails = Defaults.debugOverlayDefault
 
     var body: some View {
         GeometryReader { geometry in

@@ -5,8 +5,9 @@ import UIKit
 /// permissions, data, about, and the DEBUG-only developer section.
 struct SettingsView: View {
     @ObservedObject private var model = ProtectViewModel.shared
-    @AppStorage("debugOverlayEnabled") private var debugOverlayEnabled = false
+    @AppStorage("debugOverlayEnabled") private var debugOverlayEnabled = Defaults.debugOverlayDefault
     @StateObject private var account = AccountStore.shared
+    @AppStorage("gesturesTriggerSOS") private var gesturesTriggerSOS = true
     @AppStorage(ListenSensitivity.key) private var listenSensitivity = ListenSensitivity.defaultLevel.rawValue
     @State private var showingAccount = false
     @State private var confirmDeleteAccount = false
@@ -180,6 +181,7 @@ struct SettingsView: View {
                             Text("High").tag(ListenSensitivity.high.rawValue)
                             Text("Maximum").tag(ListenSensitivity.max.rawValue)
                         }
+                        Toggle("More than 5 rude gestures starts an SOS", isOn: $gesturesTriggerSOS)
                         Toggle("Start protecting when the app opens", isOn: $autoStartProtecting)
                         Picker("Speech language", selection: $speechLanguage) {
                             Text("Automatic").tag("auto")

@@ -2,6 +2,33 @@
 
 Log of every deviation from the project brief, with reasons. Newest first.
 
+## Phase 8.1 (2026-10-27): rude-gesture counter, Uber ride link
+
+iOS 447/447, backend 154 passed (1 skipped). On the iPhone build; the Uber
+link and the gesture counter are untested on the phone.
+
+1. **Gesture logging**: MediaPipe now runs even with no person box (a hand or
+   face near the lens is often too close for the person detector). Every frame's
+   gestures and expressions go to the app log (`gesture`, `expression`, rate
+   limited) and to a `Cues:` line in the debug overlay. Detection runs 10 times
+   a second (was 5).
+2. **More than 5 rude gestures starts the auto-SOS countdown** (the same 5 s
+   cancellable countdown as a distress word; history cause "gestures"). An
+   episode is a gesture held for 3+ frames; one long gesture counts once; the
+   window is 120 s; the count restarts after it fires. Settings -> Listening has
+   a switch (default on).
+3. **Cab**: Uber's "Create application" page (checked by the user) offers no
+   Rides API suite, so the cab is a deep link, not an API booking. The SOS
+   screen has one button that opens Uber with pickup (live location) and
+   drop-off (nearest police station or hospital) filled in; the rider confirms
+   in Uber. It never opens Uber by itself, because backgrounding the app would
+   stop the camera and recording. Uber deep links have no note-to-driver field,
+   so the nicknames carry "SOS".
+4. **Contacts get a "send a cab to them" link** in the alert text
+   (`https://m.uber.com/ul/` with `pickup=my_location` and the wearer as the
+   drop-off). The old demo cab (fake driver and plate) is no longer shown or
+   called; its backend endpoint remains.
+
 ## Phase 8 (2026-10-27): gestures, expressions, listener sensitivity
 
 Not yet run on the iPhone. The classifiers are pure and tested with synthetic
