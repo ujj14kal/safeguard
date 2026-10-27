@@ -106,5 +106,42 @@ class Settings:
         )
     )
 
+    # Phase 6: SOS escalation. The app token guards every app-to-backend
+    # endpoint when set (local dev may leave it empty, with a warning).
+    app_token: str = field(
+        default_factory=lambda: os.environ.get("SAFEGUARD_APP_TOKEN", "")
+    )
+    notify_mode: str = field(
+        default_factory=lambda: os.environ.get("NOTIFY_MODE", "dry-run")
+    )
+    telegram_bot_token: str = field(
+        default_factory=lambda: os.environ.get("TELEGRAM_BOT_TOKEN", "")
+    )
+    telegram_bot: str = field(
+        default_factory=lambda: os.environ.get(
+            "TELEGRAM_BOT", "safeguard_demo_bot"
+        )
+    )
+    public_base_url: str = field(
+        default_factory=lambda: os.environ.get(
+            "PUBLIC_BASE_URL", "http://127.0.0.1:8000"
+        )
+    )
+    contacts_path: str = field(
+        default_factory=lambda: os.environ.get(
+            "CONTACTS_PATH", "data/contacts.json"
+        )
+    )
+    notify_log_path: str = field(
+        default_factory=lambda: os.environ.get(
+            "NOTIFY_LOG_PATH", "logs/notifications.jsonl"
+        )
+    )
+    incident_rate_per_min: int = field(
+        default_factory=lambda: int(
+            os.environ.get("INCIDENT_RATE_LIMIT_PER_MIN", "10")
+        )
+    )
+
 
 SETTINGS = Settings()
