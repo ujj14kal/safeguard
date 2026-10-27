@@ -34,6 +34,7 @@ class Incident:
     share_token: str
     test: bool
     dry_run: bool
+    lang: str = "en"
     status: str = "active"
     points: deque = field(default_factory=lambda: deque(maxlen=MAX_POINTS))
     created_at: float = field(default_factory=time.time)
@@ -123,7 +124,7 @@ class IncidentStore:
                 key: getattr(incident, key)
                 for key in (
                     "id", "session", "wearer_name", "contact_codes", "share_token",
-                    "test", "dry_run", "status", "created_at", "ended_at",
+                    "test", "dry_run", "lang", "status", "created_at", "ended_at",
                     "alerted", "end_sent",
                 )
             }
@@ -138,7 +139,7 @@ class IncidentStore:
         except OSError:
             pass
 
-    def start(self, session, wearer_name, contact_codes, test=False, dry_run=True):
+    def start(self, session, wearer_name, contact_codes, test=False, dry_run=True, lang="en"):
         """Creates an incident — unless this session already has an active
         one, in which case the existing incident is returned and NO new
         alert burst goes out. Returns (incident, fresh)."""
@@ -153,6 +154,7 @@ class IncidentStore:
             share_token=make_share_token(),
             test=test,
             dry_run=dry_run,
+            lang=lang if lang in ("en", "hi") else "en",
             created_at=self._clock(),
         )
         self._index(incident)

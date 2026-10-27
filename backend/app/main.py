@@ -638,6 +638,7 @@ class IncidentStartRequest(BaseModel):
     contact_codes: list[str] = Field(default_factory=list)
     dry_run: bool = True
     test: bool = False
+    lang: str = Field(default="en", pattern="^(en|hi)$")
     lat: float | None = None
     lon: float | None = None
 
@@ -725,26 +726,33 @@ def incident_start(
         contact_codes=body.contact_codes,
         test=body.test,
         dry_run=body.dry_run,
+        lang=body.lang,
     )
     live = live_url_for(incident.share_token)
     if not fresh:
         # One alert burst per incident: repeats return the same incident.
+        # The preview echoes the would-be text for the request's own flag.
+        if body.test:
+            preview = test_text(wearer, live, lang=body.lang)
+        else:
+            preview = alert_text(wearer, live, lang=body.lang)
         return {
             "id": incident.id,
             "share_token": incident.share_token,
             "live_url": live,
             "delivery": [],
             "fresh": False,
+            "preview_text": preview,
         }
     pin = None
     if body.lat is not None:
         store.add_point(incident.id, body.lat, body.lon)
         pin = (body.lat, body.lon)
     if body.test:
-        text = test_text(wearer, live)
+        text = test_text(wearer, live, lang=body.lang)
     else:
         maps = maps_link(*pin) if pin else None
-        text = alert_text(wearer, live, maps_url=maps)
+        text = alert_text(wearer, live, maps_url=maps, lang=body.lang)
     delivery = _send_to_codes(
         incident.contact_codes, text, incident.dry_run,
         url_button=("Open live view", live), pin=pin,
@@ -762,6 +770,7 @@ def incident_start(
         "live_url": live,
         "delivery": delivery,
         "fresh": True,
+        "preview_text": text,
     }
 
 
@@ -797,7 +806,7 @@ def incident_end(
     store.end(incident_id)
     delivery = []
     if not incident.end_sent:
-        text = end_text(incident.wearer_name)
+        text = end_text(incident.wearer_name, lang=incident.lang)
         if incident.test:
             text = "[TEST] " + text
         delivery = _send_to_codes(incident.contact_codes, text, incident.dry_run)
@@ -825,6 +834,7 @@ def incident_cab(
         " ".join(body.plate.split()),
         body.eta_min,
         live_url_for(incident.share_token),
+        lang=incident.lang,
     )
     if incident.test:
         text = "[TEST] " + text

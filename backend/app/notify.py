@@ -151,7 +151,18 @@ def maps_link(lat: float, lon: float) -> str:
     return f"https://maps.google.com/?q={lat:.5f},{lon:.5f}"
 
 
-def alert_text(wearer_name: str, live_url: str, maps_url=None) -> str:
+# Contact alerts go out in the wearer's app language ("en" or "hi").
+# Hindi strings are machine-written: a native speaker should review them
+# before real use (see DECISIONS.md).
+def alert_text(wearer_name: str, live_url: str, maps_url=None, lang: str = "en") -> str:
+    if lang == "hi":
+        lines = [
+            f"{wearer_name} की ओर से SOS। उन्हें मदद की ज़रूरत हो सकती है।",
+            f"लाइव लोकेशन और वीडियो: {live_url}",
+        ]
+        if maps_url:
+            lines.append(f"नक्शे का पिन: {maps_url}")
+        return "\n".join(lines)
     lines = [
         f"SOS from {wearer_name}. They may need help.",
         f"Live location and video: {live_url}",
@@ -161,18 +172,31 @@ def alert_text(wearer_name: str, live_url: str, maps_url=None) -> str:
     return "\n".join(lines)
 
 
-def end_text(wearer_name: str) -> str:
+def end_text(wearer_name: str, lang: str = "en") -> str:
+    if lang == "hi":
+        return f"{wearer_name} की ओर से SOS समाप्त हो गया है। वे सुरक्षित हैं।"
     return f"SOS from {wearer_name} has ended. They are safe."
 
 
-def test_text(wearer_name: str, live_url: str) -> str:
+def test_text(wearer_name: str, live_url: str, lang: str = "en") -> str:
+    if lang == "hi":
+        return (
+            f"[TEST] यह {wearer_name} की ओर से एक परीक्षण अलर्ट है। "
+            f"कोई कार्रवाई ज़रूरी नहीं है। लाइव पेज: {live_url}"
+        )
     return (
         f"[TEST] This is a test alert from {wearer_name}. "
         f"No action needed. Live page: {live_url}"
     )
 
 
-def cab_text(driver: str, plate: str, eta_min: int, live_url: str) -> str:
+def cab_text(driver: str, plate: str, eta_min: int, live_url: str, lang: str = "en") -> str:
+    if lang == "hi":
+        return (
+            "डेमो कैब (कोई असली कैब सेवा जुड़ी नहीं है): "
+            f"{driver}, {plate}, लगभग {eta_min} मिनट में आ रही है। "
+            f"लाइव पेज: {live_url}"
+        )
     return (
         "DEMO cab (no real cab service is connected): "
         f"{driver}, {plate}, arriving in about {eta_min} min. "
