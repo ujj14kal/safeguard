@@ -18,6 +18,7 @@ struct SafeguardApp: App {
             // Dark theme, forced app-wide (the splash stays white by design).
             .preferredColorScheme(.dark)
             .task {
+                CueEngineFactory.make = { MediaPipeCueEngine() }
                 _ = ProtectViewModel.shared
                 // An earlier build downloaded a 889 MB on-device model; it is
                 // no longer used, so reclaim the space.

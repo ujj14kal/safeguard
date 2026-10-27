@@ -26,11 +26,42 @@ struct PersonBoxOverlay: View {
                         .stroke(DS.Colors.box(for: level), lineWidth: 3)
                         .frame(width: rect.width, height: rect.height)
                     boxLabel(level: level, trackID: track.id, score: score)
+                    if let text = cueText(track) {
+                        Text(text)
+                            .font(.caption2)
+                            .bold()
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 2)
+                            .background(DS.Colors.danger.opacity(0.85), in: Capsule())
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+                            .padding(4)
+                    }
                 }
                 .position(x: rect.midX, y: rect.midY)
             }
         }
         .accessibilityHidden(true)
+    }
+
+    /// A hostile hand gesture is always shown (it is what the wearer needs
+    /// to see); gestures and expressions in general only with the debug
+    /// overlay on.
+    private func cueText(_ track: Track) -> String? {
+        guard let cues = track.cues else { return nil }
+        var parts: [String] = []
+        if let hostile = cues.gestures.first(where: { $0.isHostile && $0.score >= config.gestureMinScore }) {
+            parts.append(String(localized: "Rude gesture") + (debugDetails ? String(format: " %.2f", hostile.score) : ""))
+        }
+        if debugDetails {
+            for gesture in cues.gestures where !gesture.isHostile && gesture.kind != .other {
+                parts.append(gesture.kind.rawValue)
+            }
+            if let expression = cues.expression, expression.kind != .neutral {
+                parts.append(String(format: "%@ %.2f", expression.kind.rawValue, expression.score))
+            }
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: " • ")
     }
 
     @ViewBuilder

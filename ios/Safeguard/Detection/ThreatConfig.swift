@@ -114,6 +114,23 @@ public struct ThreatConfig: Sendable {
     public var weightHandReach: Double = 0.25
     public var weightShouting: Double = 0.15
 
+    // MARK: - Classified gestures and expressions (MediaPipe)
+
+    /// Gesture/expression samples needed in the feature window before they
+    /// count (one noisy frame must not score).
+    public var minGestureSamples: Int = 3
+    /// A hostile gesture must be at least this sure to count.
+    public var gestureMinScore: Double = 0.6
+    /// Scales the share of frames with the gesture up (a few clear frames
+    /// of a middle finger are enough).
+    public var gestureGain: Double = 2.0
+    /// An angry face must be at least this sure to count.
+    public var expressionMinScore: Double = 0.45
+    /// Additive like speech. A hostile gesture is a clear signal; an angry
+    /// face is a weak hint that never alerts alone.
+    public var weightHostileGesture: Double = 0.30
+    public var weightAngryFace: Double = 0.08
+
     // MARK: - Wearer motion (CoreMotion)
 
     /// Phone acceleration (g, RMS over the window) below `egoStillAccel`

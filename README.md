@@ -69,6 +69,14 @@ The first request asks for local-network permission. Plain `http://` is
 allowed only for local addresses (`NSAllowsLocalNetworking`); use an `https://`
 tunnel URL for anything else. The simulator can keep using `127.0.0.1`.
 
+## Third-party components
+
+- **MediaPipe Tasks Vision** and its `gesture_recognizer.task` and
+  `face_landmarker.task` models: Google, Apache-2.0
+  (https://github.com/google-ai-edge/mediapipe). Prebuilt frameworks are
+  pinned in `ios/Packages/MediaPipeTasks`; models are in `ios/Safeguard/Models`.
+- Meta's Muse models run on the backend (never bundled).
+
 ## Accounts (Supabase)
 
 Optional sign-up/sign-in; the app works without an account. The phone talks

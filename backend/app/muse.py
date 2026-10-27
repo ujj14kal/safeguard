@@ -35,6 +35,14 @@ gestures. Describe such behaviour in plain clinical words in "behaviours_observe
 and rate it medium or high when it is directed at the wearer. A person holding an \
 ordinary object calmly (a phone, a bag, a drink) is not a threat.
 
+The on-device features may include hints from a fast gesture and expression \
+classifier: "hostile_gesture" (an obscene hand gesture such as a raised middle \
+finger held over several frames), "angry_face" and "shouting" (fractions of recent \
+frames, 0-1). They are hints only: confirm or reject them from the frames \
+yourself. A clear obscene gesture or angry shouting aimed at the wearer is at \
+least medium; an angry-looking face on its own, with nothing else, is not a \
+threat. Never mention appearance.
+
 Reply with STRICT JSON only, no other text:
 {"threat_level": "low|medium|high", "behaviours_observed": ["..."], \
 "confidence": 0.0-1.0, "reason": "one short sentence"}"""

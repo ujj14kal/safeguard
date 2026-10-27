@@ -7,6 +7,15 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D3B04A6B6BAA7C8FFE3B8697 /* MediaPipeCueEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3535E2B9271729BAE77DC1E /* MediaPipeCueEngine.swift */; };
+		D4056915C495DA434CD43945 /* LatencyMeter.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3ACE305E7487346F8006686 /* LatencyMeter.swift */; };
+		D33F9DB34BB37900940AB391 /* LatencyMeter.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3ACE305E7487346F8006686 /* LatencyMeter.swift */; };
+		D3D043C7D94A66AD593C1719 /* GestureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D397449DDB49A2AC3DE15F80 /* GestureTests.swift */; };
+		D467D050F084DE5917E8BAB7 /* GestureModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = D35A42EA2B1B7096564FB5D0 /* GestureModels.swift */; };
+		D30A4542A247ACDC42D51B6D /* GestureModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = D35A42EA2B1B7096564FB5D0 /* GestureModels.swift */; };
+		DA00000000000000000000B1 /* face_landmarker.task in Resources */ = {isa = PBXBuildFile; fileRef = DA00000000000000000000F1 /* face_landmarker.task */; };
+		DA00000000000000000000B2 /* gesture_recognizer.task in Resources */ = {isa = PBXBuildFile; fileRef = DA00000000000000000000F2 /* gesture_recognizer.task */; };
+		DA00000000000000000000B3 /* MediaPipeTasksVision in Frameworks */ = {isa = PBXBuildFile; productRef = DA00000000000000000000D2 /* MediaPipeTasksVision */; };
 		D30B5497923B1A2A90AB7DC8 /* AccountTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D336F6B227A3FBF14E0E9ED0 /* AccountTests.swift */; };
 		D483F7DBD1DF59447687A013 /* AccountStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D38A556EA82C00AAB711E1A3 /* AccountStore.swift */; };
 		D49BA87FDA05EAA1F5339F39 /* AccountClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3CA465994CC966FDD93527F /* AccountClient.swift */; };
@@ -164,6 +173,12 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		D3535E2B9271729BAE77DC1E /* MediaPipeCueEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaPipeCueEngine.swift; sourceTree = "<group>"; };
+		D3ACE305E7487346F8006686 /* LatencyMeter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LatencyMeter.swift; sourceTree = "<group>"; };
+		D397449DDB49A2AC3DE15F80 /* GestureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureTests.swift; sourceTree = "<group>"; };
+		D35A42EA2B1B7096564FB5D0 /* GestureModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureModels.swift; sourceTree = "<group>"; };
+		DA00000000000000000000F1 /* face_landmarker.task */ = {isa = PBXFileReference; lastKnownFileType = file; path = face_landmarker.task; sourceTree = "<group>"; };
+		DA00000000000000000000F2 /* gesture_recognizer.task */ = {isa = PBXFileReference; lastKnownFileType = file; path = gesture_recognizer.task; sourceTree = "<group>"; };
 		D336F6B227A3FBF14E0E9ED0 /* AccountTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountTests.swift; sourceTree = "<group>"; };
 		D33D9CE5EE39158BF27D7676 /* AccountFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountFlowView.swift; sourceTree = "<group>"; };
 		D38A556EA82C00AAB711E1A3 /* AccountStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountStore.swift; sourceTree = "<group>"; };
@@ -281,12 +296,22 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				DA00000000000000000000B3 /* MediaPipeTasksVision in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		DA00000000000000000000C1 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				DA00000000000000000000F1 /* face_landmarker.task */,
+				DA00000000000000000000F2 /* gesture_recognizer.task */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
 		D584F9DF9B6B42A842B7BE04 /* Account */ = {
 			isa = PBXGroup;
 			children = (
@@ -311,6 +336,7 @@
 		A10000000000000000000011 /* Safeguard */ = {
 			isa = PBXGroup;
 			children = (
+				DA00000000000000000000C1 /* Models */,
 				D584F9DF9B6B42A842B7BE04 /* Account */,
 				A10000000000000000000021 /* SafeguardApp.swift */,
 				A10000000000000000000022 /* ContentView.swift */,
@@ -413,6 +439,9 @@
 		A10000000000000000000019 /* Detection */ = {
 			isa = PBXGroup;
 			children = (
+				D3535E2B9271729BAE77DC1E /* MediaPipeCueEngine.swift */,
+				D3ACE305E7487346F8006686 /* LatencyMeter.swift */,
+				D35A42EA2B1B7096564FB5D0 /* GestureModels.swift */,
 				A10000000000000000000031 /* DetectedPerson.swift */,
 				A10000000000000000000032 /* PersonDetector.swift */,
 				A10000000000000000000033 /* Tracker.swift */,
@@ -428,6 +457,7 @@
 		B20000000000000000000004 /* SafeguardTests */ = {
 			isa = PBXGroup;
 			children = (
+				D397449DDB49A2AC3DE15F80 /* GestureTests.swift */,
 				D336F6B227A3FBF14E0E9ED0 /* AccountTests.swift */,
 				D3DE8F5A24FC5286B203D42A /* DashboardTests.swift */,
 				D3DC7C69BD9D77607774B042 /* LocationFixPolicyTests.swift */,
@@ -554,6 +584,9 @@
 			dependencies = (
 			);
 			name = Safeguard;
+			packageProductDependencies = (
+				DA00000000000000000000D2 /* MediaPipeTasksVision */,
+			);
 			productName = Safeguard;
 			productReference = A10000000000000000000020 /* Safeguard.app */;
 			productType = "com.apple.product-type.application";
@@ -603,6 +636,9 @@
 				Base,
 			);
 			mainGroup = A10000000000000000000010 /* Project */;
+			packageReferences = (
+				DA00000000000000000000D3 /* XCLocalSwiftPackageReference "Packages/MediaPipeTasks" */,
+			);
 			productRefGroup = A10000000000000000000012 /* Products */;
 			projectDirPath = "";
 			targets = (
@@ -620,6 +656,8 @@
 				A10000000000000000000071 /* Assets.xcassets in Resources */,
 				A100000000000000000000D4 /* Localizable.xcstrings in Resources */,
 				A100000000000000000000D6 /* InfoPlist.xcstrings in Resources */,
+				DA00000000000000000000B1 /* face_landmarker.task in Resources */,
+				DA00000000000000000000B2 /* gesture_recognizer.task in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -639,6 +677,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D3B04A6B6BAA7C8FFE3B8697 /* MediaPipeCueEngine.swift in Sources */,
+				D33F9DB34BB37900940AB391 /* LatencyMeter.swift in Sources */,
+				D30A4542A247ACDC42D51B6D /* GestureModels.swift in Sources */,
 				D30BD9C7C0FBDCB4CF37FF7F /* AccountFlowView.swift in Sources */,
 				D3BCC446CF8E54AAF4775E32 /* AccountStore.swift in Sources */,
 				D39E28361A9A5A99DC53C041 /* AccountClient.swift in Sources */,
@@ -726,6 +767,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D4056915C495DA434CD43945 /* LatencyMeter.swift in Sources */,
+				D3D043C7D94A66AD593C1719 /* GestureTests.swift in Sources */,
+				D467D050F084DE5917E8BAB7 /* GestureModels.swift in Sources */,
 				D30B5497923B1A2A90AB7DC8 /* AccountTests.swift in Sources */,
 				D483F7DBD1DF59447687A013 /* AccountStore.swift in Sources */,
 				D49BA87FDA05EAA1F5339F39 /* AccountClient.swift in Sources */,
@@ -944,6 +988,20 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+/* Begin XCLocalSwiftPackageReference section */
+		DA00000000000000000000D3 /* XCLocalSwiftPackageReference "Packages/MediaPipeTasks" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/MediaPipeTasks;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		DA00000000000000000000D2 /* MediaPipeTasksVision */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DA00000000000000000000D3 /* XCLocalSwiftPackageReference "Packages/MediaPipeTasks" */;
+			productName = MediaPipeTasksVision;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = A10000000000000000000001 /* Project object */;
 }

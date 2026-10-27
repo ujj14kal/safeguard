@@ -2,6 +2,54 @@
 
 Log of every deviation from the project brief, with reasons. Newest first.
 
+## Phase 8 (2026-10-27): gestures, expressions, listener sensitivity
+
+Not yet run on the iPhone. The classifiers are pure and tested with synthetic
+landmarks and blendshapes; the MediaPipe engine itself (models, GPU delegate,
+real latency) is unverified until it runs on a device.
+
+1. **MediaPipe Tasks Vision (Google, Apache-2.0)** supplies hand landmarks +
+   canned gestures (Gesture Recognizer) and face landmarks + 52 blendshapes
+   (Face Landmarker), in VIDEO mode so they track between frames. When it is
+   running it REPLACES the two Vision requests (hand pose, face landmarks)
+   rather than adding a third pass; if the models are missing or fail to start,
+   the old Vision cues run unchanged.
+2. **Packaging**: upstream's SwiftPM package needs a clone of the whole
+   MediaPipe repo (over 1 GB; it stalled), and its release tags carry no
+   Package.swift. `ios/Packages/MediaPipeTasks` is a tiny LOCAL package that
+   pins the three prebuilt xcframework zips by URL and checksum (copied from
+   upstream's Package.swift), about 100 MB of binaries. Update by copying the
+   three url/checksum pairs. Models (`face_landmarker.task` 3.8 MB,
+   `gesture_recognizer.task` 8.4 MB, float16, Google, Apache-2.0) are bundled
+   in `ios/Safeguard/Models/`.
+3. **Middle finger**: MediaPipe's canned gestures do not include it (it would
+   say fist or pointing), so it is decided by finger geometry (middle finger
+   extended, index/ring/pinky curled, clear dominance) and overrides the canned
+   label. Other gestures trust the canned label when it is confident.
+4. **Expressions** (happy, angry, sad, surprised, neutral) are weighted sums of
+   blendshapes. The weights and thresholds are starting guesses, not tuned on
+   real footage. Emotion models from datasets with research-only licences were
+   deliberately NOT bundled.
+5. **Scoring**: hostile gesture adds up to 0.30 (needs 3+ frames, score >= 0.6),
+   angry face adds 0.08. Neither alerts on its own: a lone middle finger or a
+   frown never starts the "Are you safe?" flow. Both are also sent to Muse as
+   hints (`hostile_gesture`, `angry_face`, `shouting`) which the prompt tells
+   it to confirm or reject from the frames.
+6. **Latency**: every stage (persons, pose, hands, face) is timed
+   (`LatencyMeter`); the debug overlay shows mean and p95, and a
+   `latency_ms_mean_p95` line goes to the app log every 10 s. The GPU delegate
+   is requested on devices and CPU is used in the Simulator.
+7. **Listening sensitivity** (Settings): Normal / High (default) / Maximum.
+   Higher levels lift quieter speech (target level 0.10/0.14/0.18, noise floor
+   0.004/0.0025/0.0015, max gain 12/20/30) and call shouting at -16/-18/-20
+   dBFS. The cost is more background noise reaching the recogniser; the first
+   release missed quiet speech, so the default is High. Changes apply within
+   about a second.
+8. **Privacy**: gestures and expressions are computed on the phone from the
+   live frame and never stored; only the rolling fractions leave as hints.
+9. **Only a rude gesture** is shown on the HUD for bystanders; gesture and
+   expression labels appear only with Settings > Developer > Detection overlay.
+
 ## Phase 7.6 (2026-10-27): accounts on Supabase
 
 Backend 152 passed, 1 skipped; iOS 415/415. Nothing here has talked to a real

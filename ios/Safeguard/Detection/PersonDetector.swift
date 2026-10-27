@@ -12,6 +12,9 @@ import Vision
 public final class PersonDetector {
     private let poseMatchDistance: Double
     private var poseUnavailable = false
+    /// MediaPipe hands/face (gestures + expressions). Nil when the models
+    /// are missing or failed to start: the Vision cues below take over.
+    private lazy var cueEngine: CueEngine? = CueEngineFactory.make()
 
     /// - Parameter poseMatchDistance: fallback pose-to-detection matching
     ///   radius (normalized units). Defaults to ThreatConfig's value so all
@@ -39,12 +42,12 @@ public final class PersonDetector {
         // Rectangles are critical (tracking must not die); pose is enrichment
         // (facing degrades to unknown). Performed separately so a pose failure
         // — e.g. unsupported in the Simulator — never takes down the frame.
-        try handler.perform([rectRequest])
+        try LatencyMeter.shared.measure("persons") { try handler.perform([rectRequest]) }
         var detections = (rectRequest.results ?? []).map {
             DetectedPerson(box: $0.boundingBox, confidence: $0.confidence)
         }
         do {
-            try handler.perform([poseRequest])
+            try LatencyMeter.shared.measure("pose") { try handler.perform([poseRequest]) }
             poseUnavailable = false
             let poses = (poseRequest.results ?? []).map { Self.bodyPose(from: $0) }
             attach(poses: poses, to: &detections)
@@ -68,6 +71,10 @@ public final class PersonDetector {
         pixelBuffer: CVPixelBuffer
     ) {
         guard !detections.isEmpty else { return }
+        if let engine = cueEngine, let frame = engine.process(pixelBuffer) {
+            attachMediaPipeCues(frame, to: &detections, pixelBuffer: pixelBuffer)
+            return
+        }
         let handRequest = VNDetectHumanHandPoseRequest()
         handRequest.maximumHandCount = 6
         let faceRequest = VNDetectFaceLandmarksRequest()
@@ -93,6 +100,40 @@ public final class PersonDetector {
                   let ratio = Self.mouthOpenRatio(face, width: width, height: height)
             else { continue }
             cues[index].mouthOpen = max(cues[index].mouthOpen ?? 0, ratio)
+        }
+        for index in detections.indices where !cues[index].isEmpty {
+            detections[index].cues = cues[index]
+        }
+    }
+
+    /// Maps MediaPipe hands and faces to their people and classifies them.
+    /// Replaces the two Vision requests (hand pose, face landmarks) when
+    /// the engine is running, so there is one pass, not two.
+    private func attachMediaPipeCues(
+        _ frame: MPFrame, to detections: inout [DetectedPerson], pixelBuffer: CVPixelBuffer
+    ) {
+        var cues = [GestureCues](repeating: GestureCues(), count: detections.count)
+        for hand in frame.hands {
+            guard let index = owner(of: hand.box, in: detections) else { continue }
+            cues[index].hands.append(HandCue(box: hand.box))
+            if let gesture = HandGestureClassifier.classify(
+                points: hand.points, cannedLabel: hand.cannedLabel,
+                cannedScore: hand.cannedScore, box: hand.box
+            ) {
+                cues[index].gestures.append(gesture)
+            }
+        }
+        for face in frame.faces {
+            guard let index = owner(of: face.box, in: detections) else { continue }
+            if let ratio = face.mouthOpen {
+                cues[index].mouthOpen = max(cues[index].mouthOpen ?? 0, ratio)
+            }
+            if !face.blendshapes.isEmpty {
+                let expression = ExpressionClassifier.classify(blendshapes: face.blendshapes)
+                if (cues[index].expression?.score ?? 0) <= expression.score {
+                    cues[index].expression = expression
+                }
+            }
         }
         for index in detections.indices where !cues[index].isEmpty {
             detections[index].cues = cues[index]

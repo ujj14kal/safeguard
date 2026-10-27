@@ -51,7 +51,9 @@ public struct ThreatScorer: Sendable {
         // every Phase 3 value bit-for-bit identical.
         value = min(1, value + features.speech * config.weightSpeech
             + features.handReach * config.weightHandReach
-            + features.shouting * config.weightShouting)
+            + features.shouting * config.weightShouting
+            + features.hostileGesture * config.weightHostileGesture
+            + features.angryFace * config.weightAngryFace)
         var reasons = parts
             .filter { $0.value >= config.reasonThreshold }
             .map(\.reason)
@@ -63,6 +65,12 @@ public struct ThreatScorer: Sendable {
         }
         if features.shouting >= config.reasonThreshold {
             reasons.append("shouting or aggressive expression")
+        }
+        if features.hostileGesture >= config.reasonThreshold {
+            reasons.append("hostile hand gesture")
+        }
+        if features.angryFace >= config.reasonThreshold {
+            reasons.append("angry face")
         }
         return ThreatScore(
             value: value,

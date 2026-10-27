@@ -394,7 +394,27 @@ final class ProtectViewModel: ObservableObject {
         }
     }
 
+    /// Per-stage detection timing for the debug overlay, and a log line
+    /// every 10 s so latency can be read off the phone afterwards.
+    @Published var latencyLine = ""
+    private var latencyTicks = 0
+
+    private func updateLatency() {
+        let stages = ["persons", "pose", "hands", "face"]
+        latencyLine = LatencyMeter.shared.summary(stages: stages)
+        latencyTicks += 1
+        guard latencyTicks % 10 == 0, !latencyLine.isEmpty else { return }
+        var fields: [String: String] = [:]
+        for stage in stages {
+            if let stats = LatencyMeter.shared.stats(stage) {
+                fields[stage] = String(format: "%.0f/%.0f", stats.meanMs, stats.p95Ms)
+            }
+        }
+        AppLog.shared.event("latency_ms_mean_p95", fields)
+    }
+
     private func tickFps() {
+        updateLatency()
         let total = frameCounter.value
         let fps = total - lastFpsSample
         lastFpsSample = total
@@ -570,7 +590,7 @@ final class ProtectViewModel: ObservableObject {
     nonisolated let evidence = EvidenceRecorder()
     private var cancellables = Set<AnyCancellable>()
     @AppStorage("shoutingTriggersSOS") var shoutingTriggersSOS = Defaults.current.shoutingTriggersSOS
-    private var loudness = LoudnessDetector()
+    private var loudness = LoudnessDetector(sensitivity: .current)
     private var levelPeak: Float = -120
     private var levelLoggedAt: TimeInterval = 0
     private let distressMatcher = DistressMatcher()

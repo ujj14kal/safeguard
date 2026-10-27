@@ -93,6 +93,7 @@ public enum Defaults {
         "recordOnSOS",
         "debugLogEnabled",
         "autoStartProtecting",
+        "listenSensitivity",
         "customSafePhrase",
         "customUnsafePhrase",
         "backendBaseURL",

@@ -508,8 +508,8 @@ final class HearingTests: XCTestCase {
         var gain = AutoGain()
         var applied: Float = 1
         for _ in 0..<40 { applied = gain.update(rms: 0.02) }
-        XCTAssertGreaterThan(applied, 3.5, "0.02 -> about 0.1 needs ~5x")
-        XCTAssertLessThanOrEqual(applied, 12)
+        XCTAssertGreaterThan(applied, 5, "0.02 -> about 0.14 needs ~7x")
+        XCTAssertLessThanOrEqual(applied, 20)
     }
 
     func testSilenceAndRoomNoiseAreNotAmplified() {
@@ -521,9 +521,46 @@ final class HearingTests: XCTestCase {
         var gain = AutoGain()
         for _ in 0..<40 { _ = gain.update(rms: 0.02) }
         let afterLoud = gain.update(rms: 0.4)
-        XCTAssertLessThan(afterLoud, 3)
+        XCTAssertLessThan(afterLoud, 4)
         for _ in 0..<10 { _ = gain.update(rms: 0.4) }
         XCTAssertEqual(gain.gain, 1, accuracy: 0.05)
+    }
+
+    func testHigherSensitivityHearsQuieterSpeech() {
+        // A faint voice at RMS 0.003 (about -50 dBFS).
+        var normal = AutoGain(sensitivity: .normal)
+        var high = AutoGain(sensitivity: .high)
+        var max = AutoGain(sensitivity: .max)
+        for _ in 0..<60 {
+            _ = normal.update(rms: 0.003)
+            _ = high.update(rms: 0.003)
+            _ = max.update(rms: 0.003)
+        }
+        XCTAssertEqual(normal.gain, 1, accuracy: 0.001, "normal treats it as room noise")
+        XCTAssertGreaterThan(high.gain, 5)
+        XCTAssertGreaterThan(max.gain, high.gain)
+        XCTAssertLessThanOrEqual(max.gain, 30)
+    }
+
+    func testSensitivityLowersTheShoutThreshold() {
+        func fires(_ level: ListenSensitivity, db: Float) -> Bool {
+            var d = LoudnessDetector(sensitivity: level)
+            for i in 0..<80 where d.feed(levelDB: db, at: Double(i) * 0.025) { return true }
+            return false
+        }
+        XCTAssertFalse(fires(.normal, db: -17))
+        XCTAssertTrue(fires(.high, db: -17))
+        XCTAssertFalse(fires(.high, db: -19))
+        XCTAssertTrue(fires(.max, db: -19))
+        XCTAssertFalse(fires(.max, db: -30), "ordinary talking never counts as shouting")
+    }
+
+    func testSensitivityChangesMidStreamKeepTheGain() {
+        var gain = AutoGain(sensitivity: .normal)
+        for _ in 0..<40 { _ = gain.update(rms: 0.02) }
+        let before = gain.gain
+        gain.apply(.max)
+        XCTAssertEqual(gain.gain, before, accuracy: 0.0001)
     }
 
     func testShoutNeedsSustainedLoudSound() {

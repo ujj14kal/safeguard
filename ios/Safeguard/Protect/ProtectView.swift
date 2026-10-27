@@ -200,7 +200,7 @@ struct ProtectView: View {
             if debugOverlay {
                 // Debug only: what the recogniser just heard, so you can see
                 // whether Hindi/English is being picked up at all.
-                (Text(verbatim: heardLine + "\n\(model.judgeStatus)\n")
+                (Text(verbatim: heardLine + "\n\(model.judgeStatus)\n\(model.latencyLine)\n")
                     + Text(format: "Apple ear on • %@", model.cloudStatus))
                     .font(.footnote.monospaced())
                     .lineLimit(6)

@@ -3057,6 +3057,22 @@
         }
       }
     },
+    "High": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "High"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ऊँची"
+          }
+        }
+      }
+    },
     "Hindi": {
       "localizations": {
         "en": {
@@ -3441,6 +3457,22 @@
         }
       }
     },
+    "Listening sensitivity": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Listening sensitivity"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सुनने की संवेदनशीलता"
+          }
+        }
+      }
+    },
     "Live page is up": {
       "localizations": {
         "en": {
@@ -3597,6 +3629,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "पुलिस और अस्पताल ढूँढ रहे हैं"
+          }
+        }
+      }
+    },
+    "Maximum": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maximum"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अधिकतम"
           }
         }
       }
@@ -3997,6 +4045,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "किसी को सूचना नहीं जाएगी। कम से कम 2 जोड़ें।"
+          }
+        }
+      }
+    },
+    "Normal": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Normal"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सामान्य"
           }
         }
       }
@@ -4957,6 +5021,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "रास्ता, संपर्क, लाइव स्ट्रीम और कैब शुरू हो रहे हैं।"
+          }
+        }
+      }
+    },
+    "Rude gesture": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rude gesture"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अभद्र इशारा"
           }
         }
       }

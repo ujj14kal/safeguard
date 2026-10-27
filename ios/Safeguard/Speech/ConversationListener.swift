@@ -103,10 +103,19 @@ final class ConversationListener: ObservableObject {
     /// Lifts quiet speech for the recogniser (the recorder keeps raw audio).
     private final class GainBox: @unchecked Sendable {
         private let lock = NSLock()
-        private var autoGain = AutoGain()
+        private var autoGain = AutoGain(sensitivity: .current)
+        private var buffersSinceCheck = 0
 
         func boosted(_ buffer: AVAudioPCMBuffer, rms: Float) -> AVAudioPCMBuffer {
-            let gain = lock.withLock { autoGain.update(rms: rms) }
+            let gain = lock.withLock { () -> Float in
+                // A Settings change takes effect within about a second.
+                buffersSinceCheck += 1
+                if buffersSinceCheck >= 10 {
+                    buffersSinceCheck = 0
+                    autoGain.apply(.current)
+                }
+                return autoGain.update(rms: rms)
+            }
             guard gain > 1.05, let source = buffer.floatChannelData,
                   let copy = AVAudioPCMBuffer(pcmFormat: buffer.format, frameCapacity: buffer.frameLength),
                   let target = copy.floatChannelData

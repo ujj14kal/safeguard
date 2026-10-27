@@ -84,11 +84,23 @@ public struct GestureCues: Sendable, Equatable {
     /// Inner-lip height over width (0 closed, ~0.5+ wide open: shouting,
     /// yelling). Nil when no face landmarks were found for this person.
     public var mouthOpen: Double?
+    /// Classified gestures (middle finger, fist, open palm...), from the
+    /// MediaPipe engine when it is running.
+    public var gestures: [HandGestureCue]
+    /// The face's current expression (angry, happy, sad...), same source.
+    public var expression: ExpressionCue?
 
-    public init(hands: [HandCue] = [], mouthOpen: Double? = nil) {
+    public init(
+        hands: [HandCue] = [], mouthOpen: Double? = nil,
+        gestures: [HandGestureCue] = [], expression: ExpressionCue? = nil
+    ) {
         self.hands = hands
         self.mouthOpen = mouthOpen
+        self.gestures = gestures
+        self.expression = expression
     }
 
-    public var isEmpty: Bool { hands.isEmpty && mouthOpen == nil }
+    public var isEmpty: Bool {
+        hands.isEmpty && mouthOpen == nil && gestures.isEmpty && expression == nil
+    }
 }

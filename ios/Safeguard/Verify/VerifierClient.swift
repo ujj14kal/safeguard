@@ -13,11 +13,20 @@ public struct VerifyFeatureSummary: Sendable, Equatable, Codable {
     public var blocking: Double
     public var cornering: Double
     public var speech: Double
+    /// On-device classifier hints (nil in older payloads): a sustained hostile
+    /// hand gesture such as the middle finger, an angry face, and shouting.
+    /// Hints for Muse to confirm or reject from the frames, not verdicts.
+    public var hostileGesture: Double?
+    public var angryFace: Double?
+    public var shouting: Double?
 
     enum CodingKeys: String, CodingKey {
         case trackID = "track_id"
         case score, reasons, trend, speed, persistence, facing, isolation, blocking, cornering
         case speech
+        case hostileGesture = "hostile_gesture"
+        case angryFace = "angry_face"
+        case shouting
     }
 
     public init(track: Track, features: PersonFeatures, score: Double, reasons: [String]) {
@@ -32,6 +41,9 @@ public struct VerifyFeatureSummary: Sendable, Equatable, Codable {
         self.blocking = features.blocking
         self.cornering = features.cornering
         self.speech = features.speech
+        self.hostileGesture = features.hostileGesture > 0 ? features.hostileGesture : nil
+        self.angryFace = features.angryFace > 0 ? features.angryFace : nil
+        self.shouting = features.shouting > 0 ? features.shouting : nil
     }
 }
 

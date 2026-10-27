@@ -257,20 +257,85 @@ public struct SpeechJudgeSchedule: Sendable {
 /// or from a chest-mounted phone, so the audio it hears is lifted toward a
 /// steady level. Silence and room noise are NOT amplified (below the noise
 /// floor the gain stays where it was), and loud speech is never boosted.
+/// How eagerly the app hears. Higher levels lift quiet speech more and
+/// treat shouting as shouting sooner: more is heard, and a little more
+/// background noise is let through. Default is High (the first release
+/// missed quiet speech).
+public enum ListenSensitivity: Int, Sendable, CaseIterable {
+    case normal = 0
+    case high = 1
+    case max = 2
+
+    public static let key = "listenSensitivity"
+    public static let defaultLevel: ListenSensitivity = .high
+
+    public static var current: ListenSensitivity {
+        let stored = UserDefaults.standard.object(forKey: key) as? Int
+        return stored.flatMap(ListenSensitivity.init(rawValue:)) ?? defaultLevel
+    }
+
+    var targetRMS: Float {
+        switch self {
+        case .normal: return 0.10
+        case .high: return 0.14
+        case .max: return 0.18
+        }
+    }
+
+    var noiseFloor: Float {
+        switch self {
+        case .normal: return 0.004
+        case .high: return 0.0025
+        case .max: return 0.0015
+        }
+    }
+
+    var maxGain: Float {
+        switch self {
+        case .normal: return 12
+        case .high: return 20
+        case .max: return 30
+        }
+    }
+
+    /// dBFS RMS that counts as loud for the shouting trigger.
+    var shoutDB: Float {
+        switch self {
+        case .normal: return -16
+        case .high: return -18
+        case .max: return -20
+        }
+    }
+}
+
 public struct AutoGain: Sendable {
-    public var targetRMS: Float = 0.10      // about -20 dBFS
-    public var noiseFloor: Float = 0.004    // about -48 dBFS: below this, hold
-    public var maxGain: Float = 12
+    public var targetRMS: Float = 0.14      // about -17 dBFS
+    public var noiseFloor: Float = 0.0025   // about -52 dBFS: below this, hold
+    public var maxGain: Float = 20
     public var attack: Float = 0.6          // how fast gain falls when it gets loud
+    public var rise: Float = 0.3            // how fast gain climbs for quiet speech
     public private(set) var gain: Float = 1
 
     public init() {}
+
+    public init(sensitivity: ListenSensitivity) {
+        targetRMS = sensitivity.targetRMS
+        noiseFloor = sensitivity.noiseFloor
+        maxGain = sensitivity.maxGain
+    }
+
+    /// Switches levels without losing the current gain.
+    public mutating func apply(_ sensitivity: ListenSensitivity) {
+        targetRMS = sensitivity.targetRMS
+        noiseFloor = sensitivity.noiseFloor
+        maxGain = sensitivity.maxGain
+    }
 
     /// Updates and returns the gain for a buffer whose RMS is `rms`.
     public mutating func update(rms: Float) -> Float {
         guard rms > noiseFloor else { return gain }
         let wanted = min(maxGain, max(1, targetRMS / rms))
-        let rate: Float = wanted < gain ? attack : 0.15
+        let rate: Float = wanted < gain ? attack : rise
         gain += (wanted - gain) * rate
         return gain
     }
@@ -279,15 +344,19 @@ public struct AutoGain: Sendable {
 /// Shouting: loud sound sustained for a moment. Fed one level (dBFS RMS) per
 /// audio buffer; fires once, then stays quiet for `cooldown` seconds.
 public struct LoudnessDetector: Sendable {
-    public var thresholdDB: Float = -16
+    public var thresholdDB: Float = -18
     public var windowSeconds: TimeInterval = 1.5
-    public var loudSecondsNeeded: TimeInterval = 0.7
+    public var loudSecondsNeeded: TimeInterval = 0.6
     public var cooldown: TimeInterval = 8
 
     private var samples: [(time: TimeInterval, loud: Bool)] = []
     private var lastFire: TimeInterval = -.infinity
 
     public init() {}
+
+    public init(sensitivity: ListenSensitivity) {
+        thresholdDB = sensitivity.shoutDB
+    }
 
     public mutating func feed(levelDB: Float, at time: TimeInterval) -> Bool {
         samples.append((time, levelDB >= thresholdDB))

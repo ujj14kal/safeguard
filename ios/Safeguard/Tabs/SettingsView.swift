@@ -7,6 +7,7 @@ struct SettingsView: View {
     @ObservedObject private var model = ProtectViewModel.shared
     @AppStorage("debugOverlayEnabled") private var debugOverlayEnabled = false
     @StateObject private var account = AccountStore.shared
+    @AppStorage(ListenSensitivity.key) private var listenSensitivity = ListenSensitivity.defaultLevel.rawValue
     @State private var showingAccount = false
     @State private var confirmDeleteAccount = false
     @AppStorage("autoStartProtecting") private var autoStartProtecting = Defaults.autoStartProtectingDefault
@@ -173,6 +174,11 @@ struct SettingsView: View {
                     Section {
                         ForEach(ListeningChoices.all) { choice in
                             ListeningToggle(choice)
+                        }
+                        Picker("Listening sensitivity", selection: $listenSensitivity) {
+                            Text("Normal").tag(ListenSensitivity.normal.rawValue)
+                            Text("High").tag(ListenSensitivity.high.rawValue)
+                            Text("Maximum").tag(ListenSensitivity.max.rawValue)
                         }
                         Toggle("Start protecting when the app opens", isOn: $autoStartProtecting)
                         Picker("Speech language", selection: $speechLanguage) {

@@ -28,6 +28,11 @@ public struct PersonFeatures: Sendable, Equatable {
     public var handReach: Double
     /// Fraction of recent samples with the mouth wide open (shouting).
     public var shouting: Double
+    /// Fraction of recent samples showing a hostile hand gesture (middle
+    /// finger), weighted by how sure the classifier was.
+    public var hostileGesture: Double
+    /// Fraction of recent samples with an angry face.
+    public var angryFace: Double
 
     public init(
         trend: Double = 0,
@@ -40,7 +45,9 @@ public struct PersonFeatures: Sendable, Equatable {
         cornering: Double = 0,
         speech: Double = 0,
         handReach: Double = 0,
-        shouting: Double = 0
+        shouting: Double = 0,
+        hostileGesture: Double = 0,
+        angryFace: Double = 0
     ) {
         self.trend = trend
         self.speed = speed
@@ -53,6 +60,8 @@ public struct PersonFeatures: Sendable, Equatable {
         self.speech = speech
         self.handReach = handReach
         self.shouting = shouting
+        self.hostileGesture = hostileGesture
+        self.angryFace = angryFace
     }
 }
 
@@ -226,6 +235,22 @@ public final class FeatureExtractor {
         if mouths.count >= config.minMouthSamples {
             let open = mouths.filter { $0 >= config.mouthOpenThreshold }.count
             features.shouting = Double(open) / Double(mouths.count)
+        }
+
+        // Classified gestures and expressions (MediaPipe engine). Absent
+        // cues leave both at 0, so older scores are unchanged.
+        let gestureSamples = recent.compactMap { $0.cues }.filter { $0.expression != nil || !$0.gestures.isEmpty }
+        if gestureSamples.count >= config.minGestureSamples {
+            let hostile = gestureSamples.reduce(0.0) { sum, cues in
+                let best = cues.gestures.filter(\.isHostile).map(\.score).max() ?? 0
+                return sum + (best >= config.gestureMinScore ? best : 0)
+            }
+            features.hostileGesture = clamp01(hostile / Double(gestureSamples.count) * config.gestureGain)
+            let angry = gestureSamples.filter {
+                guard let expression = $0.expression else { return false }
+                return expression.kind == .angry && expression.score >= config.expressionMinScore
+            }.count
+            features.angryFace = Double(angry) / Double(gestureSamples.count)
         }
     }
 
