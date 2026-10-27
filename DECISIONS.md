@@ -41,6 +41,20 @@ own terminal, because the tooling here refuses to create standing jobs.
 7. **Known gaps**: no automatic clean-up of old recordings; the free quotas
    (1 GB storage) are small; `/guardian/register` is public by design.
 
+### Accounts table and Telegram bot (added the same day)
+
+The `profiles` table was applied to the `safeguard` Supabase project
+(`wiyvykavdcisvvuwwxss`, region ap-northeast-1 Tokyo) through the Supabase tool
+after the user signed in with the owning account; RLS on, security advisor
+clean. The migration file was hardened first (`(select auth.uid())`, fixed
+`search_path`). A real sign-up was NOT run (it would create an account and
+email on the live project).
+The Telegram bot `@SafeguardAlertsUjjwalBot` ("Safeguard Alerts") was created
+with BotFather in the user's Telegram app; its token went from the clipboard to
+`.env` and the Cloud Run environment (never printed). The service was updated
+with `gcloud run services update --env-vars-file` (no image build); the webhook
+is registered (`getWebhookInfo`: our /telegram/webhook, no errors).
+
 ### Cost control for Phase 10 (added the same day)
 
 Cloud Billing and Budgets APIs enabled on `safeguard-512917`. A budget of

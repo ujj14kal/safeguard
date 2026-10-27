@@ -139,15 +139,15 @@ final class ConversationListener: ObservableObject {
     }
 
     /// Receives every microphone buffer (the SOS recorder). Nil normally.
-    func setAudioSink(_ sink: (@Sendable (AVAudioPCMBuffer) -> Void)?) {
+    func setAudioSink(_ sink: (@Sendable (AVAudioPCMBuffer, AVAudioTime) -> Void)?) {
         sinkBox.handler = sink
     }
 
     private final class SinkBox: @unchecked Sendable {
         private let lock = NSLock()
-        private var boxed: (@Sendable (AVAudioPCMBuffer) -> Void)?
+        private var boxed: (@Sendable (AVAudioPCMBuffer, AVAudioTime) -> Void)?
 
-        var handler: (@Sendable (AVAudioPCMBuffer) -> Void)? {
+        var handler: (@Sendable (AVAudioPCMBuffer, AVAudioTime) -> Void)? {
             get { lock.withLock { boxed } }
             set { lock.withLock { boxed = newValue } }
         }
@@ -218,10 +218,10 @@ final class ConversationListener: ObservableObject {
         let levels = levelBox
         let gains = gainBox
         let ear = cloud
-        input.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in
+        input.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, when in
             let rms = Self.rms(of: buffer)
             levels.handler?(20 * log10(max(rms, 1e-6)))
-            sink.handler?(buffer)
+            sink.handler?(buffer, when)
             let boosted = gains.boosted(buffer, rms: rms)
             box.request?.append(boosted)
             ear.feed(boosted)

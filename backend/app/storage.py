@@ -194,6 +194,17 @@ class SupabaseObjects:
 
 # --- recordings -------------------------------------------------------------------
 
+def _epoch(iso: str | None) -> float:
+    """Storage timestamps ("2026-10-27T17:31:12.345Z") as epoch seconds; 0 if unknown."""
+    if not iso:
+        return 0.0
+    try:
+        from datetime import datetime
+        return datetime.fromisoformat(iso.replace("Z", "+00:00")).timestamp()
+    except ValueError:
+        return 0.0
+
+
 class EvidenceBackend:
     def put(self, session: str, name: str, data: bytes) -> None: ...
     def segments(self, session: str) -> list[dict] | None: ...  # None = no such session
@@ -215,7 +226,10 @@ class LocalEvidence(EvidenceBackend):
         folder = self.root / session
         if not folder.is_dir():
             return None
-        return [{"name": f.name, "bytes": f.stat().st_size} for f in sorted(folder.iterdir())]
+        return [
+            {"name": f.name, "bytes": f.stat().st_size, "mtime": f.stat().st_mtime}
+            for f in sorted(folder.iterdir())
+        ]
 
     def delete_session(self, session):
         folder = self.root / session
@@ -236,7 +250,7 @@ class SupabaseEvidence(EvidenceBackend):
         self._o = objects
 
     def put(self, session, name, data):
-        content_type = "video/mp4" if name.endswith(".mp4") else "audio/mp4"
+        content_type = "audio/mp4" if name.endswith(".m4a") else "video/mp4"
         self._o.put(f"{session}/{name}", data, content_type)
 
     def segments(self, session):
@@ -244,7 +258,11 @@ class SupabaseEvidence(EvidenceBackend):
         if not items:
             return None
         return [
-            {"name": i["name"], "bytes": int((i.get("metadata") or {}).get("size") or 0)}
+            {
+                "name": i["name"],
+                "bytes": int((i.get("metadata") or {}).get("size") or 0),
+                "mtime": _epoch(i.get("updated_at") or i.get("created_at")),
+            }
             for i in sorted(items, key=lambda i: i["name"])
         ]
 

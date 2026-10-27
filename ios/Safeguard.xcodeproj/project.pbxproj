@@ -7,6 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D328257A41C637B25DC6D7F1 /* HLSEvidenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3B16841A4B9979C608B7715 /* HLSEvidenceTests.swift */; };
+		D470154E813C1E3446E8070D /* EvidenceCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = D309FD7CEB8085DEB8145B55 /* EvidenceCapture.swift */; };
+		D4654F5DA52AFF281808012F /* HLSEvidenceRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = D312B8976E680E118AD66268 /* HLSEvidenceRecorder.swift */; };
+		D3AEE30DC07919D3A126C809 /* EvidenceCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = D309FD7CEB8085DEB8145B55 /* EvidenceCapture.swift */; };
+		D332861288A24AE026406E89 /* HLSEvidenceRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = D312B8976E680E118AD66268 /* HLSEvidenceRecorder.swift */; };
+		D3B5E9B081F7784C7AC27FD3 /* VerifierClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A701056CD4995ADA43C998 /* VerifierClientTests.swift */; };
 		D30A76262B09EE00D88CE841 /* LiveSettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3530D8636BEE50AB954BF0E /* LiveSettingsSection.swift */; };
 		D474D400D39644B7D6B85017 /* LiveLinkStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D38FBA25D03880860EE730A3 /* LiveLinkStore.swift */; };
 		D31AF04A71E5780AC981AE1B /* LiveLinkStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D38FBA25D03880860EE730A3 /* LiveLinkStore.swift */; };
@@ -182,6 +188,10 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		D3B16841A4B9979C608B7715 /* HLSEvidenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLSEvidenceTests.swift; sourceTree = "<group>"; };
+		D309FD7CEB8085DEB8145B55 /* EvidenceCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EvidenceCapture.swift; sourceTree = "<group>"; };
+		D312B8976E680E118AD66268 /* HLSEvidenceRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLSEvidenceRecorder.swift; sourceTree = "<group>"; };
+		D3A701056CD4995ADA43C998 /* VerifierClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerifierClientTests.swift; sourceTree = "<group>"; };
 		D3530D8636BEE50AB954BF0E /* LiveSettingsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveSettingsSection.swift; sourceTree = "<group>"; };
 		D38FBA25D03880860EE730A3 /* LiveLinkStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveLinkStore.swift; sourceTree = "<group>"; };
 		D328B0DDB453F536DFD90741 /* GuardianCode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuardianCode.swift; sourceTree = "<group>"; };
@@ -474,6 +484,8 @@
 		B20000000000000000000004 /* SafeguardTests */ = {
 			isa = PBXGroup;
 			children = (
+				D3B16841A4B9979C608B7715 /* HLSEvidenceTests.swift */,
+				D3A701056CD4995ADA43C998 /* VerifierClientTests.swift */,
 				D397449DDB49A2AC3DE15F80 /* GestureTests.swift */,
 				D336F6B227A3FBF14E0E9ED0 /* AccountTests.swift */,
 				D3DE8F5A24FC5286B203D42A /* DashboardTests.swift */,
@@ -577,6 +589,8 @@
 /* End PBXGroup section */		A1000000000000000000001A /* Verify */ = {
 			isa = PBXGroup;
 			children = (
+				D309FD7CEB8085DEB8145B55 /* EvidenceCapture.swift */,
+				D312B8976E680E118AD66268 /* HLSEvidenceRecorder.swift */,
 				A1000000000000000000003C /* VerifierGate.swift */,
 				C1000000000000000000004A /* AppLog.swift */,
 				C1000000000000000000002A /* EvidenceRecorder.swift */,
@@ -696,6 +710,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D3AEE30DC07919D3A126C809 /* EvidenceCapture.swift in Sources */,
+				D332861288A24AE026406E89 /* HLSEvidenceRecorder.swift in Sources */,
 				D30A76262B09EE00D88CE841 /* LiveSettingsSection.swift in Sources */,
 				D31AF04A71E5780AC981AE1B /* LiveLinkStore.swift in Sources */,
 				D38FB7125F7835E180A367B0 /* GuardianCode.swift in Sources */,
@@ -791,6 +807,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D328257A41C637B25DC6D7F1 /* HLSEvidenceTests.swift in Sources */,
+				D470154E813C1E3446E8070D /* EvidenceCapture.swift in Sources */,
+				D4654F5DA52AFF281808012F /* HLSEvidenceRecorder.swift in Sources */,
+				D3B5E9B081F7784C7AC27FD3 /* VerifierClientTests.swift in Sources */,
 				D474D400D39644B7D6B85017 /* LiveLinkStore.swift in Sources */,
 				D41C270B6FF1E18ED4E155DE /* GuardianCode.swift in Sources */,
 				D4B5D57CDE8235244ED89383 /* UberDeepLink.swift in Sources */,

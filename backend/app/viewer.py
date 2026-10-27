@@ -9,6 +9,7 @@ the beginning of the recording.
 
 import json
 
+HLS_JS = "https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js"
 LEAFLET_VERSION = "1.9.4"
 LEAFLET_CSS = (
     f"https://unpkg.com/leaflet@{LEAFLET_VERSION}/dist/leaflet.css"
@@ -24,6 +25,7 @@ def render_viewer_page(share_token: str) -> str:
         _PAGE.replace("__TOKEN__", token_json)
         .replace("__LEAFLET_CSS__", LEAFLET_CSS)
         .replace("__LEAFLET_JS__", LEAFLET_JS)
+        .replace("__HLS_JS__", HLS_JS)
     )
 
 
@@ -88,9 +90,9 @@ _PAGE = """<!DOCTYPE html>
   <div class="card">
     <h2>Video <span class="chip" id="liveChip">catching up</span></h2>
     <video id="video" controls playsinline muted></video>
-    <p class="behind">Segment-based recording, about 10-15 s behind. It always jumps to the newest part.</p>
+    <p class="behind" id="videoNote">Segment-based recording, about 10-15 s behind. It always jumps to the newest part.</p>
   </div>
-  <div class="card">
+  <div class="card" id="audioCard">
     <h2>Audio</h2>
     <audio id="audio" controls preload="none"></audio>
     <p class="behind">Audio parts, newest first when it falls behind.</p>
@@ -98,6 +100,7 @@ _PAGE = """<!DOCTYPE html>
   <div class="err" id="err"></div>
 </main>
 <script src="__LEAFLET_JS__"></script>
+<script src="__HLS_JS__"></script>
 <script>
 const TOKEN = __TOKEN__;
 // The page lives at /live/<token> (no trailing slash), so relative URLs
@@ -132,6 +135,30 @@ function setupPlayer(id, queue) {
 }
 const videoEl = setupPlayer("video", videoQueue);
 const audioEl = setupPlayer("audio", audioQueue);
+
+// Continuous recording: video and sound in one stream (HLS). Safari plays
+// it natively; other browsers use hls.js. Until the phone sends that format
+// the page falls back to the separate parts below.
+let usingHls = false, hlsPlayer = null;
+function startContinuous() {
+  if (usingHls) return true;
+  const url = BASE + "/stream.m3u8";
+  if (videoEl.canPlayType("application/vnd.apple.mpegurl")) {
+    videoEl.src = url;
+  } else if (window.Hls && Hls.isSupported()) {
+    hlsPlayer = new Hls({liveSyncDurationCount: 3, maxBufferLength: 20});
+    hlsPlayer.loadSource(url);
+    hlsPlayer.attachMedia(videoEl);
+  } else {
+    return false;
+  }
+  usingHls = true;
+  document.getElementById("audioCard").style.display = "none";
+  document.getElementById("videoNote").textContent =
+    "One continuous recording with sound, about 6-10 s behind. Tap the speaker to hear it.";
+  videoEl.play().catch(() => {});
+  return true;
+}
 
 function ago(seconds) {
   if (seconds < 5) return "just now";
@@ -199,6 +226,12 @@ async function refresh() {
     ? "Waiting for the stream to start. This page updates by itself."
     : "Started " + when + (ended ? " \u00b7 ended" : " \u00b7 updating every 2 s");
   if (state.latest) showLocation(state.latest, state.trail || []);
+  if (state.hls && startContinuous()) {
+    const chipEl = document.getElementById("liveChip");
+    chipEl.textContent = state.hls.over ? "ended" : "live";
+    chipEl.className = "chip";
+    return;
+  }
   for (const seg of state.segments || []) {
     if (seen[seg.name]) continue;
     seen[seg.name] = true;
@@ -230,7 +263,9 @@ refresh();
 
 def render_guardian_page() -> str:
     return (
-        _GUARDIAN_PAGE.replace("__LEAFLET_CSS__", LEAFLET_CSS).replace("__LEAFLET_JS__", LEAFLET_JS)
+        _GUARDIAN_PAGE.replace("__LEAFLET_CSS__", LEAFLET_CSS)
+        .replace("__LEAFLET_JS__", LEAFLET_JS)
+        .replace("__HLS_JS__", HLS_JS)
     )
 
 
@@ -322,7 +357,7 @@ _GUARDIAN_PAGE = """<!DOCTYPE html>
       <div class="row"><button id="playAll">Play all in order</button></div>
       <div id="videos"></div>
     </div>
-    <div class="card">
+    <div class="card" id="audioCard">
       <h2>Audio</h2>
       <audio id="audioPlayer" controls></audio>
       <div id="audios"></div>
@@ -330,8 +365,10 @@ _GUARDIAN_PAGE = """<!DOCTYPE html>
   </section>
 </main>
 <script src="__LEAFLET_JS__"></script>
+<script src="__HLS_JS__"></script>
 <script>
 const $ = (id) => document.getElementById(id);
+let guardianHls = null;
 let CODE = sessionStorage.getItem("guardianCode") || "";
 let map = null, layer = null, queue = [], current = 0;
 
@@ -368,7 +405,7 @@ async function loadList() {
     row.innerHTML = '<div><b>' + (i.mode === "live" ? "Live stream" : "SOS") + ' · ' + escapeHtml(i.wearer_name) +
       '</b><span>' + fmtDate(i.started_at) + ' · ' + fmtDur(i.started_at, i.ended_at) + '</span></div>' +
       '<div style="text-align:right"><span class="pill ' + (live ? "live" : "") + '">' + (live ? "LIVE NOW" : "ended") +
-      '</span><br><span>' + i.videos + ' video · ' + i.audios + ' audio · ' + fmtSize(i.bytes) + '</span></div>';
+      '</span><br><span>' + (i.continuous ? 'continuous recording · ' : i.videos + ' video · ' + i.audios + ' audio · ') + fmtSize(i.bytes) + '</span></div>';
     row.onclick = () => openIncident(i.id);
     box.appendChild(row);
   }
@@ -398,6 +435,10 @@ async function openIncident(id) {
     map.setView(at, 16);
   }
   setTimeout(() => map.invalidateSize(), 50);
+  if (guardianHls) { guardianHls.destroy(); guardianHls = null; }
+  if (d.hls && playContinuous(d.hls)) return;
+  $("audioCard").classList.remove("hidden");
+  $("playAll").classList.remove("hidden");
   const videos = d.segments.filter((s) => s.kind === "video");
   const audios = d.segments.filter((s) => s.kind === "audio");
   renderSegs("videos", videos, (s) => { queue = [s]; current = 0; playIndex(); });
@@ -406,6 +447,27 @@ async function openIncident(id) {
   $("player").src = videos.length ? videos[0].url : "";
   $("playing").textContent = videos.length ? "Part 1 of " + videos.length : "No video was saved for this incident.";
   $("playAll").onclick = () => { current = 0; playIndex(); };
+}
+
+// One continuous recording, video and sound together (HLS).
+function playContinuous(info) {
+  const video = $("player");
+  if (video.canPlayType("application/vnd.apple.mpegurl")) {
+    video.src = info.url;
+  } else if (window.Hls && Hls.isSupported()) {
+    guardianHls = new Hls({maxBufferLength: 30});
+    guardianHls.loadSource(info.url);
+    guardianHls.attachMedia(video);
+  } else {
+    return false;
+  }
+  $("audioCard").classList.add("hidden");
+  $("playAll").classList.add("hidden");
+  $("videos").innerHTML = "";
+  $("playing").textContent = info.over
+    ? "One continuous recording, with sound, from start to finish."
+    : "Live now: one continuous recording with sound, a few seconds behind.";
+  return true;
 }
 
 function renderSegs(boxId, list, onPick) {

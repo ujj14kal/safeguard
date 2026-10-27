@@ -7121,6 +7121,22 @@
         }
       }
     },
+    "This invite no longer works. Remove this contact and add them again.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This invite no longer works. Remove this contact and add them again."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "यह आमंत्रण अब काम नहीं करता। इस संपर्क को हटाकर फिर से जोड़ें।"
+          }
+        }
+      }
+    },
     "This person agreed to be alerted": {
       "localizations": {
         "en": {

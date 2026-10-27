@@ -4,6 +4,10 @@ import SwiftUI
 struct SafeguardApp: App {
     @State private var showSplash = true
 
+    init() {
+        VerifierConfig.reconcileBuildURL()
+    }
+
     var body: some Scene {
         WindowGroup {
             ZStack {

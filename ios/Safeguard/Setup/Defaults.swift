@@ -113,6 +113,7 @@ public enum Defaults {
         "customSafePhrase",
         "customUnsafePhrase",
         "backendBaseURL",
+        "lastBuildBackendURL",
         "debugOverlayEnabled",
         "debugInitialTab",
         "debugInitialRoute",

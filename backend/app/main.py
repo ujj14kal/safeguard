@@ -27,7 +27,7 @@ from pathlib import Path
 
 import httpx
 from fastapi import FastAPI, Header, HTTPException, Request, WebSocket, WebSocketDisconnect, status
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from pydantic import BaseModel, Field
 
 from .accounts import (
@@ -39,6 +39,7 @@ from .accounts import (
 )
 from .config import SETTINGS
 from .contacts import ContactLimitError, ContactStore, invite_link, link_from_updates
+from . import hls
 from .incidents import IncidentStore
 from .links import ChannelStore, GuardianStore, normalize_code
 from .muse import MuseClient, MuseError
@@ -439,7 +440,8 @@ def log_call(
 # --- SOS evidence -----------------------------------------------------------
 
 _SESSION_RE = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
-_EVIDENCE_KINDS = {"video": {"mp4"}, "audio": {"m4a"}}
+# video/audio: the older separate parts; init/seg: the continuous fragmented stream.
+_EVIDENCE_KINDS = {"video": {"mp4"}, "audio": {"m4a"}, "init": {"mp4"}, "seg": {"m4s"}}
 
 
 _evidence_backend: EvidenceBackend | None = None
@@ -482,6 +484,7 @@ async def upload_evidence(
     kind: str,
     seq: int,
     ext: str,
+    dur: int = 0,
     x_evidence_token: str | None = Header(default=None),
     x_safeguard_token: str | None = Header(default=None),
 ) -> dict:
@@ -508,7 +511,15 @@ async def upload_evidence(
         raise HTTPException(status_code=422, detail="empty segment")
     if len(body) > limit:
         raise HTTPException(status_code=413, detail="segment too large")
-    get_evidence().put(session, f"{kind}-{seq:05d}.{ext}", body)
+    if kind == "init":
+        name = hls.INIT_NAME
+    elif kind == "seg":
+        if not 100 <= dur <= 20_000:
+            raise HTTPException(status_code=422, detail="bad segment duration")
+        name = hls.segment_name(seq, dur)
+    else:
+        name = f"{kind}-{seq:05d}.{ext}"
+    get_evidence().put(session, name, body)
     logger.info("evidence stored kind=%s seq=%d bytes=%d", kind, seq, len(body))
     return {"stored": True, "bytes": len(body)}
 
@@ -1003,8 +1014,11 @@ def _idle_channel(share_token: str):
 _SEGMENT_NAME_RE = re.compile(r"^(video|audio)-(\d{5})\.(mp4|m4a)$")
 
 
-def _live_segments(incident) -> list:
-    files = get_evidence().segments(incident.session)
+def _live_segments(incident, files=None) -> list:
+    """Old-style separate parts. `files` lets a caller that already listed
+    the storage reuse it (one listing per request, not three)."""
+    if files is None:
+        files = get_evidence().segments(incident.session)
     if not files:
         return []
     found = []
@@ -1024,6 +1038,44 @@ def _live_segments(incident) -> list:
         })
     found.sort(key=lambda item: (item["seq"], item["kind"]))
     return found
+
+
+PLAYLIST_NAME = "stream.m3u8"
+
+
+def _hls_entries(incident) -> list:
+    return get_evidence().segments(incident.session) or []
+
+
+def _hls_playlist_response(incident, url_for):
+    entries = _hls_entries(incident)
+    over = hls.is_over(incident.status == "ended", entries, time.time())
+    text = hls.build_playlist(entries, url_for, over)
+    if text is None:
+        raise HTTPException(status_code=404, detail="nothing to play yet")
+    return Response(
+        text, media_type="application/vnd.apple.mpegurl", headers={"Cache-Control": "no-store"}
+    )
+
+
+def _hls_info(incident, entries=None) -> dict | None:
+    """What the pages need to choose the continuous player."""
+    if entries is None:
+        entries = _hls_entries(incident)
+    has_init, segments = hls.collect(entries)
+    if not has_init or not segments:
+        return None
+    return {
+        "playlist": PLAYLIST_NAME,
+        "segments": len(segments),
+        "over": hls.is_over(incident.status == "ended", entries, time.time()),
+    }
+
+
+@app.get("/live/{share_token}/stream.m3u8")
+def live_playlist(share_token: str):
+    incident = _live_incident_or_404(share_token)
+    return _hls_playlist_response(incident, lambda name: f"segments/{name}")
 
 
 @app.get("/live/{share_token}", response_class=HTMLResponse)
@@ -1047,6 +1099,7 @@ def live_state(share_token: str) -> dict:
             "segments": [], "test": False,
         }
     points = list(incident.points)
+    files = _hls_entries(incident)
     return {
         "mode": incident.mode,
         "status": incident.status,
@@ -1055,7 +1108,8 @@ def live_state(share_token: str) -> dict:
         "ended_at": incident.ended_at or None,
         "latest": points[-1] if points else None,
         "trail": [{"lat": point["lat"], "lon": point["lon"]} for point in points],
-        "segments": _live_segments(incident),
+        "segments": _live_segments(incident, files),
+        "hls": _hls_info(incident, files),
         "test": incident.test,
     }
 
@@ -1064,13 +1118,9 @@ def live_state(share_token: str) -> dict:
 def live_segment(share_token: str, name: str, request: Request):
     """Serves one segment file — but only from this token's own session."""
     incident = _live_incident_or_404(share_token)
-    match = _SEGMENT_NAME_RE.match(name)
-    if not match:
+    media = hls.media_type(name)
+    if media is None:
         raise HTTPException(status_code=404, detail="no such segment")
-    kind, _, ext = match.groups()
-    if ext not in _EVIDENCE_KINDS[kind]:
-        raise HTTPException(status_code=404, detail="no such segment")
-    media = "video/mp4" if kind == "video" else "audio/mp4"
     served = get_evidence().response(
         incident.session, name, media, request.headers.get("range")
     ) if get_evidence().exists(incident.session, name) else None
@@ -1322,7 +1372,7 @@ _guardian_register_limiter = RateLimiter(6, 3600.0)
 _guardian_fail_limiters: dict[str, RateLimiter] = {}
 _guardian_ok_limiter = RateLimiter(240)
 _MEDIA_SECRET = secrets.token_bytes(32)
-_MEDIA_TTL_S = 3600
+_MEDIA_TTL_S = 6 * 3600  # a live playlist is refetched for as long as someone watches
 _DEVICE_ID_RE = re.compile(r"^[A-Za-z0-9-]{8,64}$")
 
 
@@ -1407,8 +1457,10 @@ def _signed_media_url(incident_id: str, name: str) -> str:
     return f"/guardian/media/{incident_id}/{name}?exp={expires}&sig={sig}"
 
 
-def _guardian_summary(incident) -> dict:
-    segments = _live_segments(incident)
+def _guardian_summary(incident, files=None) -> dict:
+    if files is None:
+        files = _hls_entries(incident)
+    segments = _live_segments(incident, files)
     latest = incident.latest()
     return {
         "id": incident.id,
@@ -1421,7 +1473,10 @@ def _guardian_summary(incident) -> dict:
         "latest": latest,
         "videos": sum(1 for item in segments if item["kind"] == "video"),
         "audios": sum(1 for item in segments if item["kind"] == "audio"),
-        "bytes": sum(item["bytes"] for item in segments),
+        "bytes": sum(item["bytes"] for item in segments) + sum(
+            e["bytes"] for e in files if hls.is_hls_name(e["name"])
+        ),
+        "continuous": _hls_info(incident, files) is not None,
     }
 
 
@@ -1442,12 +1497,15 @@ def guardian_incident(
     incident = get_incidents().get(incident_id)
     if incident is None or incident.guardian_code != code:
         raise HTTPException(status_code=404, detail="no such incident")
-    detail = _guardian_summary(incident)
+    files = _hls_entries(incident)
+    detail = _guardian_summary(incident, files)
     detail["trail"] = [{"lat": p["lat"], "lon": p["lon"], "ts": p.get("ts")} for p in incident.points]
     detail["segments"] = [
         {**item, "url": _signed_media_url(incident.id, item["name"])}
-        for item in _live_segments(incident)
+        for item in _live_segments(incident, files)
     ]
+    info = _hls_info(incident, files)
+    detail["hls"] = info and {**info, "url": _signed_media_url(incident.id, PLAYLIST_NAME)}
     return detail
 
 
@@ -1456,13 +1514,15 @@ def guardian_media(incident_id: str, name: str, request: Request, exp: int = 0, 
     if exp < time.time() or not hmac.compare_digest(sig, _media_sig(incident_id, name, exp)):
         raise HTTPException(status_code=403, detail="link expired, reload the page")
     incident = get_incidents().get(incident_id)
-    match = _SEGMENT_NAME_RE.match(name)
-    if incident is None or not incident.guardian_code or not match:
+    if incident is None or not incident.guardian_code:
         raise HTTPException(status_code=404, detail="no such recording")
-    kind, _, ext = match.groups()
-    if ext not in _EVIDENCE_KINDS[kind]:
+    if name == PLAYLIST_NAME:
+        return _hls_playlist_response(
+            incident, lambda n: _signed_media_url(incident.id, n)
+        )
+    media = hls.media_type(name)
+    if media is None:
         raise HTTPException(status_code=404, detail="no such recording")
-    media = "video/mp4" if kind == "video" else "audio/mp4"
     served = get_evidence().response(
         incident.session, name, media, request.headers.get("range")
     ) if get_evidence().exists(incident.session, name) else None

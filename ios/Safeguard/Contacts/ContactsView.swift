@@ -97,9 +97,15 @@ struct ContactsView: View {
                     if let phone = contact.phone {
                         Text(phone).font(.footnote).foregroundStyle(.secondary)
                     }
-                    Text(contact.linked ? String(localized: "Linked") : String(localized: "Waiting"))
-                        .font(.footnote)
-                        .foregroundStyle(contact.linked ? DS.Colors.ok : .secondary)
+                    if model.staleContactCodes.contains(contact.code) {
+                        Text("This invite no longer works. Remove this contact and add them again.")
+                            .font(.footnote)
+                            .foregroundStyle(DS.Colors.warning)
+                    } else {
+                        Text(contact.linked ? String(localized: "Linked") : String(localized: "Waiting"))
+                            .font(.footnote)
+                            .foregroundStyle(contact.linked ? DS.Colors.ok : .secondary)
+                    }
                 }
                 Spacer()
                 if contact.linked {

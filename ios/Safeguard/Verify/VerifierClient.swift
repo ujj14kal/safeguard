@@ -122,6 +122,25 @@ public struct VerifierConfig: Sendable {
         )
     }
 
+    /// Remembers which built-in address the last launch saw.
+    public static let lastBuildURLDefaultsKey = "lastBuildBackendURL"
+
+    /// A new build with a different built-in address clears the saved
+    /// Settings override. Otherwise an address typed in Settings long ago
+    /// (an old tunnel, a Mac on the home Wi-Fi) keeps beating the address the
+    /// new build was made for, and the app says the server is off. Typing a
+    /// new override afterwards works as before.
+    public static func reconcileBuildURL(
+        defaults: UserDefaults = .standard,
+        plistValue: String? = Bundle.main.object(forInfoDictionaryKey: "BackendBaseURL") as? String
+    ) {
+        let built = validURL(plistValue)?.absoluteString ?? ""
+        let last = defaults.string(forKey: lastBuildURLDefaultsKey) ?? ""
+        guard built != last else { return }
+        defaults.removeObject(forKey: backendURLDefaultsKey)
+        defaults.set(built, forKey: lastBuildURLDefaultsKey)
+    }
+
     public static func resolve(override: String?, plistValue: String?) -> VerifierConfig {
         let url = validURL(override) ?? validURL(plistValue) ?? fallbackURL
         return VerifierConfig(baseURL: url)

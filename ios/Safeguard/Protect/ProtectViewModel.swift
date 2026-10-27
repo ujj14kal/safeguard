@@ -638,7 +638,7 @@ final class ProtectViewModel: ObservableObject {
     /// "Recording • 2 of 3 parts saved to the cloud" while an SOS records.
     @Published var evidenceStatus: String?
     @AppStorage("recordOnSOS") var recordOnSOS = Defaults.current.recordOnSOS
-    nonisolated let evidence = EvidenceRecorder()
+    nonisolated let evidence = EvidenceCapture()
     private var cancellables = Set<AnyCancellable>()
     @AppStorage("shoutingTriggersSOS") var shoutingTriggersSOS = Defaults.current.shoutingTriggersSOS
     private var loudness = LoudnessDetector(sensitivity: .current)
@@ -701,7 +701,7 @@ final class ProtectViewModel: ObservableObject {
                 self?.lastEvidenceProgress = progress
             }
         }
-        listener.setAudioSink { [evidence] buffer in evidence.appendAudio(buffer) }
+        listener.setAudioSink { [evidence] buffer, when in evidence.appendAudio(buffer, at: when) }
         evidenceStatus = EvidenceProgress().summary
     }
 
@@ -1958,11 +1958,21 @@ final class ProtectViewModel: ObservableObject {
         saveContacts()
     }
 
+    /// Contacts whose invite the server does not know (it answered 404):
+    /// they were made on an older backend, so their link can never work.
+    @Published private(set) var staleContactCodes: Set<String> = []
+
     func refreshContacts() {
         Task {
             for contact in sosContacts.contacts where !contact.linked {
-                if let status = try? await incidentClient.contactStatus(code: contact.code) {
+                do {
+                    let status = try await incidentClient.contactStatus(code: contact.code)
                     sosContacts.setLinked(code: contact.code, linked: status.linked)
+                    staleContactCodes.remove(contact.code)
+                } catch VerifierError.serverStatus(404) {
+                    staleContactCodes.insert(contact.code)
+                } catch {
+                    // Offline or a server hiccup: not a verdict on the invite.
                 }
             }
             saveContacts()
