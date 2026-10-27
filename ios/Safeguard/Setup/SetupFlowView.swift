@@ -37,17 +37,21 @@ struct SetupFlowView: View {
 
     private var setupProgress: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("Step \(machine.step.rawValue + 1) of \(SetupStep.allCases.count)")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+            Text(
+                format: "Step %d of %d",
+                machine.step.rawValue + 1, SetupStep.allCases.count
+            )
+            .font(.footnote)
+            .foregroundStyle(.secondary)
             ProgressView(value: machine.progress)
         }
         .padding(.horizontal)
         .padding(.vertical, 8)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(
-            "Setup step \(machine.step.rawValue + 1) of \(SetupStep.allCases.count)"
-        )
+        .accessibilityLabel(Text(
+            format: "Setup step %d of %d",
+            machine.step.rawValue + 1, SetupStep.allCases.count
+        ))
     }
 
     @ViewBuilder
@@ -183,28 +187,34 @@ struct SetupDoneStep: View {
                 .font(.system(.largeTitle, design: .rounded, weight: .bold))
             VStack(alignment: .leading, spacing: DS.Spacing.small) {
                 summaryRow(
-                    "Name", model.wearerName.isEmpty ? "Not set" : model.wearerName
+                    String(localized: "Name"),
+                    model.wearerName.isEmpty ? String(localized: "Not set") : model.wearerName
                 )
                 summaryRow(
-                    "Contacts",
-                    "\(model.sosContacts.agreedCount) agreed, " +
-                        "\(model.sosContacts.contacts.filter(\.linked).count) linked"
+                    String(localized: "Contacts"),
+                    L10n.format(
+                        "%d agreed, %d linked", model.sosContacts.agreedCount,
+                        model.sosContacts.contacts.filter(\.linked).count
+                    )
                 )
                 summaryRow(
-                    "Code phrases",
-                    CodePhraseStore.customSafe.isEmpty ? "Defaults" : "Yours"
+                    String(localized: "Code phrases"),
+                    CodePhraseStore.customSafe.isEmpty
+                        ? String(localized: "Defaults") : String(localized: "Yours")
                 )
                 summaryRow(
-                    "Listening", "\(ListeningChoices.enabledCount()) of 6 on"
+                    String(localized: "Listening"),
+                    L10n.format("%d of 6 on", ListeningChoices.enabledCount())
                 )
             }
             let unlinked = model.sosContacts.contacts.filter { !$0.linked }.count
             if !SetupMachine.finishWarnings(unlinkedCount: unlinked).isEmpty {
                 VStack(alignment: .leading, spacing: 2) {
-                    Label(
-                        "Contacts still waiting: \(unlinked)",
-                        systemImage: "exclamationmark.triangle.fill"
-                    )
+                    Label {
+                        Text(format: "Contacts still waiting: %d", unlinked)
+                    } icon: {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                    }
                     Text("They get no alerts until they press Start.")
                         .font(.footnote)
                 }

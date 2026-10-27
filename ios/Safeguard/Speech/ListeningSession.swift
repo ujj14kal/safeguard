@@ -195,12 +195,12 @@ public struct ConversationFlag: Sendable, Equatable {
 
     public var label: String {
         switch category {
-        case .threat: "Threatening words"
-        case .coercion: "Someone is pressuring you"
-        case .pursuit: "Someone may be following you"
-        case .proposition: "Unwanted advances"
-        case .abuse, .anger: "Abusive or angry language"
-        case .distress: "A call for help"
+        case .threat: String(localized: "Threatening words")
+        case .coercion: String(localized: "Someone is pressuring you")
+        case .pursuit: String(localized: "Someone may be following you")
+        case .proposition: String(localized: "Unwanted advances")
+        case .abuse, .anger: String(localized: "Abusive or angry language")
+        case .distress: String(localized: "A call for help")
         }
     }
 

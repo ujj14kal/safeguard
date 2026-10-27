@@ -43,17 +43,17 @@ enum FrameSourceError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .cameraUnavailable:
-            "No camera is available on this device."
+            String(localized: "No camera is available on this device.")
         case .permissionDenied:
-            "Camera access was denied. Enable it in Settings to start protecting."
+            String(localized: "Camera access was denied. Enable it in Settings to start protecting.")
         case .configurationFailed(let detail):
-            "Could not configure capture: \(detail)"
+            L10n.format("Could not configure capture: %@", detail)
         case .fileNotFound(let url):
-            "Replay file not found: \(url.lastPathComponent)"
+            L10n.format("Replay file not found: %@", url.lastPathComponent)
         case .noVideoTrack(let url):
-            "No video track in \(url.lastPathComponent)"
+            L10n.format("No video track in %@", url.lastPathComponent)
         case .readerFailed(let detail):
-            "Could not read replay file: \(detail)"
+            L10n.format("Could not read replay file: %@", detail)
         case .notAvailable(let detail):
             detail
         }

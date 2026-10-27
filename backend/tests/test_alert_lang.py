@@ -95,6 +95,25 @@ def test_start_rejects_unknown_lang(client):
     assert response.status_code == 422
 
 
+def test_templates_carry_no_appearance_or_transcript():
+    import re
+
+    forbidden = {
+        "wearing", "wore", "shirt", "pants", "dress", "skinned", "beard",
+        "man", "woman", "men", "women", "boy", "girl", "male", "female",
+        "heard", "said", "transcript",
+    }
+    texts = [
+        alert_text("Meera", "https://demo.test/live/x"),
+        end_text("Meera"),
+        build_test_text("Meera", "https://demo.test/live/x"),
+        cab_text("D", "P1", 4, "https://demo.test/live/x"),
+    ]
+    for text in texts:
+        words = set(re.findall(r"[a-z]+", text.lower()))
+        assert not (words & forbidden), text
+
+
 def test_end_uses_incident_lang(client):
     started = client.post(
         "/incident/start",

@@ -12,12 +12,13 @@ enum SetupPermission: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
+    /// Pre-localised: used both as a label and inside formatted strings.
     var title: String {
         switch self {
-        case .camera: "Camera"
-        case .microphone: "Microphone"
-        case .speech: "Speech recognition"
-        case .location: "Location (while using the app)"
+        case .camera: String(localized: "Camera")
+        case .microphone: String(localized: "Microphone")
+        case .speech: String(localized: "Speech recognition")
+        case .location: String(localized: "Location (while using the app)")
         }
     }
 

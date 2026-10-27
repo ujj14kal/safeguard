@@ -14,6 +14,7 @@ struct SettingsView: View {
     @State private var wiping = false
     @State private var wipeReport: DataWipeReport?
     @State private var connectionStatus: String?
+    @State private var connectionOK = false
     @State private var testingConnection = false
     @State private var debugRouteShown = false
     @Environment(\.openURL) private var openURL
@@ -198,15 +199,16 @@ struct SettingsView: View {
                             }
                             .disabled(testingConnection)
                             if let connectionStatus {
-                                Label(
-                                    connectionStatus,
-                                    systemImage: connectionStatus.hasPrefix("Reachable")
-                                        ? "checkmark.circle.fill" : "xmark.circle.fill"
-                                )
+                                Label {
+                                    Text(connectionStatus)
+                                } icon: {
+                                    Image(
+                                        systemName: connectionOK
+                                            ? "checkmark.circle.fill" : "xmark.circle.fill"
+                                    )
+                                }
                                 .font(.footnote)
-                                .foregroundStyle(
-                                    connectionStatus.hasPrefix("Reachable") ? Color.green : Color.red
-                                )
+                                .foregroundStyle(connectionOK ? Color.green : Color.red)
                             }
                         } header: {
                             Text("Developer")
@@ -239,7 +241,7 @@ struct SettingsView: View {
             if SetupPermissions.status(of: permission) == .granted {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundStyle(.green)
-                    .accessibilityLabel("\(permission.title) granted")
+                    .accessibilityLabel(Text(format: "%@ granted", permission.title))
             } else {
                 Button("Settings") {
                     if let url = URL(string: UIApplication.openSettingsURLString) {
@@ -247,7 +249,7 @@ struct SettingsView: View {
                     }
                 }
                 .buttonStyle(.bordered)
-                .accessibilityLabel("Open Settings for \(permission.title)")
+                .accessibilityLabel(Text(format: "Open Settings for %@", permission.title))
             }
         }
         .accessibilityElement(children: .combine)
@@ -303,9 +305,13 @@ struct SettingsView: View {
             Task {
                 let url = VerifierConfig.default.baseURL
                 let ok = await VerifierClient().checkHealth()
+                connectionOK = ok
                 connectionStatus = ok
-                    ? "Reachable: \(url.absoluteString)"
-                    : "Cannot reach \(url.absoluteString). Check the URL, Wi-Fi, and that the backend listens on 0.0.0.0."
+                    ? L10n.format("Reachable: %@", url.absoluteString)
+                    : L10n.format(
+                        "Cannot reach %@. Check the URL, Wi-Fi, and that the backend listens on 0.0.0.0.",
+                        url.absoluteString
+                    )
                 testingConnection = false
             }
         }

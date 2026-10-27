@@ -9,10 +9,10 @@ enum CloudEarState: Equatable {
 
     var summary: String {
         switch self {
-        case .off: "Cloud ear: off"
-        case .connecting: "Cloud ear: connecting"
-        case .live: "Cloud ear: live"
-        case .failed(let why): "Cloud ear: \(why)"
+        case .off: String(localized: "Cloud ear: off")
+        case .connecting: String(localized: "Cloud ear: connecting")
+        case .live: String(localized: "Cloud ear: live")
+        case .failed(let why): L10n.format("Cloud ear: %@", why)
         }
     }
 }

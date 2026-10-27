@@ -14,9 +14,9 @@ public enum Proximity: Int, Sendable, Equatable, Comparable, CaseIterable {
     /// Status text. Deliberately distinct from the SOS treatment.
     public var title: String {
         switch self {
-        case .clear: "Clear"
-        case .near: "Someone is near"
-        case .tooClose: "Too close"
+        case .clear: String(localized: "Clear")
+        case .near: String(localized: "Someone is near")
+        case .tooClose: String(localized: "Too close")
         }
     }
 

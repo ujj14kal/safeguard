@@ -142,8 +142,10 @@ public struct EvidenceProgress: Sendable, Equatable {
     }
 
     public var summary: String {
-        var text = "Recording • \(uploaded) of \(segments) parts saved to the cloud"
-        if failed > 0 { text += " • \(failed) waiting to retry" }
+        var text = L10n.format("Recording • %d of %d parts saved to the cloud", uploaded, segments)
+        if failed > 0 {
+            text += L10n.format(" • %d waiting to retry", failed)
+        }
         return text
     }
 }

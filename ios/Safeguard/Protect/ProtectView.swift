@@ -135,7 +135,7 @@ struct ProtectView: View {
             } else if let deaf = model.listenerDeafReason {
                 Image(systemName: "mic.slash.fill")
                     .foregroundStyle(.secondary)
-                    .accessibilityLabel("Microphone off: \(deaf)")
+                    .accessibilityLabel(Text(format: "Microphone off: %@", deaf))
             }
             Circle()
                 .fill(model.backendStatus?.reachable == true ? DS.Colors.ok : Color.gray)
@@ -148,14 +148,20 @@ struct ProtectView: View {
         .padding()
     }
 
+    private var heardLine: String {
+        if model.lastHeard.isEmpty {
+            return String(localized: "Heard: (nothing yet)")
+        }
+        return L10n.format("Heard: %@", model.lastHeard)
+    }
+
     private var hudBottomBar: some View {
         VStack(spacing: DS.Spacing.small) {
             if debugOverlay {
                 // Debug only: what the recogniser just heard, so you can see
                 // whether Hindi/English is being picked up at all.
-                Text((model.lastHeard.isEmpty ? "Heard: (nothing yet)" : "Heard: \(model.lastHeard)")
-                    + "\n" + model.judgeStatus
-                    + "\nApple ear on • \(model.cloudStatus)")
+                (Text(verbatim: heardLine + "\n\(model.judgeStatus)\n")
+                    + Text(format: "Apple ear on • %@", model.cloudStatus))
                     .font(.footnote.monospaced())
                     .lineLimit(6)
                     .padding(8)
@@ -192,11 +198,13 @@ struct ProtectView: View {
                 .foregroundStyle(DS.Colors.danger)
             TimelineView(.periodic(from: .now, by: 0.1)) { _ in
                 let left = max(0, (model.countdownDeadline ?? 0) - ProcessInfo.processInfo.systemUptime)
-                Text("\(Int(left.rounded(.up)))")
+                Text(verbatim: "\(Int(left.rounded(.up)))")
                     .font(.system(size: 72, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
                     .monospacedDigit()
-                    .accessibilityLabel("\(Int(left.rounded(.up))) seconds until auto SOS")
+                    .accessibilityLabel(Text(
+                        format: "%d seconds until auto SOS", Int(left.rounded(.up))
+                    ))
             }
             Text("Recording and safety measures start when it reaches zero.")
                 .font(.footnote)
@@ -204,7 +212,7 @@ struct ProtectView: View {
                 .foregroundStyle(.secondary)
             Button("I'm OK, cancel") { model.cancelAutoSOS() }
                 .buttonStyle(PrimaryButtonStyle())
-            Text("Or say \"open calculator\", or double tap")
+            Text(format: "Or say \"%@\", or double tap", CodePhraseStore.primarySafe())
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }
@@ -237,7 +245,7 @@ struct ProtectView: View {
         .overlay(RoundedRectangle(cornerRadius: 20).stroke(DS.Colors.danger, lineWidth: 2))
         .padding(.horizontal)
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("\(flag.label). Start the safety measures?")
+        .accessibilityLabel(Text(format: "%@. Start the safety measures?", flag.label))
     }
 
     /// The spoken question's on-screen equivalent on the HUD: buttons, code
@@ -319,12 +327,12 @@ struct ProtectView: View {
 
     private var sosCauseText: String {
         if model.unsafeCause == .noReply {
-            return "No reply — help is on the way"
+            return String(localized: "No reply — help is on the way")
         }
         if model.unsafeCause == .distressWord {
-            return "Distress call — recording and help are starting"
+            return String(localized: "Distress call — recording and help are starting")
         }
-        return "Help is on the way"
+        return String(localized: "Help is on the way")
     }
 
     /// One chip per track: icon + name + status word.
@@ -370,17 +378,17 @@ struct ProtectView: View {
     private func trackStatusText(_ track: EscalationTrack, status: TrackStatus) -> String {
         switch status {
         case .pending:
-            return "Pending"
+            return String(localized: "Pending")
         case .running:
             let attempt = model.escalation.attempts(of: track)
-            return attempt > 1 ? "Retrying (\(attempt))" : "Running"
+            return attempt > 1 ? L10n.format("Retrying (%d)", attempt) : String(localized: "Running")
         case .done:
-            return "Done"
+            return String(localized: "Done")
         case .failed:
             if let reason = model.escalation.reason(of: track) {
-                return "Failed: \(reason)"
+                return L10n.format("Failed: %@", reason)
             }
-            return "Failed"
+            return String(localized: "Failed")
         }
     }
 
@@ -391,7 +399,7 @@ struct ProtectView: View {
             VStack(spacing: 4) {
                 ForEach(model.deliveryStatus, id: \.code) { outcome in
                     HStack {
-                        Text(outcome.name ?? "Contact")
+                        Text(outcome.name ?? String(localized: "Contact"))
                             .foregroundStyle(.white)
                         Spacer()
                         Text(deliveryText(outcome.status))
@@ -410,13 +418,13 @@ struct ProtectView: View {
     private func deliveryText(_ status: String) -> String {
         switch status {
         case "sent":
-            return "Sent"
+            return String(localized: "Sent")
         case "dry-run":
-            return "Dry-run"
+            return String(localized: "Dry-run")
         case "failed":
-            return "Failed"
+            return String(localized: "Failed")
         default:
-            return "Waiting"
+            return String(localized: "Waiting")
         }
     }
 
@@ -449,7 +457,7 @@ struct ProtectView: View {
                 HStack {
                     Button("Copy") {
                         UIPasteboard.general.string = link
-                        model.showToast("Link copied")
+                        model.showToast(String(localized: "Link copied"))
                     }
                     .buttonStyle(.bordered)
                     .tint(.white)
@@ -488,7 +496,7 @@ struct ProtectView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 HStack {
                     VStack(alignment: .leading) {
-                        Text(model.sosDestinationName ?? "Safe place")
+                        Text(model.sosDestinationName ?? String(localized: "Safe place"))
                             .font(.headline)
                             .foregroundStyle(.white)
                         if let eta = model.sosDestinationETA {
@@ -651,7 +659,7 @@ struct ProtectView: View {
                     Text("unavailable")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
-                        .accessibilityLabel("Voice commands unavailable: \(deaf)")
+                        .accessibilityLabel(Text(format: "Voice commands unavailable: %@", deaf))
                 }
             }
             ForEach(
@@ -659,7 +667,7 @@ struct ProtectView: View {
                  "Safeguard, stop • status • dim"],
                 id: \.self
             ) { command in
-                Text("“\(command)”")
+                Text(command)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }

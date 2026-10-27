@@ -19,7 +19,7 @@ struct SetupContactsStep: View {
                 "A contact receives alerts ONLY after they open the invite link " +
                 "and press Start in Telegram.")
                 .foregroundStyle(.secondary)
-            Text("Agreed so far: \(model.sosContacts.agreedCount) of 2 needed")
+            Text(format: "Agreed so far: %d of 2 needed", model.sosContacts.agreedCount)
                 .font(.headline)
                 .foregroundStyle(
                     model.sosContacts.agreedCount >= 2 ? .green : DS.Colors.warning
@@ -73,7 +73,7 @@ struct SetupContactsStep: View {
                 } label: {
                     Image(systemName: "trash")
                 }
-                .accessibilityLabel("Remove \(contact.name)")
+                .accessibilityLabel(Text(format: "Remove %@", contact.name))
             }
             Toggle(
                 "This person agreed to be alerted",

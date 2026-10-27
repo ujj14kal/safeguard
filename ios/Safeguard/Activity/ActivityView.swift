@@ -59,10 +59,12 @@ struct ActivityRow: View {
         VStack(alignment: .leading, spacing: 2) {
             Text(ActivityText.causeTitle(entry.cause))
                 .font(.headline)
-            Text("\(entry.startedAt.formatted(date: .abbreviated, time: .shortened)) • \(ActivityText.duration(entry.durationSeconds))")
+            Text(format: "%@ • %@",
+                entry.startedAt.formatted(date: .abbreviated, time: .shortened),
+                ActivityText.duration(entry.durationSeconds))
                 .font(.footnote)
                 .foregroundStyle(.secondary)
-            Text("\(entry.contactsAlerted) contacts alerted")
+            Text(format: "%d contacts alerted", entry.contactsAlerted)
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }

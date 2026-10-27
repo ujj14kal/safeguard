@@ -60,28 +60,28 @@ public struct HudStatus: Sendable, Equatable {
         listenerLive: Bool = false
     ) -> HudStatus {
         if asking {
-            return HudStatus(text: "Are you safe?", symbol: "questionmark.circle.fill")
+            return HudStatus(text: String(localized: "Are you safe?"), symbol: "questionmark.circle.fill")
         }
         if safe {
-            return HudStatus(text: "You're safe", symbol: "checkmark.shield.fill")
+            return HudStatus(text: String(localized: "You're safe"), symbol: "checkmark.shield.fill")
         }
         if listeningWindow {
-            return HudStatus(text: "Stay quiet, listening", symbol: "ear.fill")
+            return HudStatus(text: String(localized: "Stay quiet, listening"), symbol: "ear.fill")
         }
         if alert {
-            return HudStatus(text: "Something seems off", symbol: "exclamationmark.shield.fill")
+            return HudStatus(text: String(localized: "Something seems off"), symbol: "exclamationmark.shield.fill")
         }
         switch proximity {
         case .tooClose:
-            return HudStatus(text: "Too close", symbol: "exclamationmark.triangle.fill")
+            return HudStatus(text: String(localized: "Too close"), symbol: "exclamationmark.triangle.fill")
         case .near:
-            return HudStatus(text: "Someone is near", symbol: "person.fill")
+            return HudStatus(text: String(localized: "Someone is near"), symbol: "person.fill")
         case .clear:
             break
         }
         if listenerLive {
-            return HudStatus(text: "Listening", symbol: "mic.fill")
+            return HudStatus(text: String(localized: "Listening"), symbol: "mic.fill")
         }
-        return HudStatus(text: "Protecting", symbol: "shield.fill")
+        return HudStatus(text: String(localized: "Protecting"), symbol: "shield.fill")
     }
 }

@@ -91,4 +91,9 @@ public enum CodePhraseStore {
         if !custom.isEmpty { return [custom] }
         return SafetyConfig().unsafePhrases
     }
+
+    /// The safe phrase the countdown screen names (custom or default).
+    public static func primarySafe() -> String {
+        effectiveSafe()[0]
+    }
 }

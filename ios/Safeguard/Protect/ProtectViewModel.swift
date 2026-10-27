@@ -21,7 +21,7 @@ final class ProtectViewModel: ObservableObject {
     @Published var replayName: String?
     @Published var replayImage: UIImage?
     @Published var cameraSession: AVCaptureSession?
-    @Published var statusLine = "Not protecting"
+    @Published var statusLine = String(localized: "Not protecting")
     @Published var errorMessage: String?
     @Published var showingPicker = false
     @Published var debugTracks: [Track] = []
@@ -37,7 +37,7 @@ final class ProtectViewModel: ObservableObject {
     @Published var listenerDeafReason: String?
     @Published var lastHeard = ""
     /// Debug: what the AI judge last did ("sent", its verdict, or why it failed).
-    @Published var judgeStatus = "AI judge: idle"
+    @Published var judgeStatus = String(localized: "AI judge: idle")
     @Published var cloudStatus = CloudEarState.off.summary
     /// Meta Muse Voice Transcribe through the backend. Needs the listener
     /// opt-in too. Off keeps all hearing on the phone.
@@ -226,18 +226,18 @@ final class ProtectViewModel: ObservableObject {
     var displayTitle: String {
         switch state {
         case .asking:
-            return "Are you safe?"
+            return String(localized: "Are you safe?")
         case .safe:
-            return "You're safe"
+            return String(localized: "You're safe")
         case .unsafe:
-            return "SOS"
+            return String(localized: "SOS")
         case .countdown:
-            return "Auto-SOS starting"
+            return String(localized: "Auto-SOS starting")
         case .suspected:
-            return "Something seems off"
+            return String(localized: "Something seems off")
         case .monitoring:
             if threatAlert {
-                return "Something seems off"
+                return String(localized: "Something seems off")
             }
             if proximity != .clear {
                 return proximity.title
@@ -263,7 +263,7 @@ final class ProtectViewModel: ObservableObject {
             usingReplay = false
             replayName = nil
             state = .monitoring
-            beginSession(status: "Monitoring with phone camera")
+            beginSession(status: String(localized: "Monitoring with phone camera"))
             startEgoMotion()
             if pendingDistressStart {
                 pendingDistressStart = false
@@ -286,7 +286,7 @@ final class ProtectViewModel: ObservableObject {
             usingReplay = true
             replayName = url.lastPathComponent
             state = .monitoring
-            beginSession(status: "Replay mode: \(url.lastPathComponent)")
+            beginSession(status: L10n.format("Replay mode: %@", url.lastPathComponent))
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -308,7 +308,7 @@ final class ProtectViewModel: ObservableObject {
         debugTracks = []
         personCount = 0
         state = .idle
-        statusLine = "Not protecting"
+        statusLine = String(localized: "Not protecting")
         debugScores = [:]
         proximity = .clear
         threatAlert = false
@@ -367,9 +367,9 @@ final class ProtectViewModel: ObservableObject {
         let total = frameCounter.value
         let fps = total - lastFpsSample
         lastFpsSample = total
-        let base = usingReplay ? "Replay mode: \(replayName ?? "video")" : "Monitoring with phone camera"
-        let people = personCount == 1 ? "1 person" : "\(personCount) people"
-        statusLine = "\(base) • \(fps) fps • \(people)"
+        let base = usingReplay ? L10n.format("Replay mode: %@", replayName ?? "video") : String(localized: "Monitoring with phone camera")
+        let people = personCount == 1 ? String(localized: "1 person") : L10n.format("%d people", personCount)
+        statusLine = L10n.format("%@ • %d fps • %@", base, fps, people)
         safety.tick(at: Self.now)
         if let flag = conversationFlag, !flag.isActive(at: Self.now) { conversationFlag = nil }
         drainAskSpeech()
@@ -419,7 +419,7 @@ final class ProtectViewModel: ObservableObject {
 
     fileprivate func publishVerification(_ result: VerifyResult) {
         guard isProtecting else { return }
-        lastVerifyResult = "Verify: \(result.threatLevel) via \(result.path) (\(result.reason))"
+        lastVerifyResult = L10n.format("Verify: %@ via %@ (%@)", result.threatLevel, result.path, result.reason)
         AppLog.shared.event("vision_verify", [
             "level": result.threatLevel, "path": result.path, "reason": result.reason,
             "ms": String(Int(result.museLatencyMs)),
@@ -472,7 +472,7 @@ final class ProtectViewModel: ObservableObject {
             // Said once per session, then on-device protection only.
             if !status.reachable, !offlineMessageSaid {
                 offlineMessageSaid = true
-                confirm("Verification is offline")
+                confirm(String(localized: "Verification is offline"))
             }
         }
     }
@@ -519,7 +519,7 @@ final class ProtectViewModel: ObservableObject {
         AppLog.shared.event("countdown_cancel", ["by": "button"])
         safety.cancelCountdown(at: Self.now)
         syncProtectionState()
-        showToast("Auto-SOS cancelled")
+        showToast(String(localized: "Auto-SOS cancelled"))
     }
 
     private func beginCountdown() {
@@ -668,15 +668,17 @@ final class ProtectViewModel: ObservableObject {
             // silent (no TTS, no tones) until the question.
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
         case .safe:
-            UIAccessibility.post(notification: .announcement, argument: "You're safe")
+            UIAccessibility.post(notification: .announcement, argument: String(localized: "You're safe"))
             UINotificationFeedbackGenerator().notificationOccurred(.success)
         case .unsafe:
-            UIAccessibility.post(notification: .announcement, argument: "SOS. Help is on the way.")
+            UIAccessibility.post(notification: .announcement, argument: String(localized: "SOS. Help is on the way."))
             UINotificationFeedbackGenerator().notificationOccurred(.error)
         case .countdown:
             UIAccessibility.post(
                 notification: .announcement,
-                argument: "Auto SOS in 5 seconds. Say open calculator to cancel."
+                argument: L10n.format(
+                    "Auto SOS in 5 seconds. Say %@ to cancel.", CodePhraseStore.primarySafe()
+                )
             )
         case .idle, .monitoring, .asking:
             break
@@ -739,7 +741,7 @@ final class ProtectViewModel: ObservableObject {
         Task {
             guard await ConversationListener.requestPermissions() else {
                 listenerDeafReason =
-                    "Microphone or speech recognition denied: voice check-in unavailable."
+                    String(localized: "Microphone or speech recognition denied: voice check-in unavailable.")
                 return
             }
             listener.localeIdentifier = SpeechLocale.resolve(
@@ -836,11 +838,11 @@ final class ProtectViewModel: ObservableObject {
             } else {
                 switch stopConfirmation.answer(text, at: now) {
                 case .confirmed:
-                    showToast("Protection stopped")
+                    showToast(String(localized: "Protection stopped"))
                     stop()
                     return
                 case .denied:
-                    showToast("Still protecting")
+                    showToast(String(localized: "Still protecting"))
                     return
                 case .waiting, .expired:
                     break // keep scanning below
@@ -937,7 +939,7 @@ final class ProtectViewModel: ObservableObject {
             snippet = String(snippet.suffix(speechConfig.snippetMaxChars))
         }
         guard judgeSchedule.shouldSend(snippet, at: Self.now) else { return }
-        judgeStatus = "AI judge: sent \(snippet.split(separator: " ").count) words"
+        judgeStatus = L10n.format("AI judge: sent %d words", snippet.split(separator: " ").count)
         let sentAt = Date()
         AppLog.shared.event("judge_sent", ["text": snippet])
         let onDevice = speechMatcher.match(window.transcript)
@@ -949,7 +951,7 @@ final class ProtectViewModel: ObservableObject {
                     snippet: snippet, onDeviceSeverity: severity, onDeviceCategory: category
                 )
                 judgeSchedule.finished()
-                judgeStatus = "AI judge: \(result.severity) \(result.categories.joined(separator: ","))"
+                judgeStatus = L10n.format("AI judge: %@ %@", result.severity, result.categories.joined(separator: ","))
                 AppLog.shared.event("judge", [
                     "severity": result.severity, "categories": result.categories.joined(separator: ","),
                     "directed": String(result.directedAtWearer), "reason": result.reason,
@@ -958,7 +960,7 @@ final class ProtectViewModel: ObservableObject {
                 publishJudgement(result, onDevice: onDevice)
             } catch {
                 judgeSchedule.finished()
-                judgeStatus = "AI judge failed: \(error.localizedDescription)"
+                judgeStatus = L10n.format("AI judge failed: %@", error.localizedDescription)
                 AppLog.shared.event("judge_failed", ["error": error.localizedDescription])
                 if let onDevice {
                     publishSpeechFallback(severity: onDevice.severity, category: onDevice.category.rawValue)
@@ -1031,52 +1033,52 @@ final class ProtectViewModel: ObservableObject {
         switch command {
         case .stopProtecting:
             if !isProtecting {
-                showToast("Not protecting")
+                showToast(String(localized: "Not protecting"))
             } else {
                 stopConfirmation.request(at: Self.now)
-                confirm("Stop protecting? Say yes to confirm.")
+                confirm(String(localized: "Stop protecting? Say yes to confirm."))
             }
         case .status:
             confirm(statusSummary())
         case .dim:
             if !isProtecting {
-                showToast("Start protecting first")
+                showToast(String(localized: "Start protecting first"))
             } else {
                 dimmed = true
-                confirm("Screen dimmed")
+                confirm(String(localized: "Screen dimmed"))
             }
         case .brighten:
             dimmed = false
-            confirm("Screen bright")
+            confirm(String(localized: "Screen bright"))
         case .openSettings:
-            confirm("Opening Settings")
+            confirm(String(localized: "Opening Settings"))
             NotificationCenter.default.post(name: .safeguardOpenSettings, object: nil)
         case .goBack:
-            confirm("Going back")
+            confirm(String(localized: "Going back"))
             NotificationCenter.default.post(name: .safeguardGoBack, object: nil)
         case .callEmergency:
-            confirm("Calling 112")
+            confirm(String(localized: "Calling 112"))
             // telprompt always asks first: no pocket-dialled emergencies.
             if let url = URL(string: "telprompt://112") {
                 Task {
                     let opened = await UIApplication.shared.open(url)
                     if !opened {
-                        showToast("Could not place the call on this device")
+                        showToast(String(localized: "Could not place the call on this device"))
                     }
                 }
             }
         case .shareLocation:
-            confirm("Sharing your location is not available yet.")
+            confirm(String(localized: "Sharing your location is not available yet."))
         }
     }
 
     private func statusSummary() -> String {
         if !isProtecting {
-            return "Not protecting."
+            return String(localized: "Not protecting.")
         }
-        let people = personCount == 1 ? "1 person nearby" : "\(personCount) people nearby"
-        let backend = backendStatus?.reachable == true ? "Verification online." : "Verification offline."
-        return "\(displayTitle). \(people). \(proximity.title). \(backend)"
+        let people = personCount == 1 ? String(localized: "1 person nearby") : L10n.format("%d people nearby", personCount)
+        let backend = backendStatus?.reachable == true ? String(localized: "Verification online.") : String(localized: "Verification offline.")
+        return L10n.format("%@. %@. %@. %@", displayTitle, people, proximity.title, backend)
     }
 
     /// Every voice action confirms three ways: a short spoken message, a
@@ -1152,7 +1154,7 @@ final class ProtectViewModel: ObservableObject {
         noteSpeechToPipeline(severity: severity, at: Self.now)
         drainAskSpeech()
         syncProtectionState()
-        lastSpeechInfo = "Speech: \(category) on-device (verification offline)"
+        lastSpeechInfo = L10n.format("Speech: %@ on-device (verification offline)", category)
     }
 
     // MARK: - SOS escalation (Phase 6)
@@ -1232,7 +1234,7 @@ final class ProtectViewModel: ObservableObject {
         routeWaitStart = nil
         cabDeadline = nil
         showingCabSheet = false
-        showToast("SOS ended")
+        showToast(String(localized: "SOS ended"))
     }
 
     private func shortStatus(_ status: TrackStatus) -> String {
@@ -1285,21 +1287,21 @@ final class ProtectViewModel: ObservableObject {
 
     private func trackReason(for error: Error) -> String {
         if error is URLError {
-            return "backend unreachable"
+            return String(localized: "backend unreachable")
         }
         if let failure = error as? VerifierError {
             switch failure {
             case .serverStatus(401):
-                return "bad app token"
+                return String(localized: "bad app token")
             case .serverStatus(429):
-                return "rate limited"
+                return String(localized: "rate limited")
             case .serverStatus(let code):
-                return "server error \(code)"
+                return L10n.format("server error %@", String(code))
             case .invalidResponse:
-                return "bad response"
+                return String(localized: "bad response")
             }
         }
-        return "failed"
+        return String(localized: "failed")
     }
 
     /// Creates the incident once (the backend dedupes repeats per session):
@@ -1311,7 +1313,7 @@ final class ProtectViewModel: ObservableObject {
         do {
             let result = try await incidentClient.startIncident(
                 sessionID: session,
-                wearerName: wearerName.isEmpty ? "Someone" : wearerName,
+                wearerName: wearerName.isEmpty ? String(localized: "Someone") : wearerName,
                 contactCodes: sosContacts.linkedCodes,
                 dryRun: !sendRealAlerts,
                 latitude: fix?.coordinate.latitude,
@@ -1333,7 +1335,7 @@ final class ProtectViewModel: ObservableObject {
         if await ensureIncident() {
             trackDone(.contacts)
         } else {
-            trackFailed(.contacts, reason: "could not reach backend")
+            trackFailed(.contacts, reason: String(localized: "could not reach backend"))
         }
     }
 
@@ -1344,7 +1346,7 @@ final class ProtectViewModel: ObservableObject {
         if await ensureIncident(), liveURL != nil {
             trackDone(.stream)
         } else {
-            trackFailed(.stream, reason: "live page unavailable")
+            trackFailed(.stream, reason: String(localized: "live page unavailable"))
         }
     }
 
@@ -1365,7 +1367,7 @@ final class ProtectViewModel: ObservableObject {
             let nearest = places.sorted { $0.distance < $1.distance }.prefix(3)
             guard !nearest.isEmpty else {
                 sosRouteMessage = RouteChoice.noPlacesMessage
-                trackFailed(.route, reason: "none found")
+                trackFailed(.route, reason: String(localized: "none found"))
                 return
             }
             var options: [(candidate: RouteCandidate, route: MKRoute, item: MKMapItem)] = []
@@ -1387,19 +1389,19 @@ final class ProtectViewModel: ObservableObject {
                   let won = options.first(where: { $0.candidate == pick })
             else {
                 sosRouteMessage = RouteChoice.noRouteMessage
-                trackFailed(.route, reason: "no route")
+                trackFailed(.route, reason: String(localized: "no route"))
                 return
             }
             sosRoute = won.route
             sosDestinationName = pick.name
             sosDestinationCoordinate = won.item.placemark.coordinate
-            sosDestinationETA = "\(Int((pick.etaSeconds + 30) / 60)) min walk"
+            sosDestinationETA = L10n.format("%d min walk", Int((pick.etaSeconds + 30) / 60))
             sosDestinationItem = won.item
             sosRegion = regionCovering(fix.coordinate, won.item.placemark.coordinate)
             sosRouteMessage = nil
             trackDone(.route)
         } catch {
-            trackFailed(.route, reason: "search failed")
+            trackFailed(.route, reason: String(localized: "search failed"))
         }
     }
 
@@ -1468,7 +1470,7 @@ final class ProtectViewModel: ObservableObject {
     private func runCabTrack() async {
         guard sosActive else { return }
         guard await ensureIncident(), let id = incidentID else {
-            trackFailed(.cab, reason: "waiting for incident")
+            trackFailed(.cab, reason: String(localized: "waiting for incident"))
             return
         }
         do {
@@ -1485,7 +1487,7 @@ final class ProtectViewModel: ObservableObject {
     /// Manual re-share from the demo sheet.
     func shareCabDetails() {
         guard sosActive, let id = incidentID else {
-            showToast("No active SOS")
+            showToast(String(localized: "No active SOS"))
             return
         }
         Task {
@@ -1494,9 +1496,9 @@ final class ProtectViewModel: ObservableObject {
                 _ = try await incidentClient.shareCab(
                     incidentID: id, driver: cabDriver, plate: cabPlate, etaMinutes: etaMinutes
                 )
-                showToast("Cab details shared")
+                showToast(String(localized: "Cab details shared"))
             } catch {
-                showToast("Could not share cab details")
+                showToast(String(localized: "Could not share cab details"))
             }
         }
     }
@@ -1550,7 +1552,7 @@ final class ProtectViewModel: ObservableObject {
     /// Creates a backend invite and adds the contact. Returns the share link.
     func inviteContact(name: String) async -> URL? {
         guard !sosContacts.isFull else {
-            showToast("At most 5 contacts")
+            showToast(String(localized: "At most 5 contacts"))
             return nil
         }
         do {
@@ -1562,7 +1564,7 @@ final class ProtectViewModel: ObservableObject {
             }
             return nil
         } catch {
-            showToast("Could not create invite")
+            showToast(String(localized: "Could not create invite"))
             return nil
         }
     }
@@ -1695,7 +1697,7 @@ final class ProtectViewModel: ObservableObject {
     /// Returns what happened, honestly (offline failures listed).
     func deleteAllMyData(keepingSetup: Bool = false) async -> DataWipeReport? {
         guard !sosActive else {
-            showToast("End the SOS first")
+            showToast(String(localized: "End the SOS first"))
             return nil
         }
         let sessions = Set(history.entries.compactMap(\.evidenceSessionID))
@@ -1736,7 +1738,7 @@ final class ProtectViewModel: ObservableObject {
         do {
             let result = try await incidentClient.startIncident(
                 sessionID: EvidenceSessionID.make(),
-                wearerName: wearerName.isEmpty ? "Someone" : wearerName,
+                wearerName: wearerName.isEmpty ? String(localized: "Someone") : wearerName,
                 contactCodes: sosContacts.linkedCodes,
                 dryRun: true, test: false
             )
@@ -1751,23 +1753,23 @@ final class ProtectViewModel: ObservableObject {
     func sendTestAlert() {
         let codes = sosContacts.linkedCodes
         guard !codes.isEmpty else {
-            showToast("Link a contact first")
+            showToast(String(localized: "Link a contact first"))
             return
         }
         Task {
             do {
                 let result = try await incidentClient.startIncident(
                     sessionID: EvidenceSessionID.make(),
-                    wearerName: wearerName.isEmpty ? "Someone" : wearerName,
+                    wearerName: wearerName.isEmpty ? String(localized: "Someone") : wearerName,
                     contactCodes: codes,
                     dryRun: !sendRealAlerts,
                     test: true
                 )
                 try? await incidentClient.endIncident(result.id)
-                showToast(sendRealAlerts ? "Test alert sent" : "Test alert logged (dry-run)")
+                showToast(sendRealAlerts ? String(localized: "Test alert sent") : String(localized: "Test alert logged (dry-run)"))
                 AppLog.shared.event("test_alert", ["sent": "true"])
             } catch {
-                showToast("Test alert failed")
+                showToast(String(localized: "Test alert failed"))
                 AppLog.shared.event("test_alert", ["sent": "false"])
             }
         }

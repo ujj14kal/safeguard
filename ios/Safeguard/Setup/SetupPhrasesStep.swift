@@ -121,7 +121,7 @@ struct PhrasePracticeView: View {
                         .font(.headline)
                 }
                 .accessibilityElement(children: .combine)
-                .accessibilityLabel("Practice result: \(heardText)")
+                .accessibilityLabel(Text(format: "Practice result: %@", heardText))
             } else {
                 Text("Microphone or speech recognition is off, so practice can't hear you. " +
                     "Turn them on in Settings to practice.")
@@ -137,16 +137,17 @@ struct PhrasePracticeView: View {
             && SetupPermissions.status(of: .speech) == .granted
     }
 
+    /// Pre-localised: shown as a label and read inside an announcement.
     private var heardText: String {
         switch model.practiceHeard {
         case .none:
-            "Say a code phrase…"
+            String(localized: "Say a code phrase…")
         case .noMatch:
-            "Heard: nothing"
+            String(localized: "Heard: nothing")
         case .safe:
-            "Heard: safe phrase"
+            String(localized: "Heard: safe phrase")
         case .unsafe:
-            "Heard: unsafe phrase"
+            String(localized: "Heard: unsafe phrase")
         }
     }
 

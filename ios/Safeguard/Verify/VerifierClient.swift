@@ -181,13 +181,13 @@ public struct VerifyFailure: Sendable, Equatable {
     public var message: String {
         switch kind {
         case .unreachable:
-            "Verification is offline: backend unreachable. On-device protection only."
+            String(localized: "Verification is offline: backend unreachable. On-device protection only.")
         case .noKey:
-            "Verification unavailable: the backend has no API key."
+            String(localized: "Verification unavailable: the backend has no API key.")
         case .rateLimit:
-            "Verification rate-limited: too many checks in a minute."
+            String(localized: "Verification rate-limited: too many checks in a minute.")
         case .serverError:
-            "Verification server error (\(detail)). On-device protection only."
+            L10n.format("Verification server error (%@). On-device protection only.", detail)
         }
     }
 

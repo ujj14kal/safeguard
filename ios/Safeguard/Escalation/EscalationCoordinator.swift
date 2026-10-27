@@ -11,13 +11,13 @@ public enum EscalationTrack: String, Sendable, CaseIterable {
     public var title: String {
         switch self {
         case .route:
-            return "Route"
+            return String(localized: "Route")
         case .contacts:
-            return "Contacts"
+            return String(localized: "Contacts")
         case .stream:
-            return "Live stream"
+            return String(localized: "Live stream")
         case .cab:
-            return "Cab"
+            return String(localized: "Cab")
         }
     }
 }
@@ -141,7 +141,7 @@ public struct EscalationCoordinator: Sendable {
         for track in EscalationTrack.allCases {
             switch status(of: track) {
             case .running, .pending:
-                statuses[track] = .failed(reason: "SOS ended")
+                statuses[track] = .failed(reason: String(localized: "SOS ended"))
             case .done, .failed:
                 break
             }

@@ -30,9 +30,9 @@ struct ShieldRingView: View {
 
     private var voiceOverLabel: String {
         if state.isProtecting, proximity != .clear {
-            return "Status: \(proximity.title)"
+            return L10n.format("Status: %@", proximity.title)
         }
-        return "Status: \(state.title)"
+        return L10n.format("Status: %@", state.title)
     }
 
     var body: some View {

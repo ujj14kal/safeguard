@@ -129,6 +129,8 @@
 		A100000000000000000000CC /* SetupDryRunStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000CB /* SetupDryRunStep.swift */; };
 		A100000000000000000000CE /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000CD /* SettingsView.swift */; };
 		A100000000000000000000D0 /* ActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000CF /* ActivityView.swift */; };
+		A100000000000000000000D2 /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000D1 /* L10n.swift */; };
+		B20000000000000000000050 /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000D1 /* L10n.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -221,6 +223,7 @@
 		A100000000000000000000CB /* SetupDryRunStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupDryRunStep.swift; sourceTree = "<group>"; };
 		A100000000000000000000CD /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		A100000000000000000000CF /* ActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityView.swift; sourceTree = "<group>"; };
+		A100000000000000000000D1 /* L10n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = L10n.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -430,6 +433,7 @@
 				A100000000000000000000C7 /* SetupContactsStep.swift */,
 				A100000000000000000000C9 /* SetupPhrasesStep.swift */,
 				A100000000000000000000CB /* SetupDryRunStep.swift */,
+				A100000000000000000000D1 /* L10n.swift */,
 			);
 			path = Setup;
 			sourceTree = "<group>";
@@ -618,6 +622,7 @@
 				A100000000000000000000CC /* SetupDryRunStep.swift in Sources */,
 				A100000000000000000000CE /* SettingsView.swift in Sources */,
 				A100000000000000000000D0 /* ActivityView.swift in Sources */,
+				A100000000000000000000D2 /* L10n.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -680,6 +685,7 @@
 				B2000000000000000000004D /* IncidentHistory.swift in Sources */,
 				B2000000000000000000004E /* SetupTests.swift in Sources */,
 				B2000000000000000000004F /* AppLanguage.swift in Sources */,
+				B20000000000000000000050 /* L10n.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

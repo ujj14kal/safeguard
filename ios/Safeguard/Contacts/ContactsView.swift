@@ -24,7 +24,10 @@ struct ContactsView: View {
                     }
                     .onDelete(perform: delete)
                 } header: {
-                    Text("Emergency contacts (\(model.sosContacts.contacts.count)/\(SOSContactStore.maxContacts))")
+                    Text(
+                        format: "Emergency contacts (%d/%d)",
+                        model.sosContacts.contacts.count, SOSContactStore.maxContacts
+                    )
                 } footer: {
                     Text("Only people who agree get alerts. They press Start once in Telegram; nothing is sent before that.")
                 }

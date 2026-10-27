@@ -206,44 +206,12 @@ final class RouteChoiceTests: XCTestCase {
     }
 }
 
-/// App-composed share texts: fixed template + wearer details only.
+/// The mock-cab banner: always present, always honest.
+/// (Alert/cab/ended texts are composed server-side; their no-leak rule is
+/// pinned by backend tests now.)
 final class SOSMessageBuilderTests: XCTestCase {
     func testDemoBannerAlwaysPresent() {
         XCTAssertTrue(SOSMessageBuilder.demoBanner.contains("DEMO"))
         XCTAssertTrue(SOSMessageBuilder.demoBanner.contains("no real cab service"))
-    }
-
-    func testCabShareExactShape() {
-        let text = SOSMessageBuilder.cabShare(
-            driver: "Demo Driver", plate: "DL-1D-EMO", etaMinutes: 4,
-            liveURL: "https://demo.test/live/abc"
-        )
-        XCTAssertEqual(
-            text,
-            "DEMO cab (no real cab service is connected): Demo Driver, "
-                + "DL-1D-EMO, arriving in about 4 min. "
-                + "Family live page: https://demo.test/live/abc"
-        )
-    }
-
-    func testCabShareHasNoAppearanceOrTranscript() {
-        // The builder takes no transcript input; the template words are
-        // pinned here so appearance/identity wording can never creep in.
-        let text = SOSMessageBuilder.cabShare(
-            driver: "Demo Driver", plate: "DL-1D-EMO", etaMinutes: 4,
-            liveURL: "https://demo.test/live/abc"
-        ).lowercased()
-        let words = Set(
-            text.components(separatedBy: CharacterSet.alphanumerics.inverted).filter { !$0.isEmpty }
-        )
-        let forbidden = [
-            "wearing", "wore", "shirt", "pants", "dress", "skinned", "beard",
-            "man", "woman", "men", "women", "boy", "girl", "male", "female",
-            "heard", "said", "transcript",
-        ]
-        XCTAssertTrue(
-            words.intersection(forbidden).isEmpty,
-            "leaked: \(words.intersection(forbidden))"
-        )
     }
 }

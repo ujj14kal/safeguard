@@ -7,14 +7,8 @@ import Foundation
 /// appearance, or anything about other people.
 public enum SOSMessageBuilder {
     /// The mock-cab banner. Every cab surface shows it: the app must never
-    /// pretend the demo cab is real.
+    /// pretend the demo cab is real. (Alert/cab/ended texts are composed
+    /// server-side so both languages stay in one place; the app-side
+    /// composer was removed in Phase 7.)
     public static let demoBanner = "DEMO — no real cab service is connected."
-
-    /// "Share cab details" text for the contacts' Telegram thread.
-    public static func cabShare(
-        driver: String, plate: String, etaMinutes: Int, liveURL: String
-    ) -> String {
-        "DEMO cab (no real cab service is connected): \(driver), \(plate), "
-            + "arriving in about \(etaMinutes) min. Family live page: \(liveURL)"
-    }
 }

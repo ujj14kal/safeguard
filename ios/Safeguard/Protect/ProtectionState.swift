@@ -8,25 +8,25 @@ enum ProtectionState: String, CaseIterable {
 
     var title: String {
         switch self {
-        case .idle: "Not protecting"
-        case .monitoring: "Protecting"
-        case .suspected: "Something seems off"
-        case .asking: "Are you safe?"
-        case .safe: "You're safe"
-        case .unsafe: "SOS — help is on the way"
-        case .countdown: "Auto-SOS starting"
+        case .idle: String(localized: "Not protecting")
+        case .monitoring: String(localized: "Protecting")
+        case .suspected: String(localized: "Something seems off")
+        case .asking: String(localized: "Are you safe?")
+        case .safe: String(localized: "You're safe")
+        case .unsafe: String(localized: "SOS — help is on the way")
+        case .countdown: String(localized: "Auto-SOS starting")
         }
     }
 
     var subtitle: String {
         switch self {
-        case .idle: "Start protecting to watch for threatening behaviour."
-        case .monitoring: "Watching for threatening behaviour nearby."
-        case .suspected: "Checking what is happening around you."
-        case .asking: "No reply in 10 seconds starts the SOS."
-        case .safe: "Incident ended. Stay safe."
-        case .unsafe: "Route, contacts, live stream and cab are starting."
-        case .countdown: "Say \"open calculator\", tap Cancel, or double tap if you are OK."
+        case .idle: String(localized: "Start protecting to watch for threatening behaviour.")
+        case .monitoring: String(localized: "Watching for threatening behaviour nearby.")
+        case .suspected: String(localized: "Checking what is happening around you.")
+        case .asking: String(localized: "No reply in 10 seconds starts the SOS.")
+        case .safe: String(localized: "Incident ended. Stay safe.")
+        case .unsafe: String(localized: "Route, contacts, live stream and cab are starting.")
+        case .countdown: String(localized: "Say \"open calculator\", tap Cancel, or double tap if you are OK.")
         }
     }
 

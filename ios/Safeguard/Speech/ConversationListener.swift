@@ -181,20 +181,20 @@ final class ConversationListener: ObservableObject {
         guard let recognizer = SFSpeechRecognizer(locale: Locale(identifier: localeIdentifier)),
               recognizer.isAvailable
         else {
-            goDeaf("Speech recognition unavailable for \(localeIdentifier)")
+            goDeaf(L10n.format("Speech recognition unavailable for %@", localeIdentifier))
             return
         }
         guard recognizer.supportsOnDeviceRecognition else {
             // Apple's recogniser is the always-on local tier: on-device or
             // nothing. (The cloud ear is a separate, visible, optional tier.)
-            goDeaf("On-device speech for \(localeIdentifier) is not available on this iPhone")
+            goDeaf(L10n.format("On-device speech for %@ is not available on this iPhone", localeIdentifier))
             return
         }
         AppLog.shared.event("listener_start", ["engine": "apple", "locale": localeIdentifier])
         do {
             try configureAudioSession()
         } catch {
-            goDeaf("Could not start audio (\(error.localizedDescription))")
+            goDeaf(L10n.format("Could not start audio (%@)", error.localizedDescription))
             return
         }
         self.recognizer = recognizer
@@ -220,7 +220,7 @@ final class ConversationListener: ObservableObject {
         do {
             try engine.start()
         } catch {
-            goDeaf("Could not start audio (\(error.localizedDescription))")
+            goDeaf(L10n.format("Could not start audio (%@)", error.localizedDescription))
             return
         }
         session.start(at: Self.now)
