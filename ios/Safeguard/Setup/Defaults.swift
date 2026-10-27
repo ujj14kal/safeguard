@@ -67,7 +67,6 @@ public enum Defaults {
         "onboardingSeen",
         "setupComplete",
         "setupStep",
-        "setupContactDrafts",
         "wearerName",
         "sendRealAlerts",
         "sosContactsJSON",

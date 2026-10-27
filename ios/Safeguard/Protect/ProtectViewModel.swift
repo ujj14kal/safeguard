@@ -1693,14 +1693,14 @@ final class ProtectViewModel: ObservableObject {
     /// Wipes local data, then asks the backend to delete this device's
     /// evidence sessions and contacts. Refuses during an active SOS.
     /// Returns what happened, honestly (offline failures listed).
-    func deleteAllMyData() async -> DataWipeReport? {
+    func deleteAllMyData(keepingSetup: Bool = false) async -> DataWipeReport? {
         guard !sosActive else {
             showToast("End the SOS first")
             return nil
         }
         let sessions = Set(history.entries.compactMap(\.evidenceSessionID))
         let codes = sosContacts.contacts.map(\.code)
-        var report = DataWipe.wipeLocal()
+        var report = DataWipe.wipeLocal(keeping: keepingSetup ? ["setupComplete"] : [])
         sosContacts = SOSContactStore()
         history = IncidentHistory()
         refreshPhrases()
@@ -1727,6 +1727,24 @@ final class ProtectViewModel: ObservableObject {
             "backend_failed": String(report.backendFailed.count),
         ])
         return report
+    }
+
+    /// Setup dry-run: a labelled SAMPLE SOS. A dry-run (never real),
+    /// non-test incident is started and ended right away so the preview is
+    /// exactly the text contacts would receive. No recording, no location.
+    func runSampleSOS() async -> String? {
+        do {
+            let result = try await incidentClient.startIncident(
+                sessionID: EvidenceSessionID.make(),
+                wearerName: wearerName.isEmpty ? "Someone" : wearerName,
+                contactCodes: sosContacts.linkedCodes,
+                dryRun: true, test: false
+            )
+            try? await incidentClient.endIncident(result.id)
+            return result.previewText.isEmpty ? nil : result.previewText
+        } catch {
+            return nil
+        }
     }
 
     /// Settings test button: a test-flagged incident, ended right away.

@@ -63,23 +63,33 @@ struct ContactsView: View {
 
     @ViewBuilder
     private func contactRow(_ contact: SOSContact) -> some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(contact.name)
-                Text(contact.linked ? "Linked" : "Waiting")
-                    .font(.footnote)
-                    .foregroundStyle(contact.linked ? .green : .secondary)
-            }
-            Spacer()
-            if contact.linked {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
-            } else if let link = contact.link, let url = URL(string: link) {
-                ShareLink(item: url) {
-                    Label("Invite on Telegram", systemImage: "paperplane")
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(contact.name)
+                    Text(contact.linked ? "Linked" : "Waiting")
+                        .font(.footnote)
+                        .foregroundStyle(contact.linked ? .green : .secondary)
                 }
-                .font(.footnote)
+                Spacer()
+                if contact.linked {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                } else if let link = contact.link, let url = URL(string: link) {
+                    ShareLink(item: url) {
+                        Label("Invite on Telegram", systemImage: "paperplane")
+                    }
+                    .font(.footnote)
+                }
             }
+            Toggle(
+                "This person agreed to be alerted",
+                isOn: Binding(
+                    get: { contact.agreed },
+                    set: { model.setContactAgreed(code: contact.code, agreed: $0) }
+                )
+            )
+            .font(.footnote)
         }
     }
 

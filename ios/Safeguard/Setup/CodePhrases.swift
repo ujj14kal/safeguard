@@ -9,6 +9,7 @@ public enum CodePhraseValidation: Sendable {
         case same
         case containsOther
         case isDistressWord
+        case collidesWithDefault
     }
 
     /// Validates a (safe, unsafe) pair. Each needs at least 2 words, they
@@ -37,6 +38,16 @@ public enum CodePhraseValidation: Sendable {
             || distress.contains(unsafeWords.joined(separator: " "))
         {
             failures.append(.isDistressWord)
+        }
+        // The matcher tries unsafe first, substring-based: a safe phrase
+        // containing an unsafe default would always fire Unsafe instead
+        // and silently never answer Safe. (The reverse is harmless —
+        // unsafe wins anyway.)
+        let unsafeDefaults = SafetyConfig().unsafePhrases.map { words(in: $0) }
+        if !safeWords.isEmpty, unsafeDefaults.contains(where: {
+            contains(words: safeWords, phrase: $0)
+        }) {
+            failures.append(.collidesWithDefault)
         }
         return failures
     }

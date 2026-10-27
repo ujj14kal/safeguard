@@ -45,7 +45,7 @@ struct SafeguardApp: App {
     }
 }
 
-/// In-app splash: the logo with "SafeGuard" beneath it, shown for about 3.5 s
+/// In-app splash: the logo with "Safeguard" beneath it, shown for about 3.5 s
 /// on every launch, then a smooth cross-fade into the app.
 ///
 /// The system launch screen (Info.plist `UILaunchScreen`) already shows the
@@ -73,7 +73,7 @@ struct SplashView: View {
             Image("LaunchLogo")
                 .scaleEffect(settled && !reduceMotion ? 1.04 : 1.0)
                 .accessibilityHidden(true)
-            Text("SafeGuard")
+            Text("Safeguard")
                 .font(.system(size: 34, weight: .semibold, design: .rounded))
                 .tracking(0.6)
                 .foregroundStyle(Self.brandPurple)
@@ -82,7 +82,7 @@ struct SplashView: View {
         }
         .ignoresSafeArea()
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("SafeGuard")
+        .accessibilityLabel("Safeguard")
         .onAppear {
             // Title fades and rises into place after a short beat.
             withAnimation(.easeOut(duration: 0.9).delay(0.5)) {

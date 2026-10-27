@@ -150,4 +150,8 @@ extension Notification.Name {
     public static let safeguardOpenSettings = Notification.Name("SafeguardOpenSettings")
     /// Voice command "go back": ContentView returns to Protect.
     public static let safeguardGoBack = Notification.Name("SafeguardGoBack")
+    /// Settings "Run setup again": ContentView re-opens the setup flow.
+    public static let safeguardRunSetup = Notification.Name("SafeguardRunSetup")
+    /// Settings "Emergency contacts": ContentView switches to the tab.
+    public static let safeguardOpenContacts = Notification.Name("SafeguardOpenContacts")
 }

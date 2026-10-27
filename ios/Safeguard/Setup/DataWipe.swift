@@ -19,14 +19,14 @@ public enum DataWipe {
     @discardableResult
     public static func wipeLocal(
         defaults: UserDefaults = .standard, documents: URL? = nil,
-        domain: String? = nil
+        domain: String? = nil, keeping: [String] = []
     ) -> DataWipeReport {
         var report = DataWipeReport()
         let store = defaults
         var present = store.persistentDomain(
             forName: domain ?? Bundle.main.bundleIdentifier ?? ""
         ) ?? [:]
-        for key in Defaults.ownedKeys where present[key] != nil {
+        for key in Defaults.ownedKeys where present[key] != nil && !keeping.contains(key) {
             store.removeObject(forKey: key)
             present.removeValue(forKey: key)
             report.removedKeys.append(key)

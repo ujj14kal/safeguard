@@ -172,6 +172,26 @@ final class CodePhraseValidationTests: XCTestCase {
         )
     }
 
+    func testSafeContainingUnsafeDefaultCollides() {
+        // Unsafe is matched first, so this safe phrase could never fire.
+        XCTAssertEqual(
+            CodePhraseValidation.validate(
+                safe: "please open app store now", unsafe: "open calculator"
+            ),
+            [.collidesWithDefault]
+        )
+    }
+
+    func testUnsafeContainingSafeDefaultIsAllowed() {
+        // Unsafe wins anyway, so this pair works as labelled.
+        XCTAssertEqual(
+            CodePhraseValidation.validate(
+                safe: "open notes app", unsafe: "please open calculator now"
+            ),
+            []
+        )
+    }
+
     func testMatchingIsCaseInsensitive() {
         // "Help Me" still collides with the distress word "help me".
         XCTAssertEqual(

@@ -22,7 +22,6 @@
 		A1000000000000000000005C /* ProtectionState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000002C /* ProtectionState.swift */; };
 		A1000000000000000000005D /* ProtectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000002D /* ProtectView.swift */; };
 		A1000000000000000000005E /* ProtectViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000002E /* ProtectViewModel.swift */; };
-		A1000000000000000000005F /* PlaceholderViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000002F /* PlaceholderViews.swift */; };
 		A10000000000000000000070 /* PreviewStatesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000030 /* PreviewStatesView.swift */; };
 
 		A10000000000000000000072 /* DetectedPerson.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000031 /* DetectedPerson.swift */; };
@@ -71,7 +70,6 @@
 		B20000000000000000000039 /* TranscriptWindowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000008D /* TranscriptWindowTests.swift */; };
 		B2000000000000000000003A /* VerifySpeechTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000008E /* VerifySpeechTests.swift */; };
 		A10000000000000000000090 /* ConversationListener.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000008F /* ConversationListener.swift */; };
-		A10000000000000000000092 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000091 /* OnboardingView.swift */; };
 		B2000000000000000000003B /* DS.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000023 /* DS.swift */; };
 		B2000000000000000000003C /* ThemeContrastTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000093 /* ThemeContrastTests.swift */; };
 		A10000000000000000000095 /* BoxMapping.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000094 /* BoxMapping.swift */; };
@@ -122,6 +120,15 @@
 		B2000000000000000000004E /* SetupTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000BC /* SetupTests.swift */; };
 		A100000000000000000000BE /* AppLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000BD /* AppLanguage.swift */; };
 		B2000000000000000000004F /* AppLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000BD /* AppLanguage.swift */; };
+		A100000000000000000000C0 /* ListeningChoices.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000BF /* ListeningChoices.swift */; };
+		A100000000000000000000C2 /* SetupPermissions.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000C1 /* SetupPermissions.swift */; };
+		A100000000000000000000C4 /* SetupFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000C3 /* SetupFlowView.swift */; };
+		A100000000000000000000C6 /* SetupSteps.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000C5 /* SetupSteps.swift */; };
+		A100000000000000000000C8 /* SetupContactsStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000C7 /* SetupContactsStep.swift */; };
+		A100000000000000000000CA /* SetupPhrasesStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000C9 /* SetupPhrasesStep.swift */; };
+		A100000000000000000000CC /* SetupDryRunStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000CB /* SetupDryRunStep.swift */; };
+		A100000000000000000000CE /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000CD /* SettingsView.swift */; };
+		A100000000000000000000D0 /* ActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000CF /* ActivityView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -141,7 +148,6 @@
 		A1000000000000000000002C /* ProtectionState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProtectionState.swift; sourceTree = "<group>"; };
 		A1000000000000000000002D /* ProtectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProtectView.swift; sourceTree = "<group>"; };
 		A1000000000000000000002E /* ProtectViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProtectViewModel.swift; sourceTree = "<group>"; };
-		A1000000000000000000002F /* PlaceholderViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceholderViews.swift; sourceTree = "<group>"; };
 		A10000000000000000000030 /* PreviewStatesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewStatesView.swift; sourceTree = "<group>"; };
 		A10000000000000000000036 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 
@@ -176,7 +182,6 @@
 		A1000000000000000000008D /* TranscriptWindowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptWindowTests.swift; sourceTree = "<group>"; };
 		A1000000000000000000008E /* VerifySpeechTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerifySpeechTests.swift; sourceTree = "<group>"; };
 		A1000000000000000000008F /* ConversationListener.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationListener.swift; sourceTree = "<group>"; };
-		A10000000000000000000091 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		A10000000000000000000093 /* ThemeContrastTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeContrastTests.swift; sourceTree = "<group>"; };
 		A10000000000000000000094 /* BoxMapping.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoxMapping.swift; sourceTree = "<group>"; };
 		A10000000000000000000096 /* PersonBoxOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonBoxOverlay.swift; sourceTree = "<group>"; };
@@ -207,6 +212,15 @@
 		A100000000000000000000BA /* IncidentHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IncidentHistory.swift; sourceTree = "<group>"; };
 		A100000000000000000000BC /* SetupTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupTests.swift; sourceTree = "<group>"; };
 		A100000000000000000000BD /* AppLanguage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLanguage.swift; sourceTree = "<group>"; };
+		A100000000000000000000BF /* ListeningChoices.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListeningChoices.swift; sourceTree = "<group>"; };
+		A100000000000000000000C1 /* SetupPermissions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupPermissions.swift; sourceTree = "<group>"; };
+		A100000000000000000000C3 /* SetupFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupFlowView.swift; sourceTree = "<group>"; };
+		A100000000000000000000C5 /* SetupSteps.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupSteps.swift; sourceTree = "<group>"; };
+		A100000000000000000000C7 /* SetupContactsStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupContactsStep.swift; sourceTree = "<group>"; };
+		A100000000000000000000C9 /* SetupPhrasesStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupPhrasesStep.swift; sourceTree = "<group>"; };
+		A100000000000000000000CB /* SetupDryRunStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupDryRunStep.swift; sourceTree = "<group>"; };
+		A100000000000000000000CD /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		A100000000000000000000CF /* ActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -244,7 +258,6 @@
 				A10000000000000000000018 /* Supporting */,
 				A10000000000000000000037 /* Assets.xcassets */,
 				A10000000000000000000083 /* Speech */,
-				A10000000000000000000091 /* OnboardingView.swift */,
 				A1000000000000000000009E /* Escalation */,
 				A100000000000000000000AB /* Contacts */,
 				A100000000000000000000B0 /* Setup */,
@@ -303,7 +316,7 @@
 		A10000000000000000000016 /* Tabs */ = {
 			isa = PBXGroup;
 			children = (
-				A1000000000000000000002F /* PlaceholderViews.swift */,
+				A100000000000000000000CD /* SettingsView.swift */,
 			);
 			path = Tabs;
 			sourceTree = "<group>";
@@ -410,6 +423,13 @@
 				A100000000000000000000B6 /* SetupMachine.swift */,
 				A100000000000000000000B8 /* DataWipe.swift */,
 				A100000000000000000000BD /* AppLanguage.swift */,
+				A100000000000000000000BF /* ListeningChoices.swift */,
+				A100000000000000000000C1 /* SetupPermissions.swift */,
+				A100000000000000000000C3 /* SetupFlowView.swift */,
+				A100000000000000000000C5 /* SetupSteps.swift */,
+				A100000000000000000000C7 /* SetupContactsStep.swift */,
+				A100000000000000000000C9 /* SetupPhrasesStep.swift */,
+				A100000000000000000000CB /* SetupDryRunStep.swift */,
 			);
 			path = Setup;
 			sourceTree = "<group>";
@@ -418,6 +438,7 @@
 			isa = PBXGroup;
 			children = (
 				A100000000000000000000BA /* IncidentHistory.swift */,
+				A100000000000000000000CF /* ActivityView.swift */,
 			);
 			path = Activity;
 			sourceTree = "<group>";
@@ -546,7 +567,6 @@
 				A1000000000000000000005C /* ProtectionState.swift in Sources */,
 				A1000000000000000000005D /* ProtectView.swift in Sources */,
 				A1000000000000000000005E /* ProtectViewModel.swift in Sources */,
-				A1000000000000000000005F /* PlaceholderViews.swift in Sources */,
 				A10000000000000000000070 /* PreviewStatesView.swift in Sources */,
 				A10000000000000000000072 /* DetectedPerson.swift in Sources */,
 				A10000000000000000000073 /* PersonDetector.swift in Sources */,
@@ -572,7 +592,6 @@
 				C1000000000000000000008B /* AudioResampler.swift in Sources */,
 				C1000000000000000000007B /* CloudEarSupport.swift in Sources */,
 				A10000000000000000000090 /* ConversationListener.swift in Sources */,
-				A10000000000000000000092 /* OnboardingView.swift in Sources */,
 				A10000000000000000000095 /* BoxMapping.swift in Sources */,
 				A10000000000000000000097 /* PersonBoxOverlay.swift in Sources */,
 				A1000000000000000000009A /* DSButtons.swift in Sources */,
@@ -590,6 +609,15 @@
 				A100000000000000000000B9 /* DataWipe.swift in Sources */,
 				A100000000000000000000BB /* IncidentHistory.swift in Sources */,
 				A100000000000000000000BE /* AppLanguage.swift in Sources */,
+				A100000000000000000000C0 /* ListeningChoices.swift in Sources */,
+				A100000000000000000000C2 /* SetupPermissions.swift in Sources */,
+				A100000000000000000000C4 /* SetupFlowView.swift in Sources */,
+				A100000000000000000000C6 /* SetupSteps.swift in Sources */,
+				A100000000000000000000C8 /* SetupContactsStep.swift in Sources */,
+				A100000000000000000000CA /* SetupPhrasesStep.swift in Sources */,
+				A100000000000000000000CC /* SetupDryRunStep.swift in Sources */,
+				A100000000000000000000CE /* SettingsView.swift in Sources */,
+				A100000000000000000000D0 /* ActivityView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -715,7 +743,7 @@
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "Safeguard/Supporting/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 0.3.0;
+				MARKETING_VERSION = 0.7.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "io.github.ujj14kal.safeguard";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
@@ -733,7 +761,7 @@
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "Safeguard/Supporting/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 0.3.0;
+				MARKETING_VERSION = 0.7.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "io.github.ujj14kal.safeguard";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
@@ -748,7 +776,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 0.3.0;
+				MARKETING_VERSION = 0.7.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "io.github.ujj14kal.safeguard.tests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
@@ -763,7 +791,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 0.3.0;
+				MARKETING_VERSION = 0.7.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "io.github.ujj14kal.safeguard.tests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
