@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 
 from pathlib import Path
 
-from fastapi import FastAPI, Header, HTTPException, Request, status
+from fastapi import FastAPI, Header, HTTPException, Request, WebSocket, WebSocketDisconnect, status
 from pydantic import BaseModel, Field
 
 from .config import SETTINGS
@@ -37,6 +37,8 @@ _muse_client = MuseClient(
     model=SETTINGS.muse_model,
     timeout_s=SETTINGS.muse_timeout_s,
 )
+_muse_client.reasoning_effort = SETTINGS.verify_reasoning_effort
+_muse_client.speech_reasoning_effort = SETTINGS.speech_reasoning_effort
 _sam2 = Sam2Runner(
     checkpoint_path=SETTINGS.sam2_checkpoint_path,
     model_cfg=SETTINGS.sam2_config,
@@ -280,4 +282,136 @@ def list_evidence(session: str, x_evidence_token: str | None = Header(default=No
         raise HTTPException(status_code=404, detail="no such session")
     files = [{"name": f.name, "bytes": f.stat().st_size} for f in sorted(folder.iterdir())]
     return {"session": session, "files": files}
+
+
+# --- App event log (debug) --------------------------------------------------
+# Unlike the verify logs, this one DOES hold what the app heard: it exists so
+# the developer can see what the app is doing while testing. The app only
+# sends it when the "Debug log" setting is on. Switch it off before real use.
+
+_APPLOG_MAX_EVENTS = 200
+_APPLOG_MAX_FIELD = 600
+
+
+def _applog_path() -> Path:
+    path = Path(os.environ.get("APPLOG_PATH", "logs/app-events.jsonl"))
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+class AppLogBatch(BaseModel):
+    events: list[dict] = Field(max_length=_APPLOG_MAX_EVENTS)
+
+
+@app.post("/applog")
+def post_applog(batch: AppLogBatch) -> dict:
+    now = datetime.now(timezone.utc).isoformat()
+    lines = []
+    for event in batch.events:
+        clean = {
+            str(key)[:40]: (str(value)[:_APPLOG_MAX_FIELD] if not isinstance(value, (int, float, bool)) else value)
+            for key, value in event.items()
+        }
+        clean["server_ts"] = now
+        lines.append(json.dumps(clean, ensure_ascii=False))
+    if lines:
+        with _applog_path().open("a", encoding="utf-8") as handle:
+            handle.write("\n".join(lines) + "\n")
+    return {"stored": len(lines)}
+
+
+@app.get("/applog")
+def get_applog(n: int = 100) -> dict:
+    path = _applog_path()
+    if not path.exists():
+        return {"events": []}
+    tail = path.read_text(encoding="utf-8").splitlines()[-max(1, min(n, 1000)):]
+    return {"events": [json.loads(line) for line in tail if line.strip()]}
+
+
+# --- Realtime speech to text (Muse Voice Transcribe relay) -------------------
+# The phone streams 16 kHz mono PCM16 audio here as binary WebSocket frames;
+# this relays it to Meta's realtime ASR and sends the JSON events (partial and
+# final transcripts) straight back. The API key never leaves this server.
+
+ASR_KEYWORDS = [
+    "bachao", "madad", "help me", "save me", "bhosdike", "madarchod", "behenchod",
+    "chutiya", "randi", "gandu", "harami", "kamina", "maar dunga", "Safeguard",
+    "open calculator", "open app store", "free ho kya", "kitna loge", "chhodo mujhe",
+]
+
+
+def asr_handshake() -> dict:
+    return {
+        "authorization": {"accessToken": f"Bearer {SETTINGS.meta_model_api_key}"},
+        "audioEncoding": "PCM_16KHZ",
+        "model": SETTINGS.asr_model,
+        "mode": "ENDPOINTING",
+        "partialMode": "CUMULATIVE",
+        "emitAudioProgress": False,
+        "languageBias": ["Hindi", "English"],
+        "keywords": ASR_KEYWORDS,
+    }
+
+
+@app.websocket("/asr")
+async def asr_relay(client: WebSocket) -> None:
+    import asyncio
+
+    import websockets
+
+    await client.accept()
+    if not SETTINGS.meta_model_api_key:
+        await client.send_text(json.dumps({"type": "error", "message": "META_MODEL_API_KEY is not set"}))
+        await client.close(code=1011)
+        return
+    started = datetime.now(timezone.utc)
+    audio_bytes = 0
+    events = 0
+    try:
+        async with websockets.connect(SETTINGS.asr_upstream_url, max_size=None) as upstream:
+            await upstream.send(json.dumps(asr_handshake()))
+            ack = await asyncio.wait_for(upstream.recv(), timeout=15)
+            await client.send_text(json.dumps({"type": "ready", "ack": json.loads(ack) if isinstance(ack, str) else {}}))
+
+            async def phone_to_meta() -> None:
+                nonlocal audio_bytes
+                while True:
+                    message = await client.receive()
+                    if message.get("type") == "websocket.disconnect":
+                        return
+                    if message.get("bytes") is not None:
+                        audio_bytes += len(message["bytes"])
+                        await upstream.send(message["bytes"])
+                    elif message.get("text") is not None:
+                        await upstream.send(message["text"])  # e.g. {"type": "endStream"}
+
+            async def meta_to_phone() -> None:
+                nonlocal events
+                async for message in upstream:
+                    if isinstance(message, str):
+                        events += 1
+                        await client.send_text(message)
+
+            tasks = [asyncio.create_task(phone_to_meta()), asyncio.create_task(meta_to_phone())]
+            done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+            for task in pending:
+                task.cancel()
+            for task in done:
+                task.result()
+    except (WebSocketDisconnect, RuntimeError):
+        pass
+    except Exception as exc:  # noqa: BLE001 - report to the phone, never crash the server
+        logger.warning("asr relay ended: %s", exc)
+        try:
+            await client.send_text(json.dumps({"type": "error", "message": f"relay: {type(exc).__name__}"}))
+            await client.close(code=1011)
+        except Exception:  # noqa: BLE001
+            pass
+    finally:
+        # Counts only: audio and transcripts are never logged here.
+        logger.info(
+            "asr session ended seconds=%.1f audio_bytes=%d events=%d",
+            (datetime.now(timezone.utc) - started).total_seconds(), audio_bytes, events,
+        )
 

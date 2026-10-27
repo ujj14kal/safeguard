@@ -118,6 +118,10 @@ class MuseClient:
         self.api_key = api_key
         self.model = model
         self.timeout_s = timeout_s
+        # Lower effort = faster answers (docs: "low" for direct-answer tasks).
+        # Empty means the model decides. Speech judging sets it from config.
+        self.reasoning_effort = ""  # vision verify
+        self.speech_reasoning_effort = ""  # speech judge
 
     def verify(
         self,
@@ -154,6 +158,8 @@ class MuseClient:
             ],
             "response_format": {"type": "json_object"},
         }
+        if self.reasoning_effort:
+            body["reasoning_effort"] = self.reasoning_effort
         started = time.monotonic()
         try:
             response = httpx.post(
@@ -190,6 +196,8 @@ class MuseClient:
             ],
             "response_format": {"type": "json_object"},
         }
+        if self.speech_reasoning_effort:
+            body["reasoning_effort"] = self.speech_reasoning_effort
         started = time.monotonic()
         try:
             response = httpx.post(
@@ -268,10 +276,14 @@ def parse_speech_verdict(raw_body: str) -> dict:
         raise MuseError(f"bad directed_at_wearer: {directed!r}")
     if not isinstance(reason, str) or not reason:
         raise MuseError("bad reason: must be a non-empty string")
-    # Same appearance guard as /verify: speech/behaviour only, never looks.
-    term = mentions_appearance(" ".join(categories + [reason]))
-    if term:
-        raise MuseError(f"verdict mentions appearance ({term!r}); refusing to use it")
+    # Appearance guard, speech edition. The verdict is about what was SAID, so
+    # a stray look-word in the explanation (often "woman", meaning the wearer)
+    # must not throw away a correct severity: the explanation is replaced by a
+    # neutral line and any category carrying a look-word is dropped. The
+    # severity itself still comes only from the speech.
+    if mentions_appearance(reason):
+        reason = "Concerning speech (explanation withheld by the appearance guard)"
+    categories = [c for c in categories if not mentions_appearance(c)]
     return {
         "severity": severity,
         "categories": categories,

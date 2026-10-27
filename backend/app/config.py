@@ -49,6 +49,27 @@ class Settings:
     evidence_token: str = field(default_factory=lambda: os.environ.get("EVIDENCE_TOKEN", ""))
     evidence_max_mb: int = field(default_factory=lambda: _int("EVIDENCE_MAX_MB", 80))
 
+    # Muse reasoning effort (minimal|low|medium|high). Measured on the labelled
+    # speech set: minimal is as accurate as the default at roughly a third of
+    # the latency (median 2.2 s vs ~6 s).
+    speech_reasoning_effort: str = field(
+        default_factory=lambda: os.environ.get("SPEECH_REASONING_EFFORT", "minimal")
+    )
+    verify_reasoning_effort: str = field(
+        default_factory=lambda: os.environ.get("VERIFY_REASONING_EFFORT", "low")
+    )
+
+    # Muse Voice Transcribe (realtime speech to text). The key stays here;
+    # the phone streams audio to /asr and this relays it to Meta.
+    asr_upstream_url: str = field(
+        default_factory=lambda: os.environ.get(
+            "ASR_UPSTREAM_URL", "wss://api.meta.ai/v1/asr/realtime"
+        )
+    )
+    asr_model: str = field(
+        default_factory=lambda: os.environ.get("ASR_MODEL", "muse-voice-transcribe-1.0")
+    )
+
     # Continuous conversation judging sends a text snippet every few seconds,
     # so it gets its own budget and cannot starve /verify.
     speech_calls_per_min: int = field(

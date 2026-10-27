@@ -3,7 +3,6 @@ import Foundation
 /// Hands-free commands. Every one has an on-screen equivalent; the parser
 /// is pure and fully tested, the view model executes.
 public enum VoiceCommand: Sendable, Equatable {
-    case startProtecting
     case stopProtecting
     case status
     case dim
@@ -12,7 +11,6 @@ public enum VoiceCommand: Sendable, Equatable {
     case goBack
     case callEmergency
     case shareLocation
-    case help
 }
 
 /// Wake word ("safeguard", "safe guard", "save guard") must LEAD the
@@ -60,10 +58,6 @@ public struct VoiceCommandParser: Sendable {
             "stop protecting", "stop protection", "stop",
             "suraksha band karo", "band karo", "सुरक्षा बंद करो", "बंद करो",
         ]),
-        (.startProtecting, [
-            "start protecting", "start protection", "begin protecting", "start",
-            "suraksha shuru karo", "shuru karo", "सुरक्षा शुरू करो", "शुरू करो",
-        ]),
         (.status, [
             "status", "what s happening", "what is happening", "report", "how am i",
             "haal batao", "स्थिति बताओ", "हाल बताओ",
@@ -86,10 +80,6 @@ public struct VoiceCommandParser: Sendable {
         (.shareLocation, [
             "share my location", "share location",
             "location bhejo", "meri location bhejo", "लोकेशन भेजो",
-        ]),
-        (.help, [
-            "what can you say", "what can i say", "list commands", "commands", "help",
-            "madad", "kya bol sakta hoon", "मदद", "क्या बोल सकता हूँ",
         ]),
     ]
 

@@ -97,12 +97,17 @@ public enum SpeechLocale {
     public static let hindi = "hi-IN"
 
     /// "auto" follows the iPhone's first language (Hindi -> hi-IN, else en-IN).
-    public static func resolve(setting: String, preferredLanguages: [String]) -> String {
+    public static func resolve(
+        setting: String, preferredLanguages: [String], region: String? = nil
+    ) -> String {
         switch setting {
         case "hi", hindi: return hindi
         case "en", english: return english
         default:
-            return preferredLanguages.first?.lowercased().hasPrefix("hi") == true ? hindi : english
+            // Automatic: Hindi when the iPhone speaks Hindi OR is set to
+            // India, because speech there is routinely mixed Hindi-English.
+            if preferredLanguages.first?.lowercased().hasPrefix("hi") == true { return hindi }
+            return region?.uppercased() == "IN" ? hindi : english
         }
     }
 }

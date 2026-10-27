@@ -229,7 +229,7 @@ public struct SpeechJudgeSchedule: Sendable {
     private var lastText = ""
     public private(set) var inFlight = false
 
-    public init(minInterval: TimeInterval = 3) {
+    public init(minInterval: TimeInterval = 1.5) {
         self.minInterval = minInterval
     }
 
@@ -250,5 +250,62 @@ public struct SpeechJudgeSchedule: Sendable {
         lastSentAt = nil
         lastText = ""
         inFlight = false
+    }
+}
+
+/// Software gain for quiet speech. The recogniser misses words spoken softly
+/// or from a chest-mounted phone, so the audio it hears is lifted toward a
+/// steady level. Silence and room noise are NOT amplified (below the noise
+/// floor the gain stays where it was), and loud speech is never boosted.
+public struct AutoGain: Sendable {
+    public var targetRMS: Float = 0.10      // about -20 dBFS
+    public var noiseFloor: Float = 0.004    // about -48 dBFS: below this, hold
+    public var maxGain: Float = 12
+    public var attack: Float = 0.6          // how fast gain falls when it gets loud
+    public private(set) var gain: Float = 1
+
+    public init() {}
+
+    /// Updates and returns the gain for a buffer whose RMS is `rms`.
+    public mutating func update(rms: Float) -> Float {
+        guard rms > noiseFloor else { return gain }
+        let wanted = min(maxGain, max(1, targetRMS / rms))
+        let rate: Float = wanted < gain ? attack : 0.15
+        gain += (wanted - gain) * rate
+        return gain
+    }
+}
+
+/// Shouting: loud sound sustained for a moment. Fed one level (dBFS RMS) per
+/// audio buffer; fires once, then stays quiet for `cooldown` seconds.
+public struct LoudnessDetector: Sendable {
+    public var thresholdDB: Float = -16
+    public var windowSeconds: TimeInterval = 1.5
+    public var loudSecondsNeeded: TimeInterval = 0.7
+    public var cooldown: TimeInterval = 8
+
+    private var samples: [(time: TimeInterval, loud: Bool)] = []
+    private var lastFire: TimeInterval = -.infinity
+
+    public init() {}
+
+    public mutating func feed(levelDB: Float, at time: TimeInterval) -> Bool {
+        samples.append((time, levelDB >= thresholdDB))
+        samples.removeAll { time - $0.time > windowSeconds }
+        guard time - lastFire >= cooldown, samples.count >= 2 else { return false }
+        // Time spent loud = span of consecutive loud samples, summed.
+        var loud: TimeInterval = 0
+        for (previous, current) in zip(samples, samples.dropFirst()) where previous.loud && current.loud {
+            loud += current.time - previous.time
+        }
+        guard loud >= loudSecondsNeeded else { return false }
+        lastFire = time
+        samples.removeAll()
+        return true
+    }
+
+    public mutating func reset() {
+        samples.removeAll()
+        lastFire = -.infinity
     }
 }

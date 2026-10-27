@@ -1,3 +1,4 @@
+import AVFoundation
 import XCTest
 
 /// On-device speech matcher: threats flagged with the right category,
@@ -269,7 +270,7 @@ final class HindiSpeechTests: XCTestCase {
 
     func testHindiVoiceCommandsAndAnswers() {
         let parser = VoiceCommandParser()
-        XCTAssertEqual(parser.parse("सेफगार्ड सुरक्षा शुरू करो"), .startProtecting)
+        XCTAssertEqual(parser.parse("सेफगार्ड स्थिति बताओ"), .status)
         XCTAssertEqual(parser.parse("safeguard band karo"), .stopProtecting)
         XCTAssertNil(parser.parse("सुरक्षा शुरू करो"), "wake word still required")
         var confirm = StopConfirmation()
@@ -499,5 +500,126 @@ final class JudgeScheduleTests: XCTestCase {
         let tail = window.tail(maxChars: 60)
         XCTAssertLessThanOrEqual(tail.count, 60)
         XCTAssertTrue(tail.hasSuffix("the newest sentence"))
+    }
+}
+
+final class HearingTests: XCTestCase {
+    func testQuietSpeechIsLiftedTowardTheTarget() {
+        var gain = AutoGain()
+        var applied: Float = 1
+        for _ in 0..<40 { applied = gain.update(rms: 0.02) }
+        XCTAssertGreaterThan(applied, 3.5, "0.02 -> about 0.1 needs ~5x")
+        XCTAssertLessThanOrEqual(applied, 12)
+    }
+
+    func testSilenceAndRoomNoiseAreNotAmplified() {
+        var gain = AutoGain()
+        for _ in 0..<40 { XCTAssertEqual(gain.update(rms: 0.001), 1, accuracy: 0.0001) }
+    }
+
+    func testLoudSpeechIsNotBoostedAndGainFallsQuickly() {
+        var gain = AutoGain()
+        for _ in 0..<40 { _ = gain.update(rms: 0.02) }
+        let afterLoud = gain.update(rms: 0.4)
+        XCTAssertLessThan(afterLoud, 3)
+        for _ in 0..<10 { _ = gain.update(rms: 0.4) }
+        XCTAssertEqual(gain.gain, 1, accuracy: 0.05)
+    }
+
+    func testShoutNeedsSustainedLoudSound() {
+        var d = LoudnessDetector()
+        // A single loud clap.
+        XCTAssertFalse(d.feed(levelDB: -5, at: 0))
+        XCTAssertFalse(d.feed(levelDB: -40, at: 0.05))
+        // A second of ordinary talking.
+        for i in 0..<40 { XCTAssertFalse(d.feed(levelDB: -28, at: 1 + Double(i) * 0.025)) }
+        // Sustained shouting.
+        var fired = false
+        for i in 0..<60 where d.feed(levelDB: -10, at: 3 + Double(i) * 0.025) { fired = true }
+        XCTAssertTrue(fired)
+    }
+
+    func testShoutFiresOnceThenCoolsDown() {
+        var d = LoudnessDetector()
+        var count = 0
+        for i in 0..<200 where d.feed(levelDB: -8, at: Double(i) * 0.025) { count += 1 }
+        XCTAssertEqual(count, 1, "5 s of continuous shouting is one trigger, not a stream")
+    }
+}
+
+final class CloudEarSupportTests: XCTestCase {
+    func testParsesTheServiceEvents() {
+        XCTAssertEqual(CloudEarEvent.parse(#"{"type":"ready","ack":{"sessionId":"x"}}"#), .ready)
+        XCTAssertEqual(CloudEarEvent.parse(#"{"type":"transcript","transcript":"तुझे जान","final":false}"#), .partial("तुझे जान"))
+        XCTAssertEqual(
+            CloudEarEvent.parse(#"{"type":"speechComplete","turnId":1,"transcript":"free ho kya?"}"#),
+            .turnComplete("free ho kya?")
+        )
+        XCTAssertEqual(CloudEarEvent.parse(#"{"type":"error","message":"rate limited"}"#), .error("rate limited"))
+        XCTAssertEqual(CloudEarEvent.parse(#"{"type":"speechStart","turnId":2}"#), .other)
+        XCTAssertEqual(CloudEarEvent.parse(#"{"type":"transcript","transcript":""}"#), .other)
+        XCTAssertEqual(CloudEarEvent.parse("not json"), .other)
+    }
+
+    func testChunkerMakes80msLittleEndianFrames() {
+        var chunker = PCMChunker()
+        XCTAssertTrue(chunker.append([Int16](repeating: 1, count: 1000)).isEmpty)
+        let frames = chunker.append([Int16](repeating: 2, count: 1600))
+        XCTAssertEqual(frames.count, 2)
+        XCTAssertEqual(frames[0].count, 2560)
+        XCTAssertEqual(Array(frames[0].prefix(4)), [1, 0, 1, 0])
+        XCTAssertEqual(chunker.append([Int16](repeating: 3, count: 1300)).count, 1, "the 40 leftover samples carry over")
+    }
+
+    func testBackoffGrowsThenCaps() {
+        var b = CloudEarBackoff()
+        XCTAssertEqual([b.nextDelay(), b.nextDelay(), b.nextDelay(), b.nextDelay()], [1, 2, 4, 8])
+        for _ in 0..<5 { _ = b.nextDelay() }
+        XCTAssertEqual(b.nextDelay(), 15)
+        b.reset()
+        XCTAssertEqual(b.nextDelay(), 1)
+    }
+
+    func testGateStaysOffUntilThereIsAReasonThenHolds() {
+        var gate = CloudEarGate(holdSeconds: 45)
+        XCTAssertFalse(gate.shouldListen(enabled: true, alwaysOn: false, personNear: false, flagged: false, escalated: false, at: 0))
+        XCTAssertTrue(gate.shouldListen(enabled: true, alwaysOn: false, personNear: true, flagged: false, escalated: false, at: 10))
+        XCTAssertTrue(gate.shouldListen(enabled: true, alwaysOn: false, personNear: false, flagged: false, escalated: false, at: 50))
+        XCTAssertFalse(gate.shouldListen(enabled: true, alwaysOn: false, personNear: false, flagged: false, escalated: false, at: 56))
+    }
+
+    func testGateRespectsTheSwitchesAndDemoMode() {
+        var gate = CloudEarGate()
+        XCTAssertFalse(gate.shouldListen(enabled: false, alwaysOn: true, personNear: true, flagged: true, escalated: true, at: 0))
+        XCTAssertTrue(gate.shouldListen(enabled: true, alwaysOn: true, personNear: false, flagged: false, escalated: false, at: 0))
+        XCTAssertTrue(gate.shouldListen(enabled: true, alwaysOn: false, personNear: false, flagged: true, escalated: false, at: 100))
+        XCTAssertTrue(gate.shouldListen(enabled: true, alwaysOn: false, personNear: false, flagged: false, escalated: true, at: 101))
+    }
+
+    func testAppleTextIsSkippedWhileTheCloudEarDelivers() {
+        var policy = TranscriptSourcePolicy()
+        XCTAssertTrue(policy.appleMayFeedConversation(at: 0))
+        policy.noteCloud(at: 10)
+        XCTAssertFalse(policy.appleMayFeedConversation(at: 14))
+        XCTAssertTrue(policy.appleMayFeedConversation(at: 19), "cloud went quiet: Apple takes over again")
+    }
+
+    func testRelayURLUsesTheWebsocketScheme() {
+        XCTAssertEqual(CloudEarURL.relay(from: URL(string: "http://10.0.0.5:8000")!)?.absoluteString, "ws://10.0.0.5:8000/asr")
+        XCTAssertEqual(CloudEarURL.relay(from: URL(string: "https://sg.example.com")!)?.absoluteString, "wss://sg.example.com/asr")
+    }
+
+    func testResamplerMakes16kMonoInt16() throws {
+        let format = try XCTUnwrap(AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: 48_000, channels: 1, interleaved: false))
+        let buffer = try XCTUnwrap(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 4800))
+        buffer.frameLength = 4800
+        for i in 0..<4800 { buffer.floatChannelData![0][i] = sinf(Float(i) * 0.1) * 0.5 }
+        let resampler = PCM16Resampler()
+        var all: [Int16] = []
+        // A streaming converter holds back a few samples at first, so judge
+        // a second of audio, not a single buffer.
+        for _ in 0..<10 { all += try XCTUnwrap(resampler.convert(buffer)) }
+        XCTAssertEqual(Double(all.count), 16_000, accuracy: 400, "1 s at 16 kHz")
+        XCTAssertGreaterThan(all.map { abs(Int($0)) }.max() ?? 0, 5000, "level is preserved")
     }
 }

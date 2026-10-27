@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ProtectView: View {
-    @StateObject private var model = ProtectViewModel()
+    @StateObject private var model = ProtectViewModel.shared
     @AppStorage("debugOverlayEnabled") private var debugOverlay = false
     @AppStorage("listenerOptIn") private var listenerOptIn = false
 
@@ -150,9 +150,10 @@ struct ProtectView: View {
                 // Debug only: what the recogniser just heard, so you can see
                 // whether Hindi/English is being picked up at all.
                 Text((model.lastHeard.isEmpty ? "Heard: (nothing yet)" : "Heard: \(model.lastHeard)")
-                    + "\n" + model.judgeStatus)
+                    + "\n" + model.judgeStatus
+                    + "\nApple ear on • \(model.cloudStatus)")
                     .font(.footnote.monospaced())
-                    .lineLimit(4)
+                    .lineLimit(6)
                     .padding(8)
                     .safeguardPanel()
             }
@@ -161,7 +162,7 @@ struct ProtectView: View {
                     .font(.footnote)
                     .foregroundStyle(DS.Colors.warning)
             }
-            Text("Say: Safeguard, stop • status • dim")
+            Text("Say “help” / “bachao” for SOS")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
             HStack(spacing: DS.Spacing.medium) {
@@ -388,9 +389,8 @@ struct ProtectView: View {
                 }
             }
             ForEach(
-                ["Safeguard, start protecting", "Safeguard, stop",
-                 "Safeguard, status", "Safeguard, dim the screen",
-                 "Safeguard, help"],
+                ["Say “help” or “bachao”, or shout: SOS starts by itself",
+                 "Safeguard, stop • status • dim"],
                 id: \.self
             ) { command in
                 Text("“\(command)”")

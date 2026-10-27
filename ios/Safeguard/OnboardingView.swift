@@ -8,11 +8,13 @@ struct OnboardingView: View {
         "When on, Safeguard transcribes speech near you, on this phone only, " +
         "to notice threatening or harassing talk. Raw audio is never stored " +
         "and never sent anywhere; transcripts live only in a short in-memory " +
-        "window and are discarded when you stop. With \"AI judges the " +
-        "conversation\" on, the last few seconds of the transcript, as text " +
-        "only, are sent to your Safeguard backend so an AI model can tell " +
-        "whether the talk is safe; switch it off to keep everything on this " +
-        "phone."
+        "window and are discarded when you stop. Two optional cloud helpers " +
+        "can be switched off in Settings: \"Cloud ear\" streams live audio to " +
+        "your Safeguard backend, which relays it to Meta\'s speech model " +
+        "(Muse Voice Transcribe) for accurate Hindi and Hinglish, and " +
+        "\"AI judges the conversation\" sends the last few seconds of text " +
+        "to an AI model. Nothing is stored unless an SOS runs. Switch both " +
+        "off to keep everything on this phone."
 
     static let stayQuietTip =
         "If you feel uneasy, try to stay quiet for a few seconds. Safeguard " +

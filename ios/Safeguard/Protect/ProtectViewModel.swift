@@ -1,4 +1,5 @@
 import AVFoundation
+import Combine
 import CoreMotion
 import CoreImage
 import SwiftUI
@@ -9,6 +10,10 @@ import UIKit
 /// (foreground-only app), and surfaces frame flow + errors.
 @MainActor
 final class ProtectViewModel: ObservableObject {
+    /// One model for the whole app, created at launch: the microphone must be
+    /// listening for distress words whichever tab is open.
+    static let shared = ProtectViewModel()
+
     @Published var state: ProtectionState = .idle
     @Published var usingReplay = false
     @Published var replayName: String?
@@ -31,6 +36,17 @@ final class ProtectViewModel: ObservableObject {
     @Published var lastHeard = ""
     /// Debug: what the AI judge last did ("sent", its verdict, or why it failed).
     @Published var judgeStatus = "AI judge: idle"
+    @Published var cloudStatus = CloudEarState.off.summary
+    /// Meta Muse Voice Transcribe through the backend. Needs the listener
+    /// opt-in too. Off keeps all hearing on the phone.
+    @AppStorage("cloudEarEnabled") var cloudEarEnabled = true
+    /// Demo mode: keep the cloud ear on all the time. Off, it switches on only
+    /// when someone is near, a flag is raised, or an alert/SOS is running.
+    @AppStorage("cloudEarAlwaysOn") var cloudEarAlwaysOn = true
+    private var cloudGate = CloudEarGate()
+    private var sourcePolicy = TranscriptSourcePolicy()
+    private var cloudTimer: Timer?
+    private var cloudWanted = false
     /// Concerning talk heard in the last few seconds (red banner on the HUD).
     @Published var conversationFlag: ConversationFlag?
     @Published var lastSpeechInfo: String?
@@ -113,8 +129,16 @@ final class ProtectViewModel: ObservableObject {
         )
         listener.delegate = self
         listener.$isLive.assign(to: &$listenerLive)
+        listener.$isLive.removeDuplicates().dropFirst().sink { live in
+            AppLog.shared.event("mic", ["live": String(live)])
+        }.store(in: &cancellables)
         listener.$deafReason.assign(to: &$listenerDeafReason)
         listener.$lastHeard.assign(to: &$lastHeard)
+        listener.$cloudStatus.assign(to: &$cloudStatus)
+        listener.configureCloudEar()
+        cloudTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in self?.updateCloudEar() }
+        }
         // Hands-free "start protecting" needs a hot mic while idle, so the
         // listener runs from here on (foreground only — iOS suspends the
         // mic in the background). Idle transcripts feed commands only: no
@@ -315,7 +339,13 @@ final class ProtectViewModel: ObservableObject {
         debugFrameSize = frameSize
         debugScores = scores
         personCount = tracks.count
+        let wasAlert = threatAlert
         threatAlert = scores.values.contains { $0 >= pipeline.config.alertThreshold }
+        if threatAlert != wasAlert {
+            AppLog.shared.event("vision_alert", [
+                "on": String(threatAlert), "score": String(format: "%.2f", scores.values.max() ?? 0),
+            ])
+        }
         if threatAlert, let maxScore = scores.values.max() {
             safety.noteMovementAlert(score: maxScore, at: Self.now)
             drainAskSpeech()
@@ -323,6 +353,7 @@ final class ProtectViewModel: ObservableObject {
         }
         if level != proximity {
             let rising = level > proximity
+            AppLog.shared.event("proximity", ["level": String(describing: level), "people": String(tracks.count)])
             proximity = level
             if rising {
                 UIImpactFeedbackGenerator(style: level == .tooClose ? .medium : .light)
@@ -335,6 +366,10 @@ final class ProtectViewModel: ObservableObject {
     fileprivate func publishVerification(_ result: VerifyResult) {
         guard isProtecting else { return }
         lastVerifyResult = "Verify: \(result.threatLevel) via \(result.path) (\(result.reason))"
+        AppLog.shared.event("vision_verify", [
+            "level": result.threatLevel, "path": result.path, "reason": result.reason,
+            "ms": String(Int(result.museLatencyMs)),
+        ])
         verifyFailure = nil
         // Unknown levels are dropped: a strict contract beats a guess.
         if let level = MuseVerdictLevel(rawValue: result.threatLevel) {
@@ -415,6 +450,11 @@ final class ProtectViewModel: ObservableObject {
     @Published var evidenceStatus: String?
     @AppStorage("recordOnSOS") var recordOnSOS = true
     nonisolated let evidence = EvidenceRecorder()
+    private var cancellables = Set<AnyCancellable>()
+    @AppStorage("shoutingTriggersSOS") var shoutingTriggersSOS = true
+    private var loudness = LoudnessDetector()
+    private var levelPeak: Float = -120
+    private var levelLoggedAt: TimeInterval = 0
     private let distressMatcher = DistressMatcher()
     private var pendingDistressStart = false
     private var countdownTimer: Timer?
@@ -422,6 +462,7 @@ final class ProtectViewModel: ObservableObject {
     /// The wearer is OK: stop the countdown (button, double tap, or the
     /// safe code phrase all end up here or in the state machine).
     func cancelAutoSOS() {
+        AppLog.shared.event("countdown_cancel", ["by": "button"])
         safety.cancelCountdown(at: Self.now)
         syncProtectionState()
         showToast("Auto-SOS cancelled")
@@ -457,7 +498,13 @@ final class ProtectViewModel: ObservableObject {
     private func startEvidence() {
         guard recordOnSOS, !usingReplay, !evidence.isRecording else { return }
         evidence.retryPending()
-        evidence.start(sessionID: EvidenceSessionID.make()) { [weak self] progress in
+        let sessionID = EvidenceSessionID.make()
+        AppLog.shared.event("evidence_start", ["session": sessionID])
+        evidence.start(sessionID: sessionID) { [weak self] progress in
+            AppLog.shared.event("evidence", [
+                "segments": String(progress.segments), "uploaded": String(progress.uploaded),
+                "failed": String(progress.failed),
+            ])
             Task { @MainActor [weak self] in self?.evidenceStatus = progress.summary }
         }
         listener.setAudioSink { [evidence] buffer in evidence.appendAudio(buffer) }
@@ -471,6 +518,7 @@ final class ProtectViewModel: ObservableObject {
 
     /// A distress word heard while protecting.
     private func distressHeard() {
+        AppLog.shared.event("distress", ["protecting": "true"])
         safety.noteDistressWord(at: Self.now)
         syncProtectionState()
     }
@@ -479,7 +527,9 @@ final class ProtectViewModel: ObservableObject {
     /// then run the countdown as soon as the camera is up.
     private func distressHeardWhileIdle() {
         guard distressWordsEnabled, !pendingDistressStart else { return }
+        AppLog.shared.event("distress", ["protecting": "false", "action": "auto-start"])
         pendingDistressStart = true
+        NotificationCenter.default.post(name: .safeguardGoBack, object: nil)
         Task {
             await startCamera()
             if state == .idle { pendingDistressStart = false }
@@ -507,10 +557,17 @@ final class ProtectViewModel: ObservableObject {
         }
         if mapped != state {
             let previous = state
+            AppLog.shared.event("state", [
+                "from": previous.rawValue, "to": mapped.rawValue,
+                "cause": safety.unsafeCause.map { String(describing: $0) } ?? "",
+            ])
             state = mapped
             // Anything needing the wearer's eyes lifts the dim.
             if mapped == .asking || mapped == .suspected || mapped == .unsafe || mapped == .countdown {
                 dimmed = false
+            }
+            if mapped == .countdown || mapped == .unsafe || mapped == .asking {
+                NotificationCenter.default.post(name: .safeguardGoBack, object: nil)
             }
             if mapped == .countdown {
                 beginCountdown()
@@ -559,7 +616,51 @@ final class ProtectViewModel: ObservableObject {
 
     // MARK: - Conversation listener (Part B)
 
+    /// Decides, every couple of seconds, whether the cloud ear should listen.
+    private func updateCloudEar() {
+        let escalated = [.suspected, .asking, .countdown, .unsafe].contains(state)
+        let want = cloudGate.shouldListen(
+            enabled: cloudEarEnabled && listenerOptIn, alwaysOn: cloudEarAlwaysOn,
+            personNear: isProtecting && proximity != .clear,
+            flagged: conversationFlag != nil, escalated: escalated, at: Self.now
+        )
+        guard want != cloudWanted else { return }
+        cloudWanted = want
+        AppLog.shared.event("cloud_ear_wanted", ["on": String(want)])
+        listener.setCloudEar(want)
+    }
+
+    /// Words the recogniser should favour: the ones that matter most.
+    private var contextWords: [String] {
+        (safetyConfig.distressWords + safetyConfig.safePhrases + safetyConfig.unsafePhrases
+            + ["Safeguard", "stop protecting"]).prefix(60).map { $0 }
+    }
+
+    /// One raw microphone level per buffer (dBFS RMS), hopped to the main
+    /// actor. Feeds the shouting detector and the level log.
+    private func handleLevel(_ db: Float) {
+        levelPeak = max(levelPeak, db)
+        let now = Self.now
+        if now - levelLoggedAt >= 3 {
+            AppLog.shared.event("mic_level", ["peak_db": String(format: "%.0f", levelPeak)])
+            levelPeak = -120
+            levelLoggedAt = now
+        }
+        guard shoutingTriggersSOS, !speakingNow else {
+            _ = loudness.feed(levelDB: -120, at: now)
+            return
+        }
+        if loudness.feed(levelDB: db, at: now) {
+            AppLog.shared.event("shout", ["peak_db": String(format: "%.0f", db), "protecting": String(isProtecting)])
+            if isProtecting { distressHeard() } else { distressHeardWhileIdle() }
+        }
+    }
+
     private func startListener() {
+        listener.contextualStrings = contextWords
+        listener.setLevelHandler { [weak self] db in
+            Task { @MainActor [weak self] in self?.handleLevel(db) }
+        }
         Task {
             guard await ConversationListener.requestPermissions() else {
                 listenerDeafReason =
@@ -579,7 +680,19 @@ final class ProtectViewModel: ObservableObject {
     /// answer, then voice commands (never while speaking, never in the
     /// silent window), then — only when opted in — the threat matcher.
     /// Partial text: code phrases only, and each phrase once per utterance.
-    fileprivate func handlePartial(_ text: String) {
+    private var lastPartialLog: (text: String, at: TimeInterval) = ("", 0)
+
+    fileprivate func handlePartial(_ text: String, source: TranscriptSource) {
+        if source == .cloud { sourcePolicy.noteCloud(at: Self.now) }
+        if text != lastPartialLog.text, Self.now - lastPartialLog.at >= 0.8 {
+            lastPartialLog = (text, Self.now)
+            AppLog.shared.event("partial", [
+                "text": text, "protecting": String(isProtecting), "src": source.rawValue,
+            ])
+        }
+        // While the cloud ear is delivering, Apple's rougher text of the same
+        // sentence only serves distress words and code phrases below.
+        let feedsConversation = source == .cloud || sourcePolicy.appleMayFeedConversation(at: Self.now)
         guard isProtecting else {
             // Idle: a distress word starts protection without waiting for the
             // sentence to finish, unless it is a wake-worded command.
@@ -596,15 +709,21 @@ final class ProtectViewModel: ObservableObject {
             distressHeard()
             return
         }
-        rateAndFlag(text)
-        if listenerOptIn, aiJudgeEnabled { judgeConversation(partial: text) }
+        if feedsConversation {
+            rateAndFlag(text)
+            if listenerOptIn, aiJudgeEnabled { judgeConversation(partial: text) }
+        }
         guard let reply = partialGate.consume(phraseMatcher.match(text)) else { return }
         safety.noteReply(reply, at: Self.now)
         drainAskSpeech()
         syncProtectionState()
     }
 
-    fileprivate func handleTranscript(_ text: String) {
+    fileprivate func handleTranscript(_ text: String, source: TranscriptSource) {
+        if source == .cloud { sourcePolicy.noteCloud(at: Self.now) }
+        AppLog.shared.event("heard", [
+            "text": text, "protecting": String(isProtecting), "src": source.rawValue,
+        ])
         let alreadyHandled = partialGate.finishUtterance()
         if !isProtecting {
             if !speakingNow, let command = commandParser.parse(text) {
@@ -652,6 +771,7 @@ final class ProtectViewModel: ObservableObject {
             return
         }
         guard listenerOptIn else { return }
+        guard source == .cloud || sourcePolicy.appleMayFeedConversation(at: Self.now) else { return }
         rateAndFlag(text)
         window.append(text, at: Self.now)
         if aiJudgeEnabled {
@@ -681,6 +801,7 @@ final class ProtectViewModel: ObservableObject {
 
     private func vibrate(_ wanted: SpeechHapticLevel) {
         let level = hapticGate.consume(wanted, at: Self.now)
+        if level != .none { AppLog.shared.event("vibrate", ["level": String(describing: level)]) }
         // Soft taps only: one, two or three, never a sound.
         let taps: Int
         switch level {
@@ -706,6 +827,10 @@ final class ProtectViewModel: ObservableObject {
         guard found.severity >= ConversationFlag.minSeverity else { return }
         let flag = ConversationFlag(category: found.category, severity: found.severity, at: Self.now)
         conversationFlag = ConversationFlag.merged(conversationFlag, with: flag)
+        AppLog.shared.event("flag", [
+            "source": "word-list", "category": found.category.rawValue,
+            "severity": String(format: "%.2f", found.severity),
+        ])
         noteSpeechToPipeline(severity: found.severity, at: Self.now)
         dimmed = false
     }
@@ -726,6 +851,8 @@ final class ProtectViewModel: ObservableObject {
         }
         guard judgeSchedule.shouldSend(snippet, at: Self.now) else { return }
         judgeStatus = "AI judge: sent \(snippet.split(separator: " ").count) words"
+        let sentAt = Date()
+        AppLog.shared.event("judge_sent", ["text": snippet])
         let onDevice = speechMatcher.match(window.transcript)
         let severity = onDevice?.severity ?? 0
         let category = onDevice?.category.rawValue ?? "none"
@@ -736,10 +863,16 @@ final class ProtectViewModel: ObservableObject {
                 )
                 judgeSchedule.finished()
                 judgeStatus = "AI judge: \(result.severity) \(result.categories.joined(separator: ","))"
+                AppLog.shared.event("judge", [
+                    "severity": result.severity, "categories": result.categories.joined(separator: ","),
+                    "directed": String(result.directedAtWearer), "reason": result.reason,
+                    "ms": String(Int(Date().timeIntervalSince(sentAt) * 1000)),
+                ])
                 publishJudgement(result, onDevice: onDevice)
             } catch {
                 judgeSchedule.finished()
                 judgeStatus = "AI judge failed: \(error.localizedDescription)"
+                AppLog.shared.event("judge_failed", ["error": error.localizedDescription])
                 if let onDevice {
                     publishSpeechFallback(severity: onDevice.severity, category: onDevice.category.rawValue)
                 }
@@ -807,14 +940,8 @@ final class ProtectViewModel: ObservableObject {
     // MARK: - Voice commands (Part D)
 
     private func runCommand(_ command: VoiceCommand) {
+        AppLog.shared.event("command", ["name": String(describing: command)])
         switch command {
-        case .startProtecting:
-            if isProtecting {
-                showToast("Already protecting")
-            } else {
-                confirm("Protection started")
-                Task { await startCamera() }
-            }
         case .stopProtecting:
             if !isProtecting {
                 showToast("Not protecting")
@@ -853,11 +980,6 @@ final class ProtectViewModel: ObservableObject {
             }
         case .shareLocation:
             confirm("Sharing your location is not available yet.")
-        case .help:
-            confirm(
-                "You can say: start protecting, stop, status, dim, brighten, "
-                    + "settings, go back, call 112, share location, or help."
-            )
         }
     }
 
@@ -948,12 +1070,12 @@ final class ProtectViewModel: ObservableObject {
 }
 
 extension ProtectViewModel: ConversationListenerDelegate {
-    func listener(_ listener: ConversationListener, didTranscribe text: String) {
-        handleTranscript(text)
+    func listener(_ listener: ConversationListener, didTranscribe text: String, source: TranscriptSource) {
+        handleTranscript(text, source: source)
     }
 
-    func listener(_ listener: ConversationListener, didHearPartial text: String) {
-        handlePartial(text)
+    func listener(_ listener: ConversationListener, didHearPartial text: String, source: TranscriptSource) {
+        handlePartial(text, source: source)
     }
 }
 

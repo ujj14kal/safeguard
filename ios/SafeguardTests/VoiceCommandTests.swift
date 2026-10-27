@@ -10,7 +10,6 @@ final class VoiceCommandTests: XCTestCase {
 
     func testEachCommand() {
         let cases: [(String, VoiceCommand)] = [
-            ("Safeguard, start protecting", .startProtecting),
             ("Safeguard, stop protecting", .stopProtecting),
             ("Safeguard, status", .status),
             ("Safeguard, dim the screen", .dim),
@@ -19,7 +18,6 @@ final class VoiceCommandTests: XCTestCase {
             ("Safeguard, go back", .goBack),
             ("Safeguard, call 112", .callEmergency),
             ("Safeguard, share my location", .shareLocation),
-            ("Safeguard, help", .help),
         ]
         for (heard, want) in cases {
             XCTAssertEqual(parser.parse(heard), want, heard)
@@ -28,13 +26,13 @@ final class VoiceCommandTests: XCTestCase {
 
     func testAliases() {
         XCTAssertEqual(parser.parse("safeguard stop"), .stopProtecting)
-        XCTAssertEqual(parser.parse("Safeguard, begin protecting"), .startProtecting)
+        XCTAssertNil(parser.parse("Safeguard, start protecting"), "protection starts by itself now")
+        XCTAssertNil(parser.parse("Safeguard, help"), "help is a distress word, not a command")
         XCTAssertEqual(parser.parse("safeguard undim"), .brighten)
         XCTAssertEqual(parser.parse("Safeguard, settings"), .openSettings)
         XCTAssertEqual(parser.parse("safeguard back"), .goBack)
         XCTAssertEqual(parser.parse("Safeguard, call emergency"), .callEmergency)
         XCTAssertEqual(parser.parse("safeguard share location"), .shareLocation)
-        XCTAssertEqual(parser.parse("Safeguard, what can you say?"), .help)
         XCTAssertEqual(parser.parse("safeguard report"), .status)
     }
 
@@ -44,7 +42,7 @@ final class VoiceCommandTests: XCTestCase {
         XCTAssertEqual(parser.parse("save guard, status"), .status)
         XCTAssertEqual(parser.parse("SAFEGUARD, STOP!"), .stopProtecting)
         XCTAssertEqual(parser.parse("Safeguard, please dim the screen now"), .dim)
-        XCTAssertEqual(parser.parse("safeguard... um... help?"), .help)
+        XCTAssertEqual(parser.parse("safeguard... um... status?"), .status)
     }
 
     func testWakeWordRequired() {

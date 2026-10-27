@@ -5,8 +5,8 @@ import Speech
 /// (the growing text of the utterance in progress) arrive too, so the code
 /// phrases are heard within a word or two instead of after a pause.
 protocol ConversationListenerDelegate: AnyObject {
-    func listener(_ listener: ConversationListener, didTranscribe text: String)
-    func listener(_ listener: ConversationListener, didHearPartial text: String)
+    func listener(_ listener: ConversationListener, didTranscribe text: String, source: TranscriptSource)
+    func listener(_ listener: ConversationListener, didHearPartial text: String, source: TranscriptSource)
 }
 
 /// The ONE audio engine + speech recognizer for everything voice. It only
@@ -43,6 +43,91 @@ final class ConversationListener: ObservableObject {
     /// while restarts swap it from the main actor.
     private let requestBox = RequestBox()
     private let sinkBox = SinkBox()
+    private let levelBox = LevelBox()
+    private let cloud = CloudEar()
+
+    /// The cloud ear's state, for the Debug line and Settings.
+    @Published private(set) var cloudStatus = CloudEarState.off.summary
+    @Published private(set) var cloudIsLive = false
+
+    /// Sets up the cloud ear's callbacks. Call once.
+    func configureCloudEar() {
+        cloud.configure(
+            onText: { [weak self] text, isFinal in
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    self.lastHeard = text
+                    if isFinal {
+                        self.delegate?.listener(self, didTranscribe: text, source: .cloud)
+                    } else {
+                        self.delegate?.listener(self, didHearPartial: text, source: .cloud)
+                    }
+                }
+            },
+            onState: { [weak self] state in
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    self.cloudStatus = state.summary
+                    self.cloudIsLive = state == .live
+                    AppLog.shared.event("cloud_ear", ["state": state.summary])
+                }
+            }
+        )
+    }
+
+    /// Turns the cloud ear on or off. Apple's recogniser keeps running
+    /// either way.
+    func setCloudEar(_ on: Bool) {
+        if on { cloud.start() } else { cloud.stop() }
+    }
+    private let gainBox = GainBox()
+
+    /// Words the recogniser should favour (distress words, code phrases, key
+    /// threats). Set before `start`; Apple recommends well under ~100.
+    var contextualStrings: [String] = []
+
+    /// Called on the audio thread with each buffer's raw level (dBFS RMS).
+    func setLevelHandler(_ handler: (@Sendable (Float) -> Void)?) {
+        levelBox.handler = handler
+    }
+
+    private final class LevelBox: @unchecked Sendable {
+        private let lock = NSLock()
+        private var boxed: (@Sendable (Float) -> Void)?
+        var handler: (@Sendable (Float) -> Void)? {
+            get { lock.withLock { boxed } }
+            set { lock.withLock { boxed = newValue } }
+        }
+    }
+
+    /// Lifts quiet speech for the recogniser (the recorder keeps raw audio).
+    private final class GainBox: @unchecked Sendable {
+        private let lock = NSLock()
+        private var autoGain = AutoGain()
+
+        func boosted(_ buffer: AVAudioPCMBuffer, rms: Float) -> AVAudioPCMBuffer {
+            let gain = lock.withLock { autoGain.update(rms: rms) }
+            guard gain > 1.05, let source = buffer.floatChannelData,
+                  let copy = AVAudioPCMBuffer(pcmFormat: buffer.format, frameCapacity: buffer.frameLength),
+                  let target = copy.floatChannelData
+            else { return buffer }
+            copy.frameLength = buffer.frameLength
+            for channel in 0..<Int(buffer.format.channelCount) {
+                for frame in 0..<Int(buffer.frameLength) {
+                    target[channel][frame] = max(-1, min(1, source[channel][frame] * gain))
+                }
+            }
+            return copy
+        }
+    }
+
+    static func rms(of buffer: AVAudioPCMBuffer) -> Float {
+        guard let data = buffer.floatChannelData, buffer.frameLength > 0 else { return 0 }
+        var sum: Float = 0
+        let count = Int(buffer.frameLength)
+        for frame in 0..<count { sum += data[0][frame] * data[0][frame] }
+        return (sum / Float(count)).squareRoot()
+    }
 
     /// Receives every microphone buffer (the SOS recorder). Nil normally.
     func setAudioSink(_ sink: (@Sendable (AVAudioPCMBuffer) -> Void)?) {
@@ -100,11 +185,12 @@ final class ConversationListener: ObservableObject {
             return
         }
         guard recognizer.supportsOnDeviceRecognition else {
-            // Hard rule: on-device or nothing. Never fall back to server
-            // recognition, which would upload the wearer's audio.
+            // Apple's recogniser is the always-on local tier: on-device or
+            // nothing. (The cloud ear is a separate, visible, optional tier.)
             goDeaf("On-device speech for \(localeIdentifier) is not available on this iPhone")
             return
         }
+        AppLog.shared.event("listener_start", ["engine": "apple", "locale": localeIdentifier])
         do {
             try configureAudioSession()
         } catch {
@@ -120,9 +206,16 @@ final class ConversationListener: ObservableObject {
         // recognition request, so restarts have no gap.
         let box = requestBox
         let sink = sinkBox
+        let levels = levelBox
+        let gains = gainBox
+        let ear = cloud
         input.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in
-            box.request?.append(buffer)
+            let rms = Self.rms(of: buffer)
+            levels.handler?(20 * log10(max(rms, 1e-6)))
             sink.handler?(buffer)
+            let boosted = gains.boosted(buffer, rms: rms)
+            box.request?.append(boosted)
+            ear.feed(boosted)
         }
         do {
             try engine.start()
@@ -131,8 +224,9 @@ final class ConversationListener: ObservableObject {
             return
         }
         session.start(at: Self.now)
-        startRequest()
         restartTimer?.invalidate()
+        restartTimer = nil
+        startRequest()
         restartTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in self?.restartIfDue() }
         }
@@ -171,7 +265,10 @@ final class ConversationListener: ObservableObject {
     /// speaker says the check-in question; other audio ducks under us.
     private func configureAudioSession() throws {
         let audio = AVAudioSession.sharedInstance()
-        try audio.setCategory(.playAndRecord, mode: .spokenAudio, options: [.duckOthers])
+        // .default mode: the processing modes (voice chat, measurement)
+        // either cut quiet speech or turn gain off. Hear everything, and let
+        // our own gain stage level it for the recogniser.
+        try audio.setCategory(.playAndRecord, mode: .default, options: [.duckOthers, .defaultToSpeaker, .allowBluetooth])
         try audio.setActive(true)
     }
 
@@ -182,6 +279,8 @@ final class ConversationListener: ObservableObject {
         // Partials keep the safety-critical code phrases low-latency; the
         // threat scan still only sees final text.
         request.shouldReportPartialResults = true
+        request.taskHint = .dictation
+        request.contextualStrings = contextualStrings
         requestBox.request = request
         let generation = session.generation
         task = recognizer.recognitionTask(with: request) { [weak self] result, error in
@@ -211,9 +310,9 @@ final class ConversationListener: ObservableObject {
         if !text.isEmpty {
             lastHeard = text
             if result.isFinal {
-                delegate?.listener(self, didTranscribe: text)
+                delegate?.listener(self, didTranscribe: text, source: .apple)
             } else {
-                delegate?.listener(self, didHearPartial: text)
+                delegate?.listener(self, didHearPartial: text, source: .apple)
             }
         }
         // A final result ends the task: without a new request the mic would

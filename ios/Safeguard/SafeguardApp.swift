@@ -17,7 +17,15 @@ struct SafeguardApp: App {
             .statusBarHidden(showSplash)
             // Dark theme, forced app-wide (the splash stays white by design).
             .preferredColorScheme(.dark)
-            .task { await dismissSplash() }
+            .task {
+                _ = ProtectViewModel.shared
+                // An earlier build downloaded a 889 MB on-device model; it is
+                // no longer used, so reclaim the space.
+                if let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+                    try? FileManager.default.removeItem(at: docs.appendingPathComponent("huggingface"))
+                }
+                await dismissSplash()
+            }
         }
     }
 

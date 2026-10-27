@@ -91,14 +91,21 @@ def test_bad_types_rejected(client, monkeypatch):
     assert client.post("/verify-speech", json=speech_request()).status_code == 503
 
 
-def test_appearance_wording_refused(client, monkeypatch):
-    bad = speech_verdict(reason="A man wearing a red shirt is shouting.")
+def test_appearance_wording_is_redacted_not_fatal(client, monkeypatch):
+    bad = speech_verdict(
+        reason="A man wearing a red shirt is shouting.", categories=["threat", "red shirt"]
+    )
 
     def bad_post(url, headers=None, json=None, timeout=None):
         return FakeResponse(muse_envelope(bad))
 
     monkeypatch.setattr("app.muse.httpx.post", bad_post)
-    assert client.post("/verify-speech", json=speech_request()).status_code == 503
+    response = client.post("/verify-speech", json=speech_request())
+    assert response.status_code == 200
+    body = response.json()
+    assert "shirt" not in body["reason"] and "man" not in body["reason"].split()
+    assert body["categories"] == ["threat"]
+    assert body["severity"] == bad["severity"]
 
 
 def test_timeout_maps_to_503(client, monkeypatch):

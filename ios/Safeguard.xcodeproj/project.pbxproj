@@ -87,6 +87,13 @@
 		C1000000000000000000002B /* EvidenceRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1000000000000000000002A /* EvidenceRecorder.swift */; };
 		C1000000000000000000002C /* EvidenceRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1000000000000000000002A /* EvidenceRecorder.swift */; };
 		C1000000000000000000003B /* EvidenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1000000000000000000003A /* EvidenceTests.swift */; };
+		C1000000000000000000004B /* AppLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1000000000000000000004A /* AppLog.swift */; };
+		C1000000000000000000004C /* AppLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1000000000000000000004A /* AppLog.swift */; };
+		C1000000000000000000007B /* CloudEarSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1000000000000000000007A /* CloudEarSupport.swift */; };
+		C1000000000000000000007C /* CloudEarSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1000000000000000000007A /* CloudEarSupport.swift */; };
+		C1000000000000000000008B /* AudioResampler.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1000000000000000000008A /* AudioResampler.swift */; };
+		C1000000000000000000008C /* AudioResampler.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1000000000000000000008A /* AudioResampler.swift */; };
+		C1000000000000000000009B /* CloudEar.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1000000000000000000009A /* CloudEar.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -152,6 +159,10 @@
 		C1000000000000000000001A /* EvidenceUpload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EvidenceUpload.swift; sourceTree = "<group>"; };
 		C1000000000000000000002A /* EvidenceRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EvidenceRecorder.swift; sourceTree = "<group>"; };
 		C1000000000000000000003A /* EvidenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EvidenceTests.swift; sourceTree = "<group>"; };
+		C1000000000000000000004A /* AppLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLog.swift; sourceTree = "<group>"; };
+		C1000000000000000000007A /* CloudEarSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudEarSupport.swift; sourceTree = "<group>"; };
+		C1000000000000000000008A /* AudioResampler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioResampler.swift; sourceTree = "<group>"; };
+		C1000000000000000000009A /* CloudEar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudEar.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -310,6 +321,9 @@
 				A10000000000000000000086 /* SpeechMatcher.swift */,
 				A10000000000000000000088 /* TranscriptWindow.swift */,
 				A1000000000000000000008A /* ListeningSession.swift */,
+				C1000000000000000000009A /* CloudEar.swift */,
+				C1000000000000000000008A /* AudioResampler.swift */,
+				C1000000000000000000007A /* CloudEarSupport.swift */,
 				A1000000000000000000008F /* ConversationListener.swift */,
 				A1000000000000000000009B /* VoiceCommands.swift */,
 			);
@@ -320,6 +334,7 @@
 			isa = PBXGroup;
 			children = (
 				A1000000000000000000003C /* VerifierGate.swift */,
+				C1000000000000000000004A /* AppLog.swift */,
 				C1000000000000000000002A /* EvidenceRecorder.swift */,
 				C1000000000000000000001A /* EvidenceUpload.swift */,
 				A1000000000000000000003D /* FrameBuffer.swift */,
@@ -450,6 +465,7 @@
 				A10000000000000000000079 /* ThreatScorer.swift in Sources */,
 				A1000000000000000000007A /* ProximityTracker.swift in Sources */,
 				A1000000000000000000007B /* VerifierGate.swift in Sources */,
+				C1000000000000000000004B /* AppLog.swift in Sources */,
 				C1000000000000000000002B /* EvidenceRecorder.swift in Sources */,
 				C1000000000000000000001B /* EvidenceUpload.swift in Sources */,
 				A1000000000000000000007C /* FrameBuffer.swift in Sources */,
@@ -460,6 +476,9 @@
 				A10000000000000000000087 /* SpeechMatcher.swift in Sources */,
 				A10000000000000000000089 /* TranscriptWindow.swift in Sources */,
 				A1000000000000000000008B /* ListeningSession.swift in Sources */,
+				C1000000000000000000009B /* CloudEar.swift in Sources */,
+				C1000000000000000000008B /* AudioResampler.swift in Sources */,
+				C1000000000000000000007B /* CloudEarSupport.swift in Sources */,
 				A10000000000000000000090 /* ConversationListener.swift in Sources */,
 				A10000000000000000000092 /* OnboardingView.swift in Sources */,
 				A10000000000000000000095 /* BoxMapping.swift in Sources */,
@@ -490,6 +509,7 @@
 				B2000000000000000000001E /* VerifierTests.swift in Sources */,
 				B20000000000000000000031 /* BrandAssetsTests.swift in Sources */,
 				B2000000000000000000001F /* VerifierGate.swift in Sources */,
+				C1000000000000000000004C /* AppLog.swift in Sources */,
 				C1000000000000000000002C /* EvidenceRecorder.swift in Sources */,
 				C1000000000000000000003B /* EvidenceTests.swift in Sources */,
 				C1000000000000000000001C /* EvidenceUpload.swift in Sources */,
@@ -501,6 +521,8 @@
 				B20000000000000000000035 /* SpeechMatcher.swift in Sources */,
 				B20000000000000000000036 /* TranscriptWindow.swift in Sources */,
 				B20000000000000000000037 /* ListeningSession.swift in Sources */,
+				C1000000000000000000008C /* AudioResampler.swift in Sources */,
+				C1000000000000000000007C /* CloudEarSupport.swift in Sources */,
 				B20000000000000000000038 /* SpeechMatcherTests.swift in Sources */,
 				B20000000000000000000039 /* TranscriptWindowTests.swift in Sources */,
 				B2000000000000000000003A /* VerifySpeechTests.swift in Sources */,

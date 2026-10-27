@@ -37,8 +37,13 @@ struct SettingsView: View {
     @AppStorage("listenerOptIn") private var listenerOptIn = false
     @AppStorage("speechLanguage") private var speechLanguage = "auto"
     @AppStorage("aiJudgeEnabled") private var aiJudgeEnabled = true
+    @AppStorage("cloudEarEnabled") private var cloudEarEnabled = true
+    @AppStorage("cloudEarAlwaysOn") private var cloudEarAlwaysOn = true
+    @ObservedObject private var protect = ProtectViewModel.shared
     @AppStorage("distressWordsEnabled") private var distressWordsEnabled = true
     @AppStorage("recordOnSOS") private var recordOnSOS = true
+    @AppStorage("shoutingTriggersSOS") private var shoutingTriggersSOS = true
+    @AppStorage("debugLogEnabled") private var debugLogEnabled = true
     @State private var connectionStatus: String?
     @State private var testingConnection = false
 
@@ -50,9 +55,14 @@ struct SettingsView: View {
                 }
                 Section {
                     Toggle("Listen for threatening speech", isOn: $listenerOptIn)
+                    Toggle("Cloud ear (Meta Muse Voice Transcribe)", isOn: $cloudEarEnabled)
+                    Toggle("Cloud ear always on (demo)", isOn: $cloudEarAlwaysOn)
+                    LabeledContent("Status", value: protect.cloudStatus)
                     Toggle("AI judges the conversation", isOn: $aiJudgeEnabled)
                     Toggle("Distress words start auto-SOS", isOn: $distressWordsEnabled)
+                    Toggle("Shouting starts auto-SOS", isOn: $shoutingTriggersSOS)
                     Toggle("Record and upload during an SOS", isOn: $recordOnSOS)
+                    Toggle("Debug log (sends what is heard to your backend)", isOn: $debugLogEnabled)
                     Picker("Speech language", selection: $speechLanguage) {
                         Text("Automatic").tag("auto")
                         Text("English (India)").tag("en")
