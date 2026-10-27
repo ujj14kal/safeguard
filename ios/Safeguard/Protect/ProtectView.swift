@@ -1,9 +1,13 @@
+import MapKit
 import SwiftUI
+import UIKit
 
 struct ProtectView: View {
     @StateObject private var model = ProtectViewModel.shared
     @AppStorage("debugOverlayEnabled") private var debugOverlay = false
     @AppStorage("listenerOptIn") private var listenerOptIn = false
+    @Environment(\.openURL) private var openURL
+    @State private var endingPressed = false
 
     var body: some View {
         if model.isProtecting {
@@ -269,42 +273,304 @@ struct ProtectView: View {
             .accessibilityAddTraits(.isHeader)
     }
 
-    /// Unsafe: full red scrim, visually distinct from the red edge glow.
-    /// Records and shows the state; Phase 6 escalates.
+    /// Unsafe: full SOS screen. Four escalation tracks run in parallel;
+    /// each chip shows its own status, one failing never stops the rest.
     private var sosScrim: some View {
         ZStack {
             DS.Colors.danger.opacity(0.88)
                 .ignoresSafeArea()
-            VStack(spacing: DS.Spacing.medium) {
-                Image(systemName: "sos.circle.fill")
-                    .font(.system(size: 72))
-                    .foregroundStyle(.white)
-                Text("SOS")
-                    .font(.system(.largeTitle, design: .rounded, weight: .bold))
-                    .foregroundStyle(.white)
-                Text(
-                    model.unsafeCause == .noReply
-                        ? "No reply — help is on the way"
-                        : model.unsafeCause == .distressWord
-                            ? "Distress call — recording and help are starting"
-                            : "Help is on the way"
-                )
-                .foregroundStyle(.white)
-                if let status = model.evidenceStatus {
-                    Label(status, systemImage: "record.circle")
-                        .font(.footnote)
+            ScrollView {
+                VStack(spacing: DS.Spacing.medium) {
+                    Image(systemName: "sos.circle.fill")
+                        .font(.system(size: 64))
+                        .foregroundStyle(.white)
+                    Text("SOS")
+                        .font(.system(.largeTitle, design: .rounded, weight: .bold))
+                        .foregroundStyle(.white)
+                    Text(sosCauseText)
                         .foregroundStyle(.white)
                         .multilineTextAlignment(.center)
+                    trackChips
+                    deliveryRows
+                    liveLinkRow
+                    if let status = model.evidenceStatus {
+                        Label(status, systemImage: "record.circle")
+                            .font(.footnote)
+                            .foregroundStyle(.white)
+                            .multilineTextAlignment(.center)
+                    }
+                    routeCard
+                    if model.escalation.status(of: .cab) == .done {
+                        Button("Cab (demo)") { model.showingCabSheet = true }
+                            .buttonStyle(.bordered)
+                            .tint(.white)
+                            .foregroundStyle(.white)
+                    }
+                    call112Section
+                    holdToEndButton
                 }
-                Button("Stop protecting") { model.stop() }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.white)
-                    .foregroundStyle(DS.Colors.danger)
+                .padding()
             }
-            .padding()
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("SOS. Help is on the way.")
+        .sheet(isPresented: $model.showingCabSheet) { cabSheet }
+    }
+
+    private var sosCauseText: String {
+        if model.unsafeCause == .noReply {
+            return "No reply — help is on the way"
+        }
+        if model.unsafeCause == .distressWord {
+            return "Distress call — recording and help are starting"
+        }
+        return "Help is on the way"
+    }
+
+    /// One chip per track: icon + name + status word.
+    private var trackChips: some View {
+        VStack(spacing: DS.Spacing.small) {
+            ForEach(EscalationTrack.allCases, id: \.self) { track in
+                trackChip(track)
+            }
+        }
+    }
+
+    private func trackChip(_ track: EscalationTrack) -> some View {
+        let status = model.escalation.status(of: track)
+        return HStack(spacing: 8) {
+            Image(systemName: trackStatusIcon(status))
+                .foregroundStyle(.white)
+            Text(track.title)
+                .foregroundStyle(.white)
+            Spacer()
+            Text(trackStatusText(track, status: status))
+                .font(.footnote)
+                .foregroundStyle(.white.opacity(0.9))
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(.white.opacity(0.16))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+
+    private func trackStatusIcon(_ status: TrackStatus) -> String {
+        switch status {
+        case .pending:
+            return "clock"
+        case .running:
+            return "arrow.triangle.2.circlepath"
+        case .done:
+            return "checkmark.circle.fill"
+        case .failed:
+            return "exclamationmark.circle.fill"
+        }
+    }
+
+    private func trackStatusText(_ track: EscalationTrack, status: TrackStatus) -> String {
+        switch status {
+        case .pending:
+            return "Pending"
+        case .running:
+            let attempt = model.escalation.attempts(of: track)
+            return attempt > 1 ? "Retrying (\(attempt))" : "Running"
+        case .done:
+            return "Done"
+        case .failed:
+            if let reason = model.escalation.reason(of: track) {
+                return "Failed: \(reason)"
+            }
+            return "Failed"
+        }
+    }
+
+    /// Per-contact outcomes from /incident/start (Sent / Failed / Dry-run).
+    @ViewBuilder
+    private var deliveryRows: some View {
+        if !model.deliveryStatus.isEmpty {
+            VStack(spacing: 4) {
+                ForEach(model.deliveryStatus, id: \.code) { outcome in
+                    HStack {
+                        Text(outcome.name ?? "Contact")
+                            .foregroundStyle(.white)
+                        Spacer()
+                        Text(deliveryText(outcome.status))
+                            .font(.footnote.bold())
+                            .foregroundStyle(deliveryColor(outcome.status))
+                    }
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(.white.opacity(0.16))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+        }
+    }
+
+    private func deliveryText(_ status: String) -> String {
+        switch status {
+        case "sent":
+            return "Sent"
+        case "dry-run":
+            return "Dry-run"
+        case "failed":
+            return "Failed"
+        default:
+            return "Waiting"
+        }
+    }
+
+    private func deliveryColor(_ status: String) -> Color {
+        switch status {
+        case "sent":
+            return .green
+        case "dry-run":
+            return .yellow
+        case "failed":
+            return Color(red: 1, green: 0.6, blue: 0.6)
+        default:
+            return .white.opacity(0.8)
+        }
+    }
+
+    /// "Family can watch" + Copy + Share, once the incident mints the page.
+    @ViewBuilder
+    private var liveLinkRow: some View {
+        if let link = model.liveURL, let url = URL(string: link) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Family can watch:")
+                    .font(.footnote)
+                    .foregroundStyle(.white.opacity(0.9))
+                Text(link)
+                    .font(.footnote)
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                HStack {
+                    Button("Copy") {
+                        UIPasteboard.general.string = link
+                        model.showToast("Link copied")
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(.white)
+                    .foregroundStyle(.white)
+                    ShareLink(item: url, message: Text("My Safeguard live page")) {
+                        Label("Share", systemImage: "square.and.arrow.up")
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(.white)
+                    .foregroundStyle(.white)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(.white.opacity(0.16))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+        }
+    }
+
+    /// Safest route: nearest staffed/public place by walking ETA, or why
+    /// there is no route yet.
+    @ViewBuilder
+    private var routeCard: some View {
+        if let route = model.sosRoute, let region = model.sosRegion {
+            VStack(alignment: .leading, spacing: 6) {
+                Map(initialPosition: .region(region)) {
+                    MapPolyline(route.polyline)
+                        .stroke(.white, lineWidth: 4)
+                    if let name = model.sosDestinationName,
+                       let point = model.sosDestinationCoordinate
+                    {
+                        Marker(name, coordinate: point)
+                    }
+                }
+                .frame(height: 200)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                HStack {
+                    VStack(alignment: .leading) {
+                        Text(model.sosDestinationName ?? "Safe place")
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                        if let eta = model.sosDestinationETA {
+                            Text(eta)
+                                .font(.footnote)
+                                .foregroundStyle(.white.opacity(0.9))
+                        }
+                    }
+                    Spacer()
+                    Button("Open in Maps") { model.openDestinationInMaps() }
+                        .buttonStyle(.bordered)
+                        .tint(.white)
+                        .foregroundStyle(.white)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(.white.opacity(0.16))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+        } else if let message = model.sosRouteMessage {
+            Text(message)
+                .font(.footnote)
+                .foregroundStyle(.white)
+                .multilineTextAlignment(.center)
+        }
+    }
+
+    /// Emergency call: the wearer taps; nothing dials on its own.
+    private var call112Section: some View {
+        VStack(spacing: 4) {
+            Button("Call 112") {
+                if let url = URL(string: "tel:112") {
+                    openURL(url)
+                }
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.white)
+            .foregroundStyle(DS.Colors.danger)
+            Text("Automatic police alerts are on the roadmap.")
+                .font(.footnote)
+                .foregroundStyle(.white.opacity(0.9))
+        }
+    }
+
+    /// Deliberate end: hold 3 s (or say the safe phrase). Stopping
+    /// protection mid-SOS goes through this same flow.
+    private var holdToEndButton: some View {
+        Button("Hold 3 s to end SOS") {}
+            .buttonStyle(.bordered)
+            .tint(.white)
+            .foregroundStyle(.white)
+            .scaleEffect(endingPressed ? 0.94 : 1.0)
+            .onLongPressGesture(
+                minimumDuration: 3,
+                pressing: { pressing in endingPressed = pressing },
+                perform: { model.endSOSButtonHeld() }
+            )
+            .accessibilityLabel("Hold 3 seconds to end the SOS")
+    }
+
+    /// Mock cab sheet: clearly a demo, never a real booking.
+    private var cabSheet: some View {
+        NavigationStack {
+            VStack(spacing: DS.Spacing.medium) {
+                Label(SOSMessageBuilder.demoBanner, systemImage: "exclamationmark.triangle.fill")
+                    .font(.headline)
+                    .multilineTextAlignment(.center)
+                LabeledContent("Driver", value: model.cabDriver)
+                LabeledContent("Plate", value: model.cabPlate)
+                LabeledContent("Arrives in", value: model.cabCountdownText)
+                Button("Share cab details") { model.shareCabDetails() }
+                    .buttonStyle(.borderedProminent)
+                Spacer()
+            }
+            .padding()
+            .navigationTitle("Cab (demo)")
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { model.showingCabSheet = false }
+                }
+            }
+        }
     }
 
     // MARK: - Idle
