@@ -106,6 +106,9 @@
 		B20000000000000000000045 /* IncidentClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A7 /* IncidentClient.swift */; };
 		B20000000000000000000046 /* EscalationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A9 /* EscalationTests.swift */; };
 		B20000000000000000000047 /* IncidentClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000AA /* IncidentClientTests.swift */; };
+		A100000000000000000000AD /* SOSLocationTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000AC /* SOSLocationTracker.swift */; };
+		B20000000000000000000048 /* SOSLocationTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000AC /* SOSLocationTracker.swift */; };
+		A100000000000000000000AF /* ContactsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000AE /* ContactsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -182,6 +185,8 @@
 		A100000000000000000000A7 /* IncidentClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IncidentClient.swift; sourceTree = "<group>"; };
 		A100000000000000000000A9 /* EscalationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EscalationTests.swift; sourceTree = "<group>"; };
 		A100000000000000000000AA /* IncidentClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IncidentClientTests.swift; sourceTree = "<group>"; };
+		A100000000000000000000AC /* SOSLocationTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SOSLocationTracker.swift; sourceTree = "<group>"; };
+		A100000000000000000000AE /* ContactsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -221,6 +226,7 @@
 				A10000000000000000000083 /* Speech */,
 				A10000000000000000000091 /* OnboardingView.swift */,
 				A1000000000000000000009E /* Escalation */,
+				A100000000000000000000AB /* Contacts */,
 			);
 			path = Safeguard;
 			sourceTree = "<group>";
@@ -360,8 +366,17 @@
 				A100000000000000000000A3 /* RouteChoice.swift */,
 				A100000000000000000000A5 /* SOSMessageBuilder.swift */,
 				A100000000000000000000A7 /* IncidentClient.swift */,
+				A100000000000000000000AC /* SOSLocationTracker.swift */,
 			);
 			path = Escalation;
+			sourceTree = "<group>";
+		};
+		A100000000000000000000AB /* Contacts */ = {
+			isa = PBXGroup;
+			children = (
+				A100000000000000000000AE /* ContactsView.swift */,
+			);
+			path = Contacts;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */		A1000000000000000000001A /* Verify */ = {
@@ -524,6 +539,8 @@
 				A100000000000000000000A4 /* RouteChoice.swift in Sources */,
 				A100000000000000000000A6 /* SOSMessageBuilder.swift in Sources */,
 				A100000000000000000000A8 /* IncidentClient.swift in Sources */,
+				A100000000000000000000AD /* SOSLocationTracker.swift in Sources */,
+				A100000000000000000000AF /* ContactsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -578,6 +595,7 @@
 				B20000000000000000000045 /* IncidentClient.swift in Sources */,
 				B20000000000000000000046 /* EscalationTests.swift in Sources */,
 				B20000000000000000000047 /* IncidentClientTests.swift in Sources */,
+				B20000000000000000000048 /* SOSLocationTracker.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

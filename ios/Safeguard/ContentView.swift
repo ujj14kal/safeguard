@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Main tab structure: Protect, Contacts, Activity, Settings.
-/// Contacts/Activity/Settings are shells until Phase 7.
+/// Activity is a shell until Phase 7.
 struct ContentView: View {
     @State private var selection: Tab = .protect
     @AppStorage("onboardingSeen") private var onboardingSeen = false
@@ -23,7 +23,7 @@ struct ContentView: View {
             ProtectView()
                 .tabItem { Label("Protect", systemImage: "shield.fill") }
                 .tag(Tab.protect)
-            ContactsPlaceholderView()
+            ContactsView()
                 .tabItem { Label("Contacts", systemImage: "person.2.fill") }
                 .tag(Tab.contacts)
             ActivityPlaceholderView()
