@@ -41,6 +41,14 @@ class Settings:
     muse_calls_per_min: int = field(
         default_factory=lambda: _int("VERIFY_RATE_LIMIT_PER_MIN", 20)
     )
+    # SOS evidence (video and audio segments uploaded by the app). The Mac
+    # backend is the "cloud" for the demo; EVIDENCE_DIR can point at a synced
+    # or mounted bucket. If EVIDENCE_TOKEN is set, uploads must send it in
+    # the X-Evidence-Token header.
+    evidence_dir: str = field(default_factory=lambda: os.environ.get("EVIDENCE_DIR", "evidence"))
+    evidence_token: str = field(default_factory=lambda: os.environ.get("EVIDENCE_TOKEN", ""))
+    evidence_max_mb: int = field(default_factory=lambda: _int("EVIDENCE_MAX_MB", 80))
+
     # Continuous conversation judging sends a text snippet every few seconds,
     # so it gets its own budget and cannot starve /verify.
     speech_calls_per_min: int = field(

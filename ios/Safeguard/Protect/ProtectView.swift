@@ -26,7 +26,7 @@ struct ProtectView: View {
                 config: model.threatConfig
             )
             .ignoresSafeArea()
-            if model.hasRedBox || model.conversationFlag != nil {
+            if model.hasRedBox || model.conversationFlag != nil || model.state == .countdown {
                 RedVignette()
                     .ignoresSafeArea()
             }
@@ -48,7 +48,9 @@ struct ProtectView: View {
                 if model.state == .asking {
                     checkInCard
                 }
-                if let flag = model.conversationFlag {
+                if model.state == .countdown {
+                    countdownCard
+                } else if let flag = model.conversationFlag {
                     flagCard(flag)
                 }
                 if let cue = model.listeningCue {
@@ -147,9 +149,10 @@ struct ProtectView: View {
             if debugOverlay {
                 // Debug only: what the recogniser just heard, so you can see
                 // whether Hindi/English is being picked up at all.
-                Text(model.lastHeard.isEmpty ? "Heard: (nothing yet)" : "Heard: \(model.lastHeard)")
+                Text((model.lastHeard.isEmpty ? "Heard: (nothing yet)" : "Heard: \(model.lastHeard)")
+                    + "\n" + model.judgeStatus)
                     .font(.footnote.monospaced())
-                    .lineLimit(2)
+                    .lineLimit(4)
                     .padding(8)
                     .safeguardPanel()
             }
@@ -174,6 +177,37 @@ struct ProtectView: View {
             }
         }
         .padding()
+    }
+
+    /// Auto-SOS countdown after a distress word: big number, one big button.
+    private var countdownCard: some View {
+        VStack(spacing: DS.Spacing.medium) {
+            Label("Auto-SOS starting", systemImage: "timer")
+                .font(.headline)
+                .foregroundStyle(DS.Colors.danger)
+            TimelineView(.periodic(from: .now, by: 0.1)) { _ in
+                let left = max(0, (model.countdownDeadline ?? 0) - ProcessInfo.processInfo.systemUptime)
+                Text("\(Int(left.rounded(.up)))")
+                    .font(.system(size: 72, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+                    .monospacedDigit()
+                    .accessibilityLabel("\(Int(left.rounded(.up))) seconds until auto SOS")
+            }
+            Text("Recording and safety measures start when it reaches zero.")
+                .font(.footnote)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(.secondary)
+            Button("I'm OK, cancel") { model.cancelAutoSOS() }
+                .buttonStyle(PrimaryButtonStyle())
+            Text("Or say \"open calculator\", or double tap")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+        .padding()
+        .safeguardPanel()
+        .overlay(RoundedRectangle(cornerRadius: 20).stroke(DS.Colors.danger, lineWidth: 3))
+        .padding(.horizontal)
+        .accessibilityElement(children: .contain)
     }
 
     /// Red banner for concerning talk: stays a few seconds, offers the
@@ -249,9 +283,18 @@ struct ProtectView: View {
                     .foregroundStyle(.white)
                 Text(
                     model.unsafeCause == .noReply
-                        ? "No reply — help is on the way" : "Help is on the way"
+                        ? "No reply — help is on the way"
+                        : model.unsafeCause == .distressWord
+                            ? "Distress call — recording and help are starting"
+                            : "Help is on the way"
                 )
                 .foregroundStyle(.white)
+                if let status = model.evidenceStatus {
+                    Label(status, systemImage: "record.circle")
+                        .font(.footnote)
+                        .foregroundStyle(.white)
+                        .multilineTextAlignment(.center)
+                }
                 Button("Stop protecting") { model.stop() }
                     .buttonStyle(.borderedProminent)
                     .tint(.white)

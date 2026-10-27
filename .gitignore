@@ -60,3 +60,7 @@ tunnel*.log
 
 # macOS
 .DS_Store
+
+# SOS evidence uploaded to the local backend (never commit)
+backend/evidence/
+evidence/

@@ -82,6 +82,11 @@
 		A1000000000000000000009C /* VoiceCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000009B /* VoiceCommands.swift */; };
 		B2000000000000000000003F /* VoiceCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000009B /* VoiceCommands.swift */; };
 		B20000000000000000000040 /* VoiceCommandTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000009D /* VoiceCommandTests.swift */; };
+		C1000000000000000000001B /* EvidenceUpload.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1000000000000000000001A /* EvidenceUpload.swift */; };
+		C1000000000000000000001C /* EvidenceUpload.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1000000000000000000001A /* EvidenceUpload.swift */; };
+		C1000000000000000000002B /* EvidenceRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1000000000000000000002A /* EvidenceRecorder.swift */; };
+		C1000000000000000000002C /* EvidenceRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1000000000000000000002A /* EvidenceRecorder.swift */; };
+		C1000000000000000000003B /* EvidenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1000000000000000000003A /* EvidenceTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -144,6 +149,9 @@
 		A10000000000000000000099 /* DSButtons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSButtons.swift; sourceTree = "<group>"; };
 		A1000000000000000000009B /* VoiceCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceCommands.swift; sourceTree = "<group>"; };
 		A1000000000000000000009D /* VoiceCommandTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceCommandTests.swift; sourceTree = "<group>"; };
+		C1000000000000000000001A /* EvidenceUpload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EvidenceUpload.swift; sourceTree = "<group>"; };
+		C1000000000000000000002A /* EvidenceRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EvidenceRecorder.swift; sourceTree = "<group>"; };
+		C1000000000000000000003A /* EvidenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EvidenceTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -286,6 +294,7 @@
 				A10000000000000000000080 /* SafetyStateMachineTests.swift */,
 				A1000000000000000000008C /* SpeechMatcherTests.swift */,
 				A1000000000000000000008D /* TranscriptWindowTests.swift */,
+				C1000000000000000000003A /* EvidenceTests.swift */,
 				A1000000000000000000008E /* VerifySpeechTests.swift */,
 				A10000000000000000000093 /* ThemeContrastTests.swift */,
 				A10000000000000000000098 /* BoxMappingTests.swift */,
@@ -311,6 +320,8 @@
 			isa = PBXGroup;
 			children = (
 				A1000000000000000000003C /* VerifierGate.swift */,
+				C1000000000000000000002A /* EvidenceRecorder.swift */,
+				C1000000000000000000001A /* EvidenceUpload.swift */,
 				A1000000000000000000003D /* FrameBuffer.swift */,
 				A1000000000000000000003E /* VerifierClient.swift */,
 			);
@@ -439,6 +450,8 @@
 				A10000000000000000000079 /* ThreatScorer.swift in Sources */,
 				A1000000000000000000007A /* ProximityTracker.swift in Sources */,
 				A1000000000000000000007B /* VerifierGate.swift in Sources */,
+				C1000000000000000000002B /* EvidenceRecorder.swift in Sources */,
+				C1000000000000000000001B /* EvidenceUpload.swift in Sources */,
 				A1000000000000000000007C /* FrameBuffer.swift in Sources */,
 				A1000000000000000000007D /* VerifierClient.swift in Sources */,
 				A1000000000000000000007F /* SafetyStateMachine.swift in Sources */,
@@ -477,6 +490,9 @@
 				B2000000000000000000001E /* VerifierTests.swift in Sources */,
 				B20000000000000000000031 /* BrandAssetsTests.swift in Sources */,
 				B2000000000000000000001F /* VerifierGate.swift in Sources */,
+				C1000000000000000000002C /* EvidenceRecorder.swift in Sources */,
+				C1000000000000000000003B /* EvidenceTests.swift in Sources */,
+				C1000000000000000000001C /* EvidenceUpload.swift in Sources */,
 				B20000000000000000000020 /* FrameBuffer.swift in Sources */,
 				B20000000000000000000021 /* VerifierClient.swift in Sources */,
 				B20000000000000000000032 /* SafetyStateMachine.swift in Sources */,

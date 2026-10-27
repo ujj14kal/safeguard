@@ -4,7 +4,7 @@ import SwiftUI
 /// the full SafetyStateMachine (prompt, 10 s no-reply, cooldown, code phrases)
 /// arrives in Phase 5 and drives these states.
 enum ProtectionState: String, CaseIterable {
-    case idle, monitoring, suspected, asking, safe, unsafe
+    case idle, monitoring, suspected, asking, safe, unsafe, countdown
 
     var title: String {
         switch self {
@@ -14,6 +14,7 @@ enum ProtectionState: String, CaseIterable {
         case .asking: "Are you safe?"
         case .safe: "You're safe"
         case .unsafe: "SOS — help is on the way"
+        case .countdown: "Auto-SOS starting"
         }
     }
 
@@ -25,6 +26,7 @@ enum ProtectionState: String, CaseIterable {
         case .asking: "No reply in 10 seconds starts the SOS."
         case .safe: "Incident ended. Stay safe."
         case .unsafe: "Route, contacts, live stream and cab are starting."
+        case .countdown: "Say \"open calculator\", tap Cancel, or double tap if you are OK."
         }
     }
 
@@ -36,6 +38,7 @@ enum ProtectionState: String, CaseIterable {
         case .asking: "mic.fill"
         case .safe: "checkmark.shield.fill"
         case .unsafe: "sos.circle.fill"
+        case .countdown: "timer"
         }
     }
 
@@ -47,6 +50,7 @@ enum ProtectionState: String, CaseIterable {
         case .asking: .orange
         case .safe: .green
         case .unsafe: .red
+        case .countdown: .red
         }
     }
 

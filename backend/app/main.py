@@ -11,10 +11,13 @@ import binascii
 import json
 import logging
 import os
+import re
 from collections import Counter
 from datetime import datetime, timezone
 
-from fastapi import FastAPI, HTTPException, status
+from pathlib import Path
+
+from fastapi import FastAPI, Header, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
 from .config import SETTINGS
@@ -210,3 +213,71 @@ def log_call(
             handle.write(line + "\n")
     except OSError as exc:
         logger.warning("could not write verify log: %s", exc)
+
+
+# --- SOS evidence -----------------------------------------------------------
+
+_SESSION_RE = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
+_EVIDENCE_KINDS = {"video": {"mp4"}, "audio": {"m4a"}}
+
+
+def _evidence_root() -> Path:
+    return Path(SETTINGS.evidence_dir)
+
+
+def _check_evidence_token(token: str | None) -> None:
+    if SETTINGS.evidence_token and token != SETTINGS.evidence_token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="bad evidence token")
+
+
+@app.post("/evidence")
+async def upload_evidence(
+    request: Request,
+    session: str,
+    kind: str,
+    seq: int,
+    ext: str,
+    x_evidence_token: str | None = Header(default=None),
+) -> dict:
+    """Store one recording segment (raw bytes in the body) from an SOS.
+
+    The app records video and audio in short segments while an SOS runs and
+    uploads each as soon as it is closed, so a phone that is taken or
+    smashed has already sent most of the evidence. File names are fixed by
+    the server from validated fields; nothing from the client is used as a path.
+    """
+    _check_evidence_token(x_evidence_token)
+    if not _SESSION_RE.match(session):
+        raise HTTPException(status_code=422, detail="bad session id")
+    if kind not in _EVIDENCE_KINDS or ext not in _EVIDENCE_KINDS[kind]:
+        raise HTTPException(status_code=422, detail="bad kind or extension")
+    if not 0 <= seq <= 100_000:
+        raise HTTPException(status_code=422, detail="bad sequence number")
+    limit = SETTINGS.evidence_max_mb * 1024 * 1024
+    declared = request.headers.get("content-length")
+    if declared and declared.isdigit() and int(declared) > limit:
+        raise HTTPException(status_code=413, detail="segment too large")
+    body = await request.body()
+    if not body:
+        raise HTTPException(status_code=422, detail="empty segment")
+    if len(body) > limit:
+        raise HTTPException(status_code=413, detail="segment too large")
+    folder = _evidence_root() / session
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / f"{kind}-{seq:05d}.{ext}").write_bytes(body)
+    logger.info("evidence stored kind=%s seq=%d bytes=%d", kind, seq, len(body))
+    return {"stored": True, "bytes": len(body)}
+
+
+@app.get("/evidence/{session}")
+def list_evidence(session: str, x_evidence_token: str | None = Header(default=None)) -> dict:
+    """List the segments stored for one SOS session (names and sizes only)."""
+    _check_evidence_token(x_evidence_token)
+    if not _SESSION_RE.match(session):
+        raise HTTPException(status_code=422, detail="bad session id")
+    folder = _evidence_root() / session
+    if not folder.is_dir():
+        raise HTTPException(status_code=404, detail="no such session")
+    files = [{"name": f.name, "bytes": f.stat().st_size} for f in sorted(folder.iterdir())]
+    return {"session": session, "files": files}
+

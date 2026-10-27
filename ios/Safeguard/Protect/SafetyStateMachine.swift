@@ -18,6 +18,9 @@ public enum UnsafeCause: Sendable, Equatable {
     case noReply
     /// The wearer said the unsafe code phrase.
     case unsafePhrase
+    /// A distress word ("bachao", "help") started the auto-SOS countdown and
+    /// nobody cancelled it.
+    case distressWord
 }
 
 /// The wearer's reply during a check-in. `.tap` is the non-verbal answer:
@@ -33,6 +36,9 @@ public enum UserReply: Sendable, Equatable {
 /// "stay quiet" window (Part C) that precedes the spoken question.
 public enum SafetyState: Sendable, Equatable {
     case idle, monitoring, listening, asking, safe, unsafe
+    /// A distress word was heard: the auto-SOS starts when the countdown
+    /// ends unless the wearer cancels it.
+    case countdown
 }
 
 /// Every threshold, window and phrase for the safety state machine.
@@ -61,6 +67,21 @@ public struct SafetyConfig: Sendable {
     public var listeningSkipScore: Double = 0.80
     /// Calm on-screen cue shown during the window (VoiceOver reads it once).
     public var listeningCueText = "Stay quiet for a moment, listening to your surroundings"
+
+    // MARK: - Auto-SOS (distress words)
+
+    /// Seconds the wearer has to cancel the auto-SOS after a distress word.
+    public var autoSosSeconds: TimeInterval = 5
+    /// After a cancel, the same words are ignored this long, so the
+    /// tail of the same sentence cannot restart the countdown.
+    public var distressCooldownSeconds: TimeInterval = 10
+    /// Words that start protection and the countdown. Whole words, spelling
+    /// tolerant (bachao / bachaao). Edit freely.
+    public var distressWords = [
+        "help", "help me", "bachao", "bacho", "bachaao", "madad", "madad karo",
+        "save me", "somebody help", "please help", "leave me", "chhodo mujhe",
+        "बचाओ", "बचाओ बचाओ", "मदद", "मदद करो", "छोड़ो मुझे",
+    ]
 
     // MARK: - Speech
 
@@ -104,6 +125,8 @@ public struct SafetyStateMachine: Sendable {
     private let config: SafetyConfig
     private var listeningUntil: TimeInterval?
     private var askDeadline: TimeInterval?
+    private var countdownUntil: TimeInterval?
+    private var distressIgnoredUntil: TimeInterval = -.infinity
 
     /// End of the post-Safe quiet period (nil when not in Safe).
     public private(set) var cooldownUntil: TimeInterval?
@@ -128,6 +151,38 @@ public struct SafetyStateMachine: Sendable {
 
     // MARK: - Inputs
 
+    /// A distress word was heard. Starts the auto-SOS countdown from any
+    /// protecting state (even with no incident, and through a Safe cooldown).
+    public mutating func noteDistressWord(at time: TimeInterval) {
+        guard time >= distressIgnoredUntil else { return }
+        switch state {
+        case .monitoring, .listening, .asking, .safe:
+            listeningUntil = nil
+            askDeadline = nil
+            askSpeechDue = false
+            cooldownUntil = nil
+            countdownUntil = time + config.autoSosSeconds
+            state = .countdown
+        case .idle, .countdown, .unsafe:
+            break
+        }
+    }
+
+    /// Seconds left before the auto-SOS fires, or nil outside the countdown.
+    public func countdownRemaining(at time: TimeInterval) -> TimeInterval? {
+        guard state == .countdown, let until = countdownUntil else { return nil }
+        return max(0, until - time)
+    }
+
+    /// Cancels a running countdown ("I'm OK"): back to monitoring.
+    public mutating func cancelCountdown(at time: TimeInterval) {
+        guard state == .countdown else { return }
+        countdownUntil = nil
+        suspicionSources = []
+        distressIgnoredUntil = time + config.distressCooldownSeconds
+        state = .monitoring
+    }
+
     /// An on-device scorer alert (score at or above threshold).
     public mutating func noteMovementAlert(score: Double, at time: TimeInterval) {
         switch state {
@@ -139,7 +194,7 @@ public struct SafetyStateMachine: Sendable {
             if score >= config.listeningSkipScore {
                 enterAsking()
             }
-        case .idle, .asking, .safe, .unsafe:
+        case .idle, .asking, .safe, .unsafe, .countdown:
             break
         }
     }
@@ -173,7 +228,7 @@ public struct SafetyStateMachine: Sendable {
                 suspicionSources = [.muse]
                 cooldownUntil = nil
                 enterAsking()
-            case .idle, .safe, .unsafe:
+            case .idle, .safe, .unsafe, .countdown:
                 break
             }
         }
@@ -189,7 +244,7 @@ public struct SafetyStateMachine: Sendable {
             enterSuspicionOrAsking(skip: false, at: time)
         case .listening, .asking:
             suspicionSources.insert(.speech)
-        case .idle, .safe, .unsafe:
+        case .idle, .safe, .unsafe, .countdown:
             break
         }
     }
@@ -200,7 +255,7 @@ public struct SafetyStateMachine: Sendable {
             // Works at ANY time while protecting — even with no incident —
             // and goes straight to Unsafe.
             switch state {
-            case .monitoring, .listening, .asking, .safe:
+            case .monitoring, .listening, .asking, .safe, .countdown:
                 enterUnsafe(cause: .unsafePhrase)
             case .idle, .unsafe:
                 break
@@ -208,6 +263,8 @@ public struct SafetyStateMachine: Sendable {
         case .safePhrase:
             if state == .asking {
                 enterSafe(at: time)
+            } else if state == .countdown {
+                cancelCountdown(at: time)
             }
         case .tap:
             switch state {
@@ -217,6 +274,8 @@ public struct SafetyStateMachine: Sendable {
             case .asking:
                 // Non-verbal "I'm OK".
                 enterSafe(at: time)
+            case .countdown:
+                cancelCountdown(at: time)
             case .idle, .monitoring, .safe, .unsafe:
                 break
             }
@@ -248,6 +307,10 @@ public struct SafetyStateMachine: Sendable {
                 cooldownUntil = nil
                 suspicionSources = []
                 state = .monitoring
+            }
+        case .countdown:
+            if let until = countdownUntil, time >= until {
+                enterUnsafe(cause: .distressWord)
             }
         case .idle, .monitoring, .unsafe:
             break
@@ -289,6 +352,7 @@ public struct SafetyStateMachine: Sendable {
     }
 
     private mutating func enterUnsafe(cause: UnsafeCause) {
+        countdownUntil = nil
         listeningUntil = nil
         askDeadline = nil
         askSpeechDue = false
@@ -303,6 +367,32 @@ public struct SafetyStateMachine: Sendable {
         listeningUntil = nil
         askDeadline = nil
         cooldownUntil = nil
+        countdownUntil = nil
+        distressIgnoredUntil = -.infinity
+    }
+}
+
+/// Spots distress words in a transcript (whole words, spelling tolerant).
+/// Wake-worded voice commands are NOT distress: "Safeguard, help" lists the
+/// commands. The view model checks commands first.
+public struct DistressMatcher: Sendable {
+    private let phrases: [[String]]
+
+    public init(config: SafetyConfig = SafetyConfig()) {
+        phrases = config.distressWords.map { SpeechText.words(in: $0).map(SpeechText.fuzzyKey) }
+    }
+
+    public func matches(_ transcript: String) -> Bool {
+        let keys = SpeechText.words(in: transcript).map(SpeechText.fuzzyKey)
+        guard !keys.isEmpty else { return false }
+        return phrases.contains { phrase in
+            guard !phrase.isEmpty, keys.count >= phrase.count else { return false }
+            return (0...(keys.count - phrase.count)).contains { start in
+                zip(keys[start..<(start + phrase.count)], phrase).allSatisfy {
+                    SpeechText.keysEqual($0, $1)
+                }
+            }
+        }
     }
 }
 

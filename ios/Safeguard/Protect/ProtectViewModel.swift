@@ -29,6 +29,8 @@ final class ProtectViewModel: ObservableObject {
     @Published var listenerLive = false
     @Published var listenerDeafReason: String?
     @Published var lastHeard = ""
+    /// Debug: what the AI judge last did ("sent", its verdict, or why it failed).
+    @Published var judgeStatus = "AI judge: idle"
     /// Concerning talk heard in the last few seconds (red banner on the HUD).
     @Published var conversationFlag: ConversationFlag?
     @Published var lastSpeechInfo: String?
@@ -158,6 +160,8 @@ final class ProtectViewModel: ObservableObject {
             return "You're safe"
         case .unsafe:
             return "SOS"
+        case .countdown:
+            return "Auto-SOS starting"
         case .suspected:
             return "Something seems off"
         case .monitoring:
@@ -190,7 +194,12 @@ final class ProtectViewModel: ObservableObject {
             state = .monitoring
             beginSession(status: "Monitoring with phone camera")
             startEgoMotion()
+            if pendingDistressStart {
+                pendingDistressStart = false
+                distressHeard()
+            }
         } catch {
+            pendingDistressStart = false
             errorMessage = error.localizedDescription
         }
     }
@@ -213,6 +222,7 @@ final class ProtectViewModel: ObservableObject {
     }
 
     func stop() {
+        stopEvidence()
         stopEgoMotion()
         hapticGate.reset()
         source?.stop()
@@ -235,6 +245,8 @@ final class ProtectViewModel: ObservableObject {
         speakingNow = false
         // The listener stays up for idle voice commands; the transcript
         // window is still discarded on every stop.
+        endCountdown()
+        evidenceStatus = nil
         window.clear()
         conversationFlag = nil
         judgeSchedule.reset()
@@ -394,6 +406,86 @@ final class ProtectViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Auto-SOS countdown (distress words)
+
+    @AppStorage("distressWordsEnabled") var distressWordsEnabled = true
+    /// System-uptime time when the auto-SOS fires; nil outside the countdown.
+    @Published var countdownDeadline: TimeInterval?
+    /// "Recording • 2 of 3 parts saved to the cloud" while an SOS records.
+    @Published var evidenceStatus: String?
+    @AppStorage("recordOnSOS") var recordOnSOS = true
+    nonisolated let evidence = EvidenceRecorder()
+    private let distressMatcher = DistressMatcher()
+    private var pendingDistressStart = false
+    private var countdownTimer: Timer?
+
+    /// The wearer is OK: stop the countdown (button, double tap, or the
+    /// safe code phrase all end up here or in the state machine).
+    func cancelAutoSOS() {
+        safety.cancelCountdown(at: Self.now)
+        syncProtectionState()
+        showToast("Auto-SOS cancelled")
+    }
+
+    private func beginCountdown() {
+        countdownDeadline = Self.now + safetyConfig.autoSosSeconds
+        // One soft tap each second; the SOS itself fires on the deadline,
+        // not on a tick, so it cannot be late by up to a second.
+        countdownTimer?.invalidate()
+        countdownTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self, self.state == .countdown else { return }
+                UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+            }
+        }
+        let wait = safetyConfig.autoSosSeconds + 0.05
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(wait))
+            guard let self, self.state == .countdown else { return }
+            self.safety.tick(at: Self.now)
+            self.syncProtectionState()
+        }
+    }
+
+    private func endCountdown() {
+        countdownTimer?.invalidate()
+        countdownTimer = nil
+        countdownDeadline = nil
+    }
+
+    /// SOS: start recording video and audio, saved to the backend in parts.
+    private func startEvidence() {
+        guard recordOnSOS, !usingReplay, !evidence.isRecording else { return }
+        evidence.retryPending()
+        evidence.start(sessionID: EvidenceSessionID.make()) { [weak self] progress in
+            Task { @MainActor [weak self] in self?.evidenceStatus = progress.summary }
+        }
+        listener.setAudioSink { [evidence] buffer in evidence.appendAudio(buffer) }
+        evidenceStatus = EvidenceProgress().summary
+    }
+
+    private func stopEvidence() {
+        listener.setAudioSink(nil)
+        evidence.stop()
+    }
+
+    /// A distress word heard while protecting.
+    private func distressHeard() {
+        safety.noteDistressWord(at: Self.now)
+        syncProtectionState()
+    }
+
+    /// A distress word heard while NOT protecting: start protecting at once,
+    /// then run the countdown as soon as the camera is up.
+    private func distressHeardWhileIdle() {
+        guard distressWordsEnabled, !pendingDistressStart else { return }
+        pendingDistressStart = true
+        Task {
+            await startCamera()
+            if state == .idle { pendingDistressStart = false }
+        }
+    }
+
     /// Drives the ring/display state from the machine, announcing changes.
     private func syncProtectionState() {
         let mapped: ProtectionState
@@ -410,13 +502,22 @@ final class ProtectViewModel: ObservableObject {
             mapped = .safe
         case .unsafe:
             mapped = .unsafe
+        case .countdown:
+            mapped = .countdown
         }
         if mapped != state {
+            let previous = state
             state = mapped
             // Anything needing the wearer's eyes lifts the dim.
-            if mapped == .asking || mapped == .suspected || mapped == .unsafe {
+            if mapped == .asking || mapped == .suspected || mapped == .unsafe || mapped == .countdown {
                 dimmed = false
             }
+            if mapped == .countdown {
+                beginCountdown()
+            } else if previous == .countdown {
+                endCountdown()
+            }
+            if mapped == .unsafe { startEvidence() }
             announce(mapped)
         }
     }
@@ -441,6 +542,11 @@ final class ProtectViewModel: ObservableObject {
         case .unsafe:
             UIAccessibility.post(notification: .announcement, argument: "SOS. Help is on the way.")
             UINotificationFeedbackGenerator().notificationOccurred(.error)
+        case .countdown:
+            UIAccessibility.post(
+                notification: .announcement,
+                argument: "Auto SOS in 5 seconds. Say open calculator to cancel."
+            )
         case .idle, .monitoring, .asking:
             break
         }
@@ -474,8 +580,24 @@ final class ProtectViewModel: ObservableObject {
     /// silent window), then — only when opted in — the threat matcher.
     /// Partial text: code phrases only, and each phrase once per utterance.
     fileprivate func handlePartial(_ text: String) {
-        guard isProtecting else { return }
+        guard isProtecting else {
+            // Idle: a distress word starts protection without waiting for the
+            // sentence to finish, unless it is a wake-worded command.
+            if distressWordsEnabled, !speakingNow, commandParser.parse(text) == nil,
+               distressMatcher.matches(text)
+            {
+                distressHeardWhileIdle()
+            }
+            return
+        }
+        if distressWordsEnabled, !speakingNow, commandParser.parse(text) == nil,
+           distressMatcher.matches(text)
+        {
+            distressHeard()
+            return
+        }
         rateAndFlag(text)
+        if listenerOptIn, aiJudgeEnabled { judgeConversation(partial: text) }
         guard let reply = partialGate.consume(phraseMatcher.match(text)) else { return }
         safety.noteReply(reply, at: Self.now)
         drainAskSpeech()
@@ -487,6 +609,8 @@ final class ProtectViewModel: ObservableObject {
         if !isProtecting {
             if !speakingNow, let command = commandParser.parse(text) {
                 runCommand(command)
+            } else if distressWordsEnabled, !speakingNow, distressMatcher.matches(text) {
+                distressHeardWhileIdle()
             }
             return
         }
@@ -521,6 +645,10 @@ final class ProtectViewModel: ObservableObject {
            let command = commandParser.parse(text)
         {
             runCommand(command)
+            return
+        }
+        if distressWordsEnabled, !speakingNow, distressMatcher.matches(text) {
+            distressHeard()
             return
         }
         guard listenerOptIn else { return }
@@ -586,9 +714,18 @@ final class ProtectViewModel: ObservableObject {
     /// says whether it is safe, so threats the word list has never seen
     /// are still caught. Text only, never audio; the on-device matcher has
     /// already warned instantly and stays as the fallback.
-    private func judgeConversation() {
-        let snippet = window.tail(maxChars: speechConfig.snippetMaxChars)
+    private func judgeConversation(partial: String? = nil) {
+        // A partial is the sentence still being spoken: judge it together
+        // with the window, so the verdict does not wait for the pause that
+        // ends the sentence.
+        var text = window.transcript
+        if let partial, !partial.isEmpty { text += (text.isEmpty ? "" : " ") + partial }
+        var snippet = text
+        if snippet.count > speechConfig.snippetMaxChars {
+            snippet = String(snippet.suffix(speechConfig.snippetMaxChars))
+        }
         guard judgeSchedule.shouldSend(snippet, at: Self.now) else { return }
+        judgeStatus = "AI judge: sent \(snippet.split(separator: " ").count) words"
         let onDevice = speechMatcher.match(window.transcript)
         let severity = onDevice?.severity ?? 0
         let category = onDevice?.category.rawValue ?? "none"
@@ -598,9 +735,11 @@ final class ProtectViewModel: ObservableObject {
                     snippet: snippet, onDeviceSeverity: severity, onDeviceCategory: category
                 )
                 judgeSchedule.finished()
+                judgeStatus = "AI judge: \(result.severity) \(result.categories.joined(separator: ","))"
                 publishJudgement(result, onDevice: onDevice)
             } catch {
                 judgeSchedule.finished()
+                judgeStatus = "AI judge failed: \(error.localizedDescription)"
                 if let onDevice {
                     publishSpeechFallback(severity: onDevice.severity, category: onDevice.category.rawValue)
                 }
@@ -941,6 +1080,7 @@ private final class DetectionPipeline {
 extension ProtectViewModel: FrameSourceDelegate {
     nonisolated func frameSource(_ source: any FrameSource, didOutput frame: SafeguardFrame) {
         frameCounter.increment()
+        evidence.appendVideo(frame.pixelBuffer, at: frame.timestamp)
         // Drop frames while one is still being handled: bounds the queue
         // and the detection work under a 30 fps source.
         guard pipelineGate.tryEnter() else { return }

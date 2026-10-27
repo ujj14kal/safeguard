@@ -42,6 +42,22 @@ final class ConversationListener: ObservableObject {
     /// realtime thread (Apple's own pattern — no actor hop per buffer)
     /// while restarts swap it from the main actor.
     private let requestBox = RequestBox()
+    private let sinkBox = SinkBox()
+
+    /// Receives every microphone buffer (the SOS recorder). Nil normally.
+    func setAudioSink(_ sink: (@Sendable (AVAudioPCMBuffer) -> Void)?) {
+        sinkBox.handler = sink
+    }
+
+    private final class SinkBox: @unchecked Sendable {
+        private let lock = NSLock()
+        private var boxed: (@Sendable (AVAudioPCMBuffer) -> Void)?
+
+        var handler: (@Sendable (AVAudioPCMBuffer) -> Void)? {
+            get { lock.withLock { boxed } }
+            set { lock.withLock { boxed = newValue } }
+        }
+    }
     private var task: SFSpeechRecognitionTask?
     private var restartTimer: Timer?
     private var interruptionObserver: NSObjectProtocol?
@@ -103,8 +119,10 @@ final class ConversationListener: ObservableObject {
         // One tap for the whole run: every buffer reaches exactly one
         // recognition request, so restarts have no gap.
         let box = requestBox
+        let sink = sinkBox
         input.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in
             box.request?.append(buffer)
+            sink.handler?(buffer)
         }
         do {
             try engine.start()

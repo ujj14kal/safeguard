@@ -374,3 +374,103 @@ final class SafetyStateMachineTests: XCTestCase {
         XCTAssertNil(matcher.match("open calculator"))
     }
 }
+
+/// Distress words: bachao / help start a 5 s countdown to auto-SOS.
+final class AutoSOSCountdownTests: XCTestCase {
+    private func protecting() -> SafetyStateMachine {
+        var m = SafetyStateMachine()
+        m.startProtecting(at: 0)
+        return m
+    }
+
+    func testDistressWordStartsCountdownFromMonitoring() {
+        var m = protecting()
+        m.noteDistressWord(at: 10)
+        XCTAssertEqual(m.state, .countdown)
+        XCTAssertEqual(m.countdownRemaining(at: 12) ?? 0, 3, accuracy: 0.001)
+    }
+
+    func testCountdownEndsInUnsafeWithDistressCause() {
+        var m = protecting()
+        m.noteDistressWord(at: 10)
+        m.tick(at: 14.9)
+        XCTAssertEqual(m.state, .countdown)
+        m.tick(at: 15.0)
+        XCTAssertEqual(m.state, .unsafe)
+        XCTAssertEqual(m.unsafeCause, .distressWord)
+    }
+
+    func testSafePhraseDoubleTapAndButtonCancel() {
+        for cancel in [
+            { (m: inout SafetyStateMachine) in m.noteReply(.safePhrase, at: 12) },
+            { (m: inout SafetyStateMachine) in m.noteReply(.tap, at: 12) },
+            { (m: inout SafetyStateMachine) in m.cancelCountdown(at: 12) },
+        ] {
+            var m = protecting()
+            m.noteDistressWord(at: 10)
+            cancel(&m)
+            XCTAssertEqual(m.state, .monitoring)
+            m.tick(at: 30)
+            XCTAssertEqual(m.state, .monitoring, "a cancelled countdown must never fire")
+        }
+    }
+
+    func testUnsafePhraseSkipsTheCountdown() {
+        var m = protecting()
+        m.noteDistressWord(at: 10)
+        m.noteReply(.unsafePhrase, at: 11)
+        XCTAssertEqual(m.state, .unsafe)
+        XCTAssertEqual(m.unsafeCause, .unsafePhrase)
+    }
+
+    func testSameWordsAreIgnoredRightAfterACancel() {
+        var m = protecting()
+        m.noteDistressWord(at: 10)
+        m.cancelCountdown(at: 11)
+        m.noteDistressWord(at: 15)
+        XCTAssertEqual(m.state, .monitoring, "10 s cool-down after a cancel")
+        m.noteDistressWord(at: 22)
+        XCTAssertEqual(m.state, .countdown)
+    }
+
+    func testDistressOverridesAskingAndSafeCooldown() {
+        var asking = protecting()
+        asking.noteMovementAlert(score: 0.9, at: 1)
+        XCTAssertEqual(asking.state, .asking)
+        asking.noteDistressWord(at: 2)
+        XCTAssertEqual(asking.state, .countdown)
+        XCTAssertFalse(asking.takeAskSpeechDue(), "no spoken question over a countdown")
+
+        var safe = protecting()
+        safe.noteMovementAlert(score: 0.9, at: 1)
+        safe.noteReply(.safePhrase, at: 2)
+        XCTAssertEqual(safe.state, .safe)
+        safe.noteDistressWord(at: 3)
+        XCTAssertEqual(safe.state, .countdown)
+    }
+
+    func testOtherSignalsDoNotDisturbTheCountdown() {
+        var m = protecting()
+        m.noteDistressWord(at: 10)
+        m.noteMovementAlert(score: 0.95, at: 11)
+        m.noteMuseVerdict(.low, at: 11)
+        m.noteSpeech(severity: 0.9, at: 11)
+        XCTAssertEqual(m.state, .countdown)
+    }
+
+    func testIdleIgnoresDistressUntilProtecting() {
+        var m = SafetyStateMachine()
+        m.noteDistressWord(at: 1)
+        XCTAssertEqual(m.state, .idle)
+    }
+
+    func testDistressMatcherEnglishHindiAndSpelling() {
+        let matcher = DistressMatcher()
+        for text in ["bachao", "bachaao bachaao", "help", "please help me", "बचाओ", "मदद करो", "madad karo koi", "SAVE ME"] {
+            XCTAssertTrue(matcher.matches(text), text)
+        }
+        for text in ["hello there", "the helpful assistant", "chalo chai peete hain", "mujhe kuch nahi chahiye", "bachpan ki yaad"] {
+            XCTAssertFalse(matcher.matches(text), text)
+        }
+    }
+}
