@@ -2,32 +2,68 @@
 
 Phase 1: health check. Phase 4: POST /verify (SAM 2 + Muse, with fallback).
 Phase 5: POST /verify-speech (Muse judges a text snippet, never audio).
-Phase 6 adds the incident/alert/stream endpoints. No API keys in code: all
-configuration comes from environment variables (see /.env.example).
+Phase 6: SOS escalation — contacts, incidents, family live viewer. No API
+keys in code: all configuration comes from environment variables (see
+/.env.example).
 """
 
+import asyncio
 import base64
 import binascii
 import json
 import logging
 import os
 import re
+import secrets
 from collections import Counter
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
 from pathlib import Path
 
+import httpx
 from fastapi import FastAPI, Header, HTTPException, Request, WebSocket, WebSocketDisconnect, status
+from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel, Field
 
 from .config import SETTINGS
+from .contacts import ContactLimitError, ContactStore, invite_link, link_from_updates
+from .incidents import IncidentStore
 from .muse import MuseClient, MuseError
+from .notify import (
+    TELEGRAM_API,
+    DryRunNotifier,
+    NotifyConfigError,
+    alert_text,
+    cab_text,
+    end_text,
+    make_notifier,
+    maps_link,
+    test_text,
+)
 from .ratelimit import RateLimiter
 from .sam2_local import Sam2Runner, Sam2Unavailable
+from .viewer import render_viewer_page
 
 logger = logging.getLogger("safeguard.verify")
 
-app = FastAPI(title="Safeguard backend")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    if not SETTINGS.app_token:
+        logger.warning(
+            "SAFEGUARD_APP_TOKEN is not set: app endpoints are open "
+            "(local dev only — set it before exposing this backend)"
+        )
+    poll_task = None
+    if SETTINGS.notify_mode == "telegram" and SETTINGS.telegram_bot_token:
+        poll_task = asyncio.create_task(_telegram_poll_loop())
+    yield
+    if poll_task is not None:
+        poll_task.cancel()
+
+
+app = FastAPI(title="Safeguard backend", lifespan=lifespan)
 
 _muse_limiter = RateLimiter(SETTINGS.muse_calls_per_min)
 _speech_limiter = RateLimiter(SETTINGS.speech_calls_per_min)
@@ -47,6 +83,70 @@ _sam2 = Sam2Runner(
     corridor_half_width=SETTINGS.verify_corridor_half_width,
 )
 _daily_counts: Counter[str] = Counter()
+
+# --- Phase 6: app token auth + stores -------------------------------------------
+# Every app-to-backend endpoint requires X-Safeguard-Token when
+# SAFEGUARD_APP_TOKEN is set; unset means open (local dev), with a startup
+# warning. /health and the share-token viewer are always public.
+
+
+def app_token_ok(provided: str | None) -> bool:
+    want = SETTINGS.app_token
+    if not want:
+        return True
+    return bool(provided) and secrets.compare_digest(provided, want)
+
+
+def require_app_token(provided: str | None) -> None:
+    if not app_token_ok(provided):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="missing or wrong app token",
+        )
+
+
+_contact_store: ContactStore | None = None
+_incidents: IncidentStore | None = None
+_incident_limiter = RateLimiter(SETTINGS.incident_rate_per_min)
+
+
+def get_contact_store() -> ContactStore:
+    global _contact_store
+    if _contact_store is None:
+        _contact_store = ContactStore(SETTINGS.contacts_path)
+    return _contact_store
+
+
+def get_incidents() -> IncidentStore:
+    global _incidents
+    if _incidents is None:
+        _incidents = IncidentStore()
+    return _incidents
+
+
+def live_url_for(share_token: str) -> str:
+    return f"{SETTINGS.public_base_url.rstrip('/')}/live/{share_token}"
+
+
+async def _telegram_poll_loop() -> None:
+    """No public webhook: poll getUpdates and link /start <code> senders."""
+    token = SETTINGS.telegram_bot_token
+    offset = None
+    async with httpx.AsyncClient(timeout=25) as client:
+        while True:
+            try:
+                response = await client.get(
+                    f"{TELEGRAM_API}/bot{token}/getUpdates",
+                    params={"offset": offset, "timeout": 20},
+                )
+                linked, offset = link_from_updates(
+                    response.json(), get_contact_store()
+                )
+                if linked:
+                    logger.info("telegram linked %d contact(s)", len(linked))
+            except Exception as exc:
+                logger.warning("telegram poll failed: %s", exc)
+                await asyncio.sleep(5)
 
 
 class VerifyRequest(BaseModel):
@@ -74,7 +174,11 @@ def health() -> dict:
 
 
 @app.post("/verify", response_model=VerifyResponse)
-def verify(request: VerifyRequest) -> VerifyResponse:
+def verify(
+    request: VerifyRequest,
+    x_safeguard_token: str | None = Header(default=None),
+) -> VerifyResponse:
+    require_app_token(x_safeguard_token)
     for blob in request.frames_b64:
         try:
             base64.b64decode(blob, validate=True)
@@ -141,7 +245,11 @@ class SpeechVerifyResponse(BaseModel):
 
 
 @app.post("/verify-speech", response_model=SpeechVerifyResponse)
-def verify_speech(request: SpeechVerifyRequest) -> SpeechVerifyResponse:
+def verify_speech(
+    request: SpeechVerifyRequest,
+    x_safeguard_token: str | None = Header(default=None),
+) -> SpeechVerifyResponse:
+    require_app_token(x_safeguard_token)
     # Its own budget: the app judges the conversation continuously, and a
     # chatty crowd must not starve movement verification (or vice versa).
     if not _speech_limiter.allow():
@@ -227,9 +335,19 @@ def _evidence_root() -> Path:
     return Path(SETTINGS.evidence_dir)
 
 
-def _check_evidence_token(token: str | None) -> None:
-    if SETTINGS.evidence_token and token != SETTINGS.evidence_token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="bad evidence token")
+def _check_evidence_or_app_token(evidence: str | None, app: str | None) -> None:
+    # Phase 6: /evidence accepts EITHER the app token or the legacy evidence
+    # token (kept so the pinned evidence-token tests keep passing; the app
+    # sends the app token everywhere).
+    ev_ok = bool(SETTINGS.evidence_token) and evidence == SETTINGS.evidence_token
+    app_ok = bool(SETTINGS.app_token) and app_token_ok(app)
+    if ev_ok or app_ok:
+        return
+    if not SETTINGS.evidence_token and not SETTINGS.app_token:
+        return
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED, detail="bad evidence or app token"
+    )
 
 
 @app.post("/evidence")
@@ -240,6 +358,7 @@ async def upload_evidence(
     seq: int,
     ext: str,
     x_evidence_token: str | None = Header(default=None),
+    x_safeguard_token: str | None = Header(default=None),
 ) -> dict:
     """Store one recording segment (raw bytes in the body) from an SOS.
 
@@ -248,7 +367,7 @@ async def upload_evidence(
     smashed has already sent most of the evidence. File names are fixed by
     the server from validated fields; nothing from the client is used as a path.
     """
-    _check_evidence_token(x_evidence_token)
+    _check_evidence_or_app_token(x_evidence_token, x_safeguard_token)
     if not _SESSION_RE.match(session):
         raise HTTPException(status_code=422, detail="bad session id")
     if kind not in _EVIDENCE_KINDS or ext not in _EVIDENCE_KINDS[kind]:
@@ -272,9 +391,13 @@ async def upload_evidence(
 
 
 @app.get("/evidence/{session}")
-def list_evidence(session: str, x_evidence_token: str | None = Header(default=None)) -> dict:
+def list_evidence(
+    session: str,
+    x_evidence_token: str | None = Header(default=None),
+    x_safeguard_token: str | None = Header(default=None),
+) -> dict:
     """List the segments stored for one SOS session (names and sizes only)."""
-    _check_evidence_token(x_evidence_token)
+    _check_evidence_or_app_token(x_evidence_token, x_safeguard_token)
     if not _SESSION_RE.match(session):
         raise HTTPException(status_code=422, detail="bad session id")
     folder = _evidence_root() / session
@@ -304,7 +427,11 @@ class AppLogBatch(BaseModel):
 
 
 @app.post("/applog")
-def post_applog(batch: AppLogBatch) -> dict:
+def post_applog(
+    batch: AppLogBatch,
+    x_safeguard_token: str | None = Header(default=None),
+) -> dict:
+    require_app_token(x_safeguard_token)
     now = datetime.now(timezone.utc).isoformat()
     lines = []
     for event in batch.events:
@@ -321,7 +448,11 @@ def post_applog(batch: AppLogBatch) -> dict:
 
 
 @app.get("/applog")
-def get_applog(n: int = 100) -> dict:
+def get_applog(
+    n: int = 100,
+    x_safeguard_token: str | None = Header(default=None),
+) -> dict:
+    require_app_token(x_safeguard_token)
     path = _applog_path()
     if not path.exists():
         return {"events": []}
@@ -361,6 +492,10 @@ async def asr_relay(client: WebSocket) -> None:
     import websockets
 
     await client.accept()
+    if not app_token_ok(client.headers.get("x-safeguard-token")):
+        await client.send_text(json.dumps({"type": "error", "message": "missing or wrong app token"}))
+        await client.close(code=4401)
+        return
     if not SETTINGS.meta_model_api_key:
         await client.send_text(json.dumps({"type": "error", "message": "META_MODEL_API_KEY is not set"}))
         await client.close(code=1011)
@@ -414,4 +549,316 @@ async def asr_relay(client: WebSocket) -> None:
             "asr session ended seconds=%.1f audio_bytes=%d events=%d",
             (datetime.now(timezone.utc) - started).total_seconds(), audio_bytes, events,
         )
+
+
+# --- Phase 6: contacts, incidents, live viewer ----------------------------------
+
+
+class InviteRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=60)
+
+
+@app.post("/contacts/invite")
+def invite_contact(
+    body: InviteRequest,
+    x_safeguard_token: str | None = Header(default=None),
+) -> dict:
+    """Adds a contact and returns the Telegram invite link (Start once)."""
+    require_app_token(x_safeguard_token)
+    try:
+        record = get_contact_store().invite(body.name)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    except ContactLimitError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+    return {
+        "name": record["name"],
+        "code": record["code"],
+        "link": invite_link(SETTINGS.telegram_bot, record["code"]),
+    }
+
+
+@app.get("/contacts/{code}")
+def contact_status(
+    code: str,
+    x_safeguard_token: str | None = Header(default=None),
+) -> dict:
+    require_app_token(x_safeguard_token)
+    record = get_contact_store().get(code)
+    if record is None:
+        raise HTTPException(status_code=404, detail="no such invite code")
+    return {"name": record["name"], "linked": record["chat_id"] is not None}
+
+
+class IncidentStartRequest(BaseModel):
+    session: str
+    wearer_name: str = Field(min_length=1, max_length=60)
+    contact_codes: list[str] = Field(default_factory=list)
+    dry_run: bool = True
+    test: bool = False
+    lat: float | None = None
+    lon: float | None = None
+
+
+class LocationPoint(BaseModel):
+    lat: float
+    lon: float
+    accuracy: float | None = None
+    ts: float | None = None
+
+
+class CabRequest(BaseModel):
+    driver: str = Field(min_length=1, max_length=60)
+    plate: str = Field(min_length=1, max_length=20)
+    eta_min: int = Field(ge=0, le=180)
+
+
+def _check_fix(lat: float | None, lon: float | None, accuracy=None) -> None:
+    if (lat is None) != (lon is None):
+        raise HTTPException(status_code=422, detail="lat and lon go together")
+    if lat is not None and not (-90 <= lat <= 90 and -180 <= lon <= 180):
+        raise HTTPException(status_code=422, detail="lat/lon out of range")
+    if accuracy is not None and accuracy < 0:
+        raise HTTPException(status_code=422, detail="accuracy cannot be negative")
+
+
+def _notifier_for(dry_run: bool):
+    if dry_run:
+        return DryRunNotifier(SETTINGS.notify_log_path)
+    try:
+        return make_notifier(SETTINGS)
+    except NotifyConfigError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"notifier unavailable: {exc}",
+        )
+
+
+def _send_to_codes(codes, text, dry_run, url_button=None, pin=None) -> list:
+    """Sends one message to linked contacts. Returns per-contact delivery."""
+    store = get_contact_store()
+    notifier = _notifier_for(dry_run)
+    delivery = []
+    for code in codes:
+        record = store.get(code)
+        if record is None or record.get("chat_id") is None:
+            delivery.append({"code": code, "status": "skipped", "detail": "not linked"})
+            continue
+        result = notifier.send_text(
+            record["chat_id"], text, url_button=url_button
+        )
+        detail = result.detail
+        if result.ok and pin is not None:
+            pin_result = notifier.send_location(record["chat_id"], *pin)
+            if not pin_result.ok:
+                detail = f"text ok, pin failed: {pin_result.detail}"
+        delivery.append({
+            "code": code,
+            "name": record["name"],
+            "status": result.status,
+            "detail": detail,
+        })
+    return delivery
+
+
+@app.post("/incident/start")
+def incident_start(
+    body: IncidentStartRequest,
+    x_safeguard_token: str | None = Header(default=None),
+) -> dict:
+    require_app_token(x_safeguard_token)
+    if not _incident_limiter.allow():
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="incident start rate limit exceeded",
+        )
+    if not _SESSION_RE.match(body.session):
+        raise HTTPException(status_code=422, detail="bad session id")
+    _check_fix(body.lat, body.lon)
+    wearer = " ".join(body.wearer_name.split())
+    store = get_incidents()
+    incident, fresh = store.start(
+        session=body.session,
+        wearer_name=wearer,
+        contact_codes=body.contact_codes,
+        test=body.test,
+        dry_run=body.dry_run,
+    )
+    live = live_url_for(incident.share_token)
+    if not fresh:
+        # One alert burst per incident: repeats return the same incident.
+        return {
+            "id": incident.id,
+            "share_token": incident.share_token,
+            "live_url": live,
+            "delivery": [],
+            "fresh": False,
+        }
+    pin = None
+    if body.lat is not None:
+        store.add_point(incident.id, body.lat, body.lon)
+        pin = (body.lat, body.lon)
+    if body.test:
+        text = test_text(wearer, live)
+    else:
+        maps = maps_link(*pin) if pin else None
+        text = alert_text(wearer, live, maps_url=maps)
+    delivery = _send_to_codes(
+        incident.contact_codes, text, incident.dry_run,
+        url_button=("Open live view", live), pin=pin,
+    )
+    incident.alerted = True
+    sent = sum(1 for item in delivery if item["status"] in ("sent", "dry-run"))
+    logger.info(
+        "incident started id=%s contacts=%d sent=%d test=%s",
+        incident.id, len(delivery), sent, body.test,
+    )
+    return {
+        "id": incident.id,
+        "share_token": incident.share_token,
+        "live_url": live,
+        "delivery": delivery,
+        "fresh": True,
+    }
+
+
+@app.post("/incident/{incident_id}/location")
+def incident_location(
+    incident_id: str,
+    body: LocationPoint,
+    x_safeguard_token: str | None = Header(default=None),
+) -> dict:
+    require_app_token(x_safeguard_token)
+    incident = get_incidents().get(incident_id)
+    if incident is None:
+        raise HTTPException(status_code=404, detail="no such incident")
+    _check_fix(body.lat, body.lon, body.accuracy)
+    get_incidents().add_point(
+        incident_id, body.lat, body.lon, accuracy=body.accuracy, ts=body.ts
+    )
+    return {"stored": len(incident.points)}
+
+
+@app.post("/incident/{incident_id}/end")
+def incident_end(
+    incident_id: str,
+    x_safeguard_token: str | None = Header(default=None),
+) -> dict:
+    require_app_token(x_safeguard_token)
+    store = get_incidents()
+    incident = store.get(incident_id)
+    if incident is None:
+        raise HTTPException(status_code=404, detail="no such incident")
+    if incident.status != "active":
+        return {"ended": True, "already_ended": True}
+    store.end(incident_id)
+    delivery = []
+    if not incident.end_sent:
+        text = end_text(incident.wearer_name)
+        if incident.test:
+            text = "[TEST] " + text
+        delivery = _send_to_codes(incident.contact_codes, text, incident.dry_run)
+        incident.end_sent = True
+        logger.info("incident ended id=%s contacts=%d", incident.id, len(delivery))
+    return {"ended": True, "already_ended": False, "delivery": delivery}
+
+
+@app.post("/incident/{incident_id}/cab")
+def incident_cab(
+    incident_id: str,
+    body: CabRequest,
+    x_safeguard_token: str | None = Header(default=None),
+) -> dict:
+    """Shares DEMO cab details with the incident's contacts (no real cab)."""
+    require_app_token(x_safeguard_token)
+    incident = get_incidents().get(incident_id)
+    if incident is None:
+        raise HTTPException(status_code=404, detail="no such incident")
+    if incident.status != "active":
+        raise HTTPException(status_code=409, detail="incident has ended")
+    text = cab_text(
+        " ".join(body.driver.split()),
+        " ".join(body.plate.split()),
+        body.eta_min,
+        live_url_for(incident.share_token),
+    )
+    if incident.test:
+        text = "[TEST] " + text
+    delivery = _send_to_codes(incident.contact_codes, text, incident.dry_run)
+    sent = sum(1 for item in delivery if item["status"] in ("sent", "dry-run"))
+    logger.info("incident cab shared id=%s contacts=%d sent=%d", incident.id, len(delivery), sent)
+    return {"sent": sent, "delivery": delivery}
+
+
+def _live_incident_or_404(share_token: str):
+    incident = get_incidents().get_by_token(share_token)
+    if incident is None:
+        raise HTTPException(status_code=404, detail="no such live page")
+    return incident
+
+
+_SEGMENT_NAME_RE = re.compile(r"^(video|audio)-(\d{5})\.(mp4|m4a)$")
+
+
+def _live_segments(incident) -> list:
+    folder = _evidence_root() / incident.session
+    if not folder.is_dir():
+        return []
+    found = []
+    for path in sorted(folder.iterdir()):
+        match = _SEGMENT_NAME_RE.match(path.name)
+        if not match:
+            continue
+        kind, seq, ext = match.groups()
+        if ext not in _EVIDENCE_KINDS[kind]:
+            continue
+        found.append({
+            "kind": kind,
+            "seq": int(seq),
+            "name": path.name,
+            "bytes": path.stat().st_size,
+            "url": f"segments/{path.name}",
+        })
+    found.sort(key=lambda item: (item["seq"], item["kind"]))
+    return found
+
+
+@app.get("/live/{share_token}", response_class=HTMLResponse)
+def live_page(share_token: str) -> str:
+    # Share token only — no app token. A wrong token is a plain 404.
+    _live_incident_or_404(share_token)
+    return render_viewer_page(share_token)
+
+
+@app.get("/live/{share_token}/state")
+def live_state(share_token: str) -> dict:
+    incident = _live_incident_or_404(share_token)
+    points = list(incident.points)
+    return {
+        "status": incident.status,
+        "wearer_name": incident.wearer_name,
+        "started_at": incident.created_at,
+        "ended_at": incident.ended_at or None,
+        "latest": points[-1] if points else None,
+        "trail": [{"lat": point["lat"], "lon": point["lon"]} for point in points],
+        "segments": _live_segments(incident),
+        "test": incident.test,
+    }
+
+
+@app.get("/live/{share_token}/segments/{name}")
+def live_segment(share_token: str, name: str):
+    """Serves one segment file — but only from this token's own session."""
+    incident = _live_incident_or_404(share_token)
+    match = _SEGMENT_NAME_RE.match(name)
+    if not match:
+        raise HTTPException(status_code=404, detail="no such segment")
+    kind, _, ext = match.groups()
+    if ext not in _EVIDENCE_KINDS[kind]:
+        raise HTTPException(status_code=404, detail="no such segment")
+    path = _evidence_root() / incident.session / name
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="no such segment")
+    media = "video/mp4" if kind == "video" else "audio/mp4"
+    return FileResponse(path, media_type=media, filename=name)
 
