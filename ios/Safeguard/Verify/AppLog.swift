@@ -54,10 +54,18 @@ public final class AppLog: @unchecked Sendable {
     ) {
         self.session = session
         self.config = config
-        UserDefaults.standard.register(defaults: [Self.enabledKey: true])
+        UserDefaults.standard.register(defaults: [Self.enabledKey: Defaults.current.debugLogEnabled])
     }
 
     public var isEnabled: Bool { UserDefaults.standard.bool(forKey: Self.enabledKey) }
+
+    /// Queued (unsent) event count, for tests and the wipe report.
+    public var queuedCount: Int { lock.withLock { buffer.count } }
+
+    /// Drops every queued event. "Delete all my data" calls this.
+    public func clearQueue() {
+        lock.withLock { _ = buffer.drain(limit: Int.max) }
+    }
 
     /// Records one event. `kind` is a short name ("heard", "judge", "state");
     /// fields are plain strings.

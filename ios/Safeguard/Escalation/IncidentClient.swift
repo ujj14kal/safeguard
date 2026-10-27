@@ -55,6 +55,14 @@ public struct IncidentClient: Sendable {
         return config().authorize(request)
     }
 
+    private func delete(_ path: String) -> URLRequest {
+        var request = URLRequest(
+            url: config().baseURL.appendingPathComponent(path), timeoutInterval: 30
+        )
+        request.httpMethod = "DELETE"
+        return config().authorize(request)
+    }
+
     private struct StartBody: Decodable {
         var id: String
         var share_token: String
@@ -165,6 +173,26 @@ public struct IncidentClient: Sendable {
         let (data, response) = try await session.data(for: get("contacts/\(code)"))
         let parsed: StatusBody = try decode(data, response: response)
         return LinkedContactStatus(name: parsed.name, linked: parsed.linked)
+    }
+
+    private struct DeleteBody: Decodable {
+        var deleted: Bool
+    }
+
+    /// "Delete all my data": removes one evidence session server-side.
+    @discardableResult
+    public func deleteEvidence(sessionID: String) async throws -> Bool {
+        let (data, response) = try await session.data(for: delete("evidence/\(sessionID)"))
+        let parsed: DeleteBody = try decode(data, response: response)
+        return parsed.deleted
+    }
+
+    /// "Delete all my data": removes one linked contact server-side.
+    @discardableResult
+    public func deleteContact(code: String) async throws -> Bool {
+        let (data, response) = try await session.data(for: delete("contacts/\(code)"))
+        let parsed: DeleteBody = try decode(data, response: response)
+        return parsed.deleted
     }
 
     // MARK: - Private

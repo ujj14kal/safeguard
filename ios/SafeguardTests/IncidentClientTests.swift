@@ -195,6 +195,22 @@ final class IncidentClientTests: XCTestCase {
         XCTAssertEqual(try XCTUnwrap(capture.request).httpMethod, "GET")
     }
 
+    func testDeleteEvidenceUsesDelete() async throws {
+        let (session, capture) = captureSession(body: "{\"deleted\": true}")
+        let deleted = try await client(session).deleteEvidence(sessionID: "sos-abcdef12")
+        XCTAssertTrue(deleted)
+        XCTAssertEqual(try XCTUnwrap(capture.request).url?.path, "/evidence/sos-abcdef12")
+        XCTAssertEqual(try XCTUnwrap(capture.request).httpMethod, "DELETE")
+    }
+
+    func testDeleteContactUsesDelete() async throws {
+        let (session, capture) = captureSession(body: "{\"deleted\": false}")
+        let deleted = try await client(session).deleteContact(code: "abc123")
+        XCTAssertFalse(deleted, "idempotent miss still parses")
+        XCTAssertEqual(try XCTUnwrap(capture.request).url?.path, "/contacts/abc123")
+        XCTAssertEqual(try XCTUnwrap(capture.request).httpMethod, "DELETE")
+    }
+
     func testInvalidJSONThrows() async {
         do {
             _ = try await client(stubSession(body: "not json")).startIncident(

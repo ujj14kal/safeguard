@@ -20,16 +20,16 @@ struct SettingsView: View {
     @State private var debugRouteShown = false
     @AppStorage("debugOverlayEnabled") private var debugOverlayEnabled = false
     @AppStorage(VerifierConfig.backendURLDefaultsKey) private var backendURL = ""
-    @AppStorage("listenerOptIn") private var listenerOptIn = false
+    @AppStorage("listenerOptIn") private var listenerOptIn = Defaults.current.listenerOptIn
     @AppStorage("speechLanguage") private var speechLanguage = "auto"
-    @AppStorage("aiJudgeEnabled") private var aiJudgeEnabled = true
-    @AppStorage("cloudEarEnabled") private var cloudEarEnabled = true
-    @AppStorage("cloudEarAlwaysOn") private var cloudEarAlwaysOn = true
+    @AppStorage("aiJudgeEnabled") private var aiJudgeEnabled = Defaults.current.aiJudgeEnabled
+    @AppStorage("cloudEarEnabled") private var cloudEarEnabled = Defaults.current.cloudEarEnabled
+    @AppStorage("cloudEarAlwaysOn") private var cloudEarAlwaysOn = Defaults.current.cloudEarAlwaysOn
     @ObservedObject private var protect = ProtectViewModel.shared
-    @AppStorage("distressWordsEnabled") private var distressWordsEnabled = true
-    @AppStorage("recordOnSOS") private var recordOnSOS = true
-    @AppStorage("shoutingTriggersSOS") private var shoutingTriggersSOS = true
-    @AppStorage("debugLogEnabled") private var debugLogEnabled = true
+    @AppStorage("distressWordsEnabled") private var distressWordsEnabled = Defaults.current.distressWordsEnabled
+    @AppStorage("recordOnSOS") private var recordOnSOS = Defaults.current.recordOnSOS
+    @AppStorage("shoutingTriggersSOS") private var shoutingTriggersSOS = Defaults.current.shoutingTriggersSOS
+    @AppStorage("debugLogEnabled") private var debugLogEnabled = Defaults.current.debugLogEnabled
     @State private var connectionStatus: String?
     @State private var testingConnection = false
     @State private var showingRealAlertsConfirm = false

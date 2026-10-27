@@ -139,6 +139,29 @@ final class SOSContactStoreTests: XCTestCase {
         XCTAssertEqual(SOSContactStore(contacts: many).contacts.count, 5)
     }
 
+    func testAgreedCount() {
+        var store = SOSContactStore()
+        store.add(name: "Meera", code: "a")
+        store.add(name: "Arjun", code: "b")
+        XCTAssertEqual(store.agreedCount, 0)
+        store.setAgreed(code: "a", agreed: true)
+        store.setAgreed(code: "missing", agreed: true)
+        XCTAssertEqual(store.agreedCount, 1)
+        store.setAgreed(code: "b", agreed: true)
+        XCTAssertEqual(store.agreedCount, 2)
+    }
+
+    func testOldContactsWithoutLinkOrAgreedStillLoad() throws {
+        let data = Data(
+            #"[{"name":"Meera","code":"a","linked":true}]"#.utf8
+        )
+        let decoded = try JSONDecoder().decode([SOSContact].self, from: data)
+        XCTAssertEqual(decoded.count, 1)
+        XCTAssertTrue(decoded[0].linked)
+        XCTAssertNil(decoded[0].link)
+        XCTAssertFalse(decoded[0].agreed)
+    }
+
     func testInviteLinkRoundTrips() throws {
         var store = SOSContactStore()
         XCTAssertTrue(store.add(

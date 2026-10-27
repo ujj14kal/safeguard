@@ -109,6 +109,17 @@
 		A100000000000000000000AD /* SOSLocationTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000AC /* SOSLocationTracker.swift */; };
 		B20000000000000000000048 /* SOSLocationTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000AC /* SOSLocationTracker.swift */; };
 		A100000000000000000000AF /* ContactsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000AE /* ContactsView.swift */; };
+		A100000000000000000000B3 /* Defaults.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000B2 /* Defaults.swift */; };
+		B20000000000000000000049 /* Defaults.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000B2 /* Defaults.swift */; };
+		A100000000000000000000B5 /* CodePhrases.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000B4 /* CodePhrases.swift */; };
+		B2000000000000000000004A /* CodePhrases.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000B4 /* CodePhrases.swift */; };
+		A100000000000000000000B7 /* SetupMachine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000B6 /* SetupMachine.swift */; };
+		B2000000000000000000004B /* SetupMachine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000B6 /* SetupMachine.swift */; };
+		A100000000000000000000B9 /* DataWipe.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000B8 /* DataWipe.swift */; };
+		B2000000000000000000004C /* DataWipe.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000B8 /* DataWipe.swift */; };
+		A100000000000000000000BB /* IncidentHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000BA /* IncidentHistory.swift */; };
+		B2000000000000000000004D /* IncidentHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000BA /* IncidentHistory.swift */; };
+		B2000000000000000000004E /* SetupTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000BC /* SetupTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -187,6 +198,12 @@
 		A100000000000000000000AA /* IncidentClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IncidentClientTests.swift; sourceTree = "<group>"; };
 		A100000000000000000000AC /* SOSLocationTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SOSLocationTracker.swift; sourceTree = "<group>"; };
 		A100000000000000000000AE /* ContactsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactsView.swift; sourceTree = "<group>"; };
+		A100000000000000000000B2 /* Defaults.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Defaults.swift; sourceTree = "<group>"; };
+		A100000000000000000000B4 /* CodePhrases.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodePhrases.swift; sourceTree = "<group>"; };
+		A100000000000000000000B6 /* SetupMachine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupMachine.swift; sourceTree = "<group>"; };
+		A100000000000000000000B8 /* DataWipe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataWipe.swift; sourceTree = "<group>"; };
+		A100000000000000000000BA /* IncidentHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IncidentHistory.swift; sourceTree = "<group>"; };
+		A100000000000000000000BC /* SetupTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -227,6 +244,8 @@
 				A10000000000000000000091 /* OnboardingView.swift */,
 				A1000000000000000000009E /* Escalation */,
 				A100000000000000000000AB /* Contacts */,
+				A100000000000000000000B0 /* Setup */,
+				A100000000000000000000B1 /* Activity */,
 			);
 			path = Safeguard;
 			sourceTree = "<group>";
@@ -338,6 +357,7 @@
 				A1000000000000000000009D /* VoiceCommandTests.swift */,
 				A100000000000000000000A9 /* EscalationTests.swift */,
 				A100000000000000000000AA /* IncidentClientTests.swift */,
+				A100000000000000000000BC /* SetupTests.swift */,
 			);
 			path = SafeguardTests;
 			sourceTree = "<group>";
@@ -377,6 +397,25 @@
 				A100000000000000000000AE /* ContactsView.swift */,
 			);
 			path = Contacts;
+			sourceTree = "<group>";
+		};
+		A100000000000000000000B0 /* Setup */ = {
+			isa = PBXGroup;
+			children = (
+				A100000000000000000000B2 /* Defaults.swift */,
+				A100000000000000000000B4 /* CodePhrases.swift */,
+				A100000000000000000000B6 /* SetupMachine.swift */,
+				A100000000000000000000B8 /* DataWipe.swift */,
+			);
+			path = Setup;
+			sourceTree = "<group>";
+		};
+		A100000000000000000000B1 /* Activity */ = {
+			isa = PBXGroup;
+			children = (
+				A100000000000000000000BA /* IncidentHistory.swift */,
+			);
+			path = Activity;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */		A1000000000000000000001A /* Verify */ = {
@@ -541,6 +580,11 @@
 				A100000000000000000000A8 /* IncidentClient.swift in Sources */,
 				A100000000000000000000AD /* SOSLocationTracker.swift in Sources */,
 				A100000000000000000000AF /* ContactsView.swift in Sources */,
+				A100000000000000000000B3 /* Defaults.swift in Sources */,
+				A100000000000000000000B5 /* CodePhrases.swift in Sources */,
+				A100000000000000000000B7 /* SetupMachine.swift in Sources */,
+				A100000000000000000000B9 /* DataWipe.swift in Sources */,
+				A100000000000000000000BB /* IncidentHistory.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -596,6 +640,12 @@
 				B20000000000000000000046 /* EscalationTests.swift in Sources */,
 				B20000000000000000000047 /* IncidentClientTests.swift in Sources */,
 				B20000000000000000000048 /* SOSLocationTracker.swift in Sources */,
+				B20000000000000000000049 /* Defaults.swift in Sources */,
+				B2000000000000000000004A /* CodePhrases.swift in Sources */,
+				B2000000000000000000004B /* SetupMachine.swift in Sources */,
+				B2000000000000000000004C /* DataWipe.swift in Sources */,
+				B2000000000000000000004D /* IncidentHistory.swift in Sources */,
+				B2000000000000000000004E /* SetupTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -5,7 +5,7 @@ import UIKit
 struct ProtectView: View {
     @StateObject private var model = ProtectViewModel.shared
     @AppStorage("debugOverlayEnabled") private var debugOverlay = false
-    @AppStorage("listenerOptIn") private var listenerOptIn = false
+    @AppStorage("listenerOptIn") private var listenerOptIn = Defaults.current.listenerOptIn
     @Environment(\.openURL) private var openURL
     @State private var endingPressed = false
 

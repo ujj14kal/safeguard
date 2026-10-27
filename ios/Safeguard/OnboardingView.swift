@@ -22,7 +22,7 @@ struct OnboardingView: View {
         "recorded. If you need help right away, say your unsafe phrase at " +
         "any time."
 
-    @AppStorage("listenerOptIn") private var listenerOptIn = false
+    @AppStorage("listenerOptIn") private var listenerOptIn = Defaults.current.listenerOptIn
     var onDone: () -> Void
 
     var body: some View {

@@ -41,10 +41,10 @@ final class ProtectViewModel: ObservableObject {
     @Published var cloudStatus = CloudEarState.off.summary
     /// Meta Muse Voice Transcribe through the backend. Needs the listener
     /// opt-in too. Off keeps all hearing on the phone.
-    @AppStorage("cloudEarEnabled") var cloudEarEnabled = true
+    @AppStorage("cloudEarEnabled") var cloudEarEnabled = Defaults.current.cloudEarEnabled
     /// Demo mode: keep the cloud ear on all the time. Off, it switches on only
     /// when someone is near, a flag is raised, or an alert/SOS is running.
-    @AppStorage("cloudEarAlwaysOn") var cloudEarAlwaysOn = true
+    @AppStorage("cloudEarAlwaysOn") var cloudEarAlwaysOn = Defaults.current.cloudEarAlwaysOn
     private var cloudGate = CloudEarGate()
     private var sourcePolicy = TranscriptSourcePolicy()
     private var cloudTimer: Timer?
@@ -99,7 +99,7 @@ final class ProtectViewModel: ObservableObject {
     /// Conversation-listener opt-in (default OFF). On while protecting,
     /// transcripts feed the threat matcher; off, they are scanned for code
     /// phrases/commands and dropped, and no window is ever built.
-    @AppStorage("listenerOptIn") var listenerOptIn = false
+    @AppStorage("listenerOptIn") var listenerOptIn = Defaults.current.listenerOptIn
     /// "auto" (follow the iPhone), "en" or "hi".
     @AppStorage("speechLanguage") var speechLanguage = "auto"
 
@@ -492,15 +492,15 @@ final class ProtectViewModel: ObservableObject {
 
     // MARK: - Auto-SOS countdown (distress words)
 
-    @AppStorage("distressWordsEnabled") var distressWordsEnabled = true
+    @AppStorage("distressWordsEnabled") var distressWordsEnabled = Defaults.current.distressWordsEnabled
     /// System-uptime time when the auto-SOS fires; nil outside the countdown.
     @Published var countdownDeadline: TimeInterval?
     /// "Recording • 2 of 3 parts saved to the cloud" while an SOS records.
     @Published var evidenceStatus: String?
-    @AppStorage("recordOnSOS") var recordOnSOS = true
+    @AppStorage("recordOnSOS") var recordOnSOS = Defaults.current.recordOnSOS
     nonisolated let evidence = EvidenceRecorder()
     private var cancellables = Set<AnyCancellable>()
-    @AppStorage("shoutingTriggersSOS") var shoutingTriggersSOS = true
+    @AppStorage("shoutingTriggersSOS") var shoutingTriggersSOS = Defaults.current.shoutingTriggersSOS
     private var loudness = LoudnessDetector()
     private var levelPeak: Float = -120
     private var levelLoggedAt: TimeInterval = 0
@@ -848,7 +848,7 @@ final class ProtectViewModel: ObservableObject {
     private var hapticGate = SpeechHapticGate()
     private var judgeSchedule = SpeechJudgeSchedule()
     /// AI judging of the whole conversation (text only goes to the backend).
-    @AppStorage("aiJudgeEnabled") var aiJudgeEnabled = true
+    @AppStorage("aiJudgeEnabled") var aiJudgeEnabled = Defaults.current.aiJudgeEnabled
 
     /// Every chunk of talk is rated on its own and answered with a vibration
     /// only (never a sound): a nudge, an elevated double tap, or a strong
