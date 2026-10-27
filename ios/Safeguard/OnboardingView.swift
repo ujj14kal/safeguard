@@ -8,9 +8,11 @@ struct OnboardingView: View {
         "When on, Safeguard transcribes speech near you, on this phone only, " +
         "to notice threatening or harassing talk. Raw audio is never stored " +
         "and never sent anywhere; transcripts live only in a short in-memory " +
-        "window and are discarded when you stop. Only a short text snippet " +
-        "is ever sent for a second opinion, and only when something " +
-        "threatening is heard."
+        "window and are discarded when you stop. With \"AI judges the " +
+        "conversation\" on, the last few seconds of the transcript, as text " +
+        "only, are sent to your Safeguard backend so an AI model can tell " +
+        "whether the talk is safe; switch it off to keep everything on this " +
+        "phone."
 
     static let stayQuietTip =
         "If you feel uneasy, try to stay quiet for a few seconds. Safeguard " +

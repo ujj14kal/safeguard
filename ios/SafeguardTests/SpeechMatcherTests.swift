@@ -473,3 +473,31 @@ final class EnglishCussTests: XCTestCase {
         }
     }
 }
+
+final class JudgeScheduleTests: XCTestCase {
+    func testSendsNewTalkOnceAndThrottles() {
+        var s = SpeechJudgeSchedule(minInterval: 3)
+        XCTAssertTrue(s.shouldSend("free ho kya aap", at: 0))
+        XCTAssertFalse(s.shouldSend("free ho kya aap aaj raat", at: 1), "one call at a time")
+        s.finished()
+        XCTAssertFalse(s.shouldSend("free ho kya aap aaj raat", at: 2), "too soon")
+        XCTAssertTrue(s.shouldSend("free ho kya aap aaj raat", at: 3.5))
+    }
+
+    func testSameTextIsNotSentTwiceAndTinyTalkIsSkipped() {
+        var s = SpeechJudgeSchedule(minInterval: 1)
+        XCTAssertFalse(s.shouldSend("hello", at: 0), "one word is not enough")
+        XCTAssertTrue(s.shouldSend("hello there friend", at: 0))
+        s.finished()
+        XCTAssertFalse(s.shouldSend("hello there friend", at: 5))
+    }
+
+    func testTailKeepsNewestWordsWithinTheLimit() {
+        var window = TranscriptWindow(windowSeconds: 20)
+        window.append(String(repeating: "old ", count: 200), at: 0)
+        window.append("the newest sentence", at: 1)
+        let tail = window.tail(maxChars: 60)
+        XCTAssertLessThanOrEqual(tail.count, 60)
+        XCTAssertTrue(tail.hasSuffix("the newest sentence"))
+    }
+}

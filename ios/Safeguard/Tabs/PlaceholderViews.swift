@@ -36,6 +36,7 @@ struct SettingsView: View {
     @AppStorage(VerifierConfig.backendURLDefaultsKey) private var backendURL = ""
     @AppStorage("listenerOptIn") private var listenerOptIn = false
     @AppStorage("speechLanguage") private var speechLanguage = "auto"
+    @AppStorage("aiJudgeEnabled") private var aiJudgeEnabled = true
     @State private var connectionStatus: String?
     @State private var testingConnection = false
 
@@ -47,6 +48,7 @@ struct SettingsView: View {
                 }
                 Section {
                     Toggle("Listen for threatening speech", isOn: $listenerOptIn)
+                    Toggle("AI judges the conversation", isOn: $aiJudgeEnabled)
                     Picker("Speech language", selection: $speechLanguage) {
                         Text("Automatic").tag("auto")
                         Text("English (India)").tag("en")

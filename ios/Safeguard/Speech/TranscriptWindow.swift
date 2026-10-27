@@ -41,6 +41,18 @@ public struct TranscriptWindow: Sendable {
         segments.map(\.text).joined(separator: " ")
     }
 
+    /// The most recent talk, capped at `maxChars` and cut at a word
+    /// boundary: what the AI judge reads.
+    public func tail(maxChars: Int = 400) -> String {
+        let text = transcript
+        guard text.count > maxChars, maxChars > 0 else { return text }
+        let cut = String(text.suffix(maxChars))
+        if let space = cut.firstIndex(of: " ") {
+            return String(cut[cut.index(after: space)...])
+        }
+        return cut
+    }
+
     /// Trigger snippet: the sentence holding word `matchWordIndex`, plus a
     /// little context, capped at `maxChars`. Falls back to the window tail
     /// when the index is out of range.

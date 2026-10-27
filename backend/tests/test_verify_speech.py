@@ -109,16 +109,26 @@ def test_timeout_maps_to_503(client, monkeypatch):
     assert client.post("/verify-speech", json=speech_request()).status_code == 503
 
 
-def test_rate_limit_shared_with_verify(client, monkeypatch):
+def test_speech_has_its_own_rate_limit(client, monkeypatch):
     def good_post(url, headers=None, json=None, timeout=None):
         return FakeResponse(muse_envelope(speech_verdict()))
 
     monkeypatch.setattr("app.muse.httpx.post", good_post)
-    monkeypatch.setattr(main, "_muse_limiter", RateLimiter(2))
+    monkeypatch.setattr(main, "_speech_limiter", RateLimiter(2))
     assert client.post("/verify-speech", json=speech_request()).status_code == 200
     assert client.post("/verify-speech", json=speech_request()).status_code == 200
     limited = client.post("/verify-speech", json=speech_request())
     assert limited.status_code == 429
+
+
+def test_exhausted_verify_budget_does_not_block_speech(client, monkeypatch):
+    def good_post(url, headers=None, json=None, timeout=None):
+        return FakeResponse(muse_envelope(speech_verdict()))
+
+    monkeypatch.setattr("app.muse.httpx.post", good_post)
+    monkeypatch.setattr(main, "_muse_limiter", RateLimiter(0))
+    monkeypatch.setattr(main, "_speech_limiter", RateLimiter(5))
+    assert client.post("/verify-speech", json=speech_request()).status_code == 200
 
 
 def test_snippet_length_limits(client):

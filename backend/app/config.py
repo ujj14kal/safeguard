@@ -41,6 +41,11 @@ class Settings:
     muse_calls_per_min: int = field(
         default_factory=lambda: _int("VERIFY_RATE_LIMIT_PER_MIN", 20)
     )
+    # Continuous conversation judging sends a text snippet every few seconds,
+    # so it gets its own budget and cannot starve /verify.
+    speech_calls_per_min: int = field(
+        default_factory=lambda: _int("SPEECH_RATE_LIMIT_PER_MIN", 40)
+    )
 
     # SAM 2 (local, optional). Mode: auto (try, fall back on slow/fail),
     # sam2 (require; 503 if unavailable), muse-only (never try).

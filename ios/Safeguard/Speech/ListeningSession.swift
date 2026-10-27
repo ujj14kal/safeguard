@@ -219,3 +219,36 @@ public struct ConversationFlag: Sendable, Equatable {
         return kept
     }
 }
+
+/// Decides when the conversation goes to the AI judge: after new talk, at
+/// most every `minInterval` seconds, one call at a time, never the same
+/// text twice. Pure, so the schedule is testable.
+public struct SpeechJudgeSchedule: Sendable {
+    private let minInterval: TimeInterval
+    private var lastSentAt: TimeInterval?
+    private var lastText = ""
+    public private(set) var inFlight = false
+
+    public init(minInterval: TimeInterval = 3) {
+        self.minInterval = minInterval
+    }
+
+    /// True when `text` should be sent now. Marks the call in flight.
+    public mutating func shouldSend(_ text: String, at time: TimeInterval) -> Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !inFlight, trimmed.split(separator: " ").count >= 2, trimmed != lastText else { return false }
+        if let last = lastSentAt, time - last < minInterval { return false }
+        inFlight = true
+        lastSentAt = time
+        lastText = trimmed
+        return true
+    }
+
+    public mutating func finished() { inFlight = false }
+
+    public mutating func reset() {
+        lastSentAt = nil
+        lastText = ""
+        inFlight = false
+    }
+}

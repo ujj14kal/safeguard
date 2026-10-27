@@ -27,6 +27,7 @@ logger = logging.getLogger("safeguard.verify")
 app = FastAPI(title="Safeguard backend")
 
 _muse_limiter = RateLimiter(SETTINGS.muse_calls_per_min)
+_speech_limiter = RateLimiter(SETTINGS.speech_calls_per_min)
 _muse_client = MuseClient(
     base_url=SETTINGS.meta_model_base_url,
     api_key=SETTINGS.meta_model_api_key,
@@ -136,12 +137,12 @@ class SpeechVerifyResponse(BaseModel):
 
 @app.post("/verify-speech", response_model=SpeechVerifyResponse)
 def verify_speech(request: SpeechVerifyRequest) -> SpeechVerifyResponse:
-    # One shared Muse budget for /verify and /verify-speech: a chatty
-    # crowd must not starve movement verification (or vice versa).
-    if not _muse_limiter.allow():
+    # Its own budget: the app judges the conversation continuously, and a
+    # chatty crowd must not starve movement verification (or vice versa).
+    if not _speech_limiter.allow():
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Muse rate limit exceeded (20 calls/min)",
+            detail=f"Speech rate limit exceeded ({SETTINGS.speech_calls_per_min} calls/min)",
         )
     try:
         verdict, muse_latency = _muse_client.verify_speech(

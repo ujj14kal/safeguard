@@ -237,6 +237,7 @@ final class ProtectViewModel: ObservableObject {
         // window is still discarded on every stop.
         window.clear()
         conversationFlag = nil
+        judgeSchedule.reset()
         speechGate.reset()
         stopConfirmation.cancel()
         dimmed = false
@@ -525,6 +526,10 @@ final class ProtectViewModel: ObservableObject {
         guard listenerOptIn else { return }
         rateAndFlag(text)
         window.append(text, at: Self.now)
+        if aiJudgeEnabled {
+            judgeConversation()
+            return
+        }
         guard let found = speechMatcher.match(window.transcript) else { return }
         noteSpeechToPipeline(severity: found.severity, at: Self.now)
         if speechGate.consume(severity: found.severity, at: Self.now) {
@@ -535,13 +540,19 @@ final class ProtectViewModel: ObservableObject {
     // MARK: - Silent conversation rating
 
     private var hapticGate = SpeechHapticGate()
+    private var judgeSchedule = SpeechJudgeSchedule()
+    /// AI judging of the whole conversation (text only goes to the backend).
+    @AppStorage("aiJudgeEnabled") var aiJudgeEnabled = true
 
     /// Every chunk of talk is rated on its own and answered with a vibration
     /// only (never a sound): a nudge, an elevated double tap, or a strong
     /// warning pattern.
     private func rateChunk(_ text: String) {
-        let severity = speechMatcher.match(text)?.severity ?? 0
-        let level = hapticGate.consume(SpeechHapticLevel.level(for: severity), at: Self.now)
+        vibrate(SpeechHapticLevel.level(for: speechMatcher.match(text)?.severity ?? 0))
+    }
+
+    private func vibrate(_ wanted: SpeechHapticLevel) {
+        let level = hapticGate.consume(wanted, at: Self.now)
         // Soft taps only: one, two or three, never a sound.
         let taps: Int
         switch level {
@@ -568,6 +579,50 @@ final class ProtectViewModel: ObservableObject {
         let flag = ConversationFlag(category: found.category, severity: found.severity, at: Self.now)
         conversationFlag = ConversationFlag.merged(conversationFlag, with: flag)
         noteSpeechToPipeline(severity: found.severity, at: Self.now)
+        dimmed = false
+    }
+
+    /// The AI layer: the backend model reads the last stretch of talk and
+    /// says whether it is safe, so threats the word list has never seen
+    /// are still caught. Text only, never audio; the on-device matcher has
+    /// already warned instantly and stays as the fallback.
+    private func judgeConversation() {
+        let snippet = window.tail(maxChars: speechConfig.snippetMaxChars)
+        guard judgeSchedule.shouldSend(snippet, at: Self.now) else { return }
+        let onDevice = speechMatcher.match(window.transcript)
+        let severity = onDevice?.severity ?? 0
+        let category = onDevice?.category.rawValue ?? "none"
+        Task {
+            do {
+                let result = try await speechVerifier.verifySpeech(
+                    snippet: snippet, onDeviceSeverity: severity, onDeviceCategory: category
+                )
+                judgeSchedule.finished()
+                publishJudgement(result, onDevice: onDevice)
+            } catch {
+                judgeSchedule.finished()
+                if let onDevice {
+                    publishSpeechFallback(severity: onDevice.severity, category: onDevice.category.rawValue)
+                }
+            }
+        }
+    }
+
+    private func publishJudgement(_ result: SpeechVerifyResult, onDevice: SpeechMatch?) {
+        guard isProtecting else { return }
+        let severity = SpeechMatcher.backendSeverity(result.severity)
+        publishSpeechResult(result, onDeviceSeverity: onDevice?.severity ?? 0)
+        guard severity >= ConversationFlag.minSeverity else {
+            // The AI says it is safe (a joke, a film, friends): take down a
+            // flag the word list raised, unless it was a clear threat.
+            if let flag = conversationFlag, flag.severity < 0.9 { conversationFlag = nil }
+            return
+        }
+        let category = result.categories.compactMap(SpeechCategory.init(rawValue:)).first
+            ?? onDevice?.category ?? .abuse
+        let flag = ConversationFlag(category: category, severity: severity, at: Self.now)
+        conversationFlag = ConversationFlag.merged(conversationFlag, with: flag)
+        vibrate(SpeechHapticLevel.level(for: severity))
         dimmed = false
     }
 
