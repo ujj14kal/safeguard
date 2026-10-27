@@ -1,21 +1,7 @@
 import SwiftUI
 
-/// Tab shells. Real Contacts/Activity/Settings arrive in Phase 7; Settings
-/// already hosts the debug section (debug builds only).
-struct ContactsPlaceholderView: View {
-    var body: some View {
-        NavigationStack {
-            ContentUnavailableView {
-                Label("Contacts", systemImage: "person.2.fill")
-                    .foregroundStyle(DS.Colors.accent)
-            } description: {
-                Text("Emergency contacts arrive in Phase 7.")
-            }
-            .navigationTitle("Contacts")
-        }
-    }
-}
-
+/// Tab shells. Activity history arrives in Phase 7; Settings already
+/// hosts the debug section (debug builds only). Contacts is real.
 struct ActivityPlaceholderView: View {
     var body: some View {
         NavigationStack {
@@ -46,12 +32,47 @@ struct SettingsView: View {
     @AppStorage("debugLogEnabled") private var debugLogEnabled = true
     @State private var connectionStatus: String?
     @State private var testingConnection = false
+    @State private var showingRealAlertsConfirm = false
 
     var body: some View {
         NavigationStack {
             Form {
                 Section("About") {
-                    LabeledContent("Version", value: "0.5.0 (Phase 5)")
+                    LabeledContent("Version", value: "0.6.0 (Phase 6)")
+                }
+                Section {
+                    TextField("Your display name", text: $protect.wearerName)
+                        .textInputAutocapitalization(.words)
+                        .disableAutocorrection(true)
+                    Toggle("Send real alerts", isOn: Binding(
+                        get: { protect.sendRealAlerts },
+                        set: { enabled in
+                            if enabled {
+                                showingRealAlertsConfirm = true
+                            } else {
+                                protect.sendRealAlerts = false
+                            }
+                        }
+                    ))
+                    Button("Send test alert to my contacts") {
+                        protect.sendTestAlert()
+                    }
+                } header: {
+                    Text("SOS")
+                } footer: {
+                    Text("Real alerts go out over Telegram only to contacts who pressed Start. Dry-run (off) only logs on the backend. Your display name is shown in SOS alerts.")
+                }
+                .confirmationDialog(
+                    "Send real alerts?",
+                    isPresented: $showingRealAlertsConfirm,
+                    titleVisibility: .visible
+                ) {
+                    Button("Send real alerts") {
+                        protect.sendRealAlerts = true
+                    }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("Your contacts will get real Telegram alerts on the next SOS. Only people who pressed Start get them.")
                 }
                 Section {
                     Toggle("Listen for threatening speech", isOn: $listenerOptIn)
