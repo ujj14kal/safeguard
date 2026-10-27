@@ -45,7 +45,7 @@ public final class AccountStore: ObservableObject {
     @discardableResult
     public func signUp(
         name: String, email: String, password: String, phone: String,
-        consent: Bool, language: String
+        consent: Bool, language: String, guardianCode: String = ""
     ) async -> Bool {
         if let problem = AccountValidation.signupProblem(
             name: name, email: email, password: password, phone: phone, consent: consent
@@ -56,9 +56,13 @@ public final class AccountStore: ObservableObject {
         return await run {
             let result = try await self.service.signUp(
                 name: Self.clean(name), email: Self.clean(email).lowercased(),
-                password: password, phone: Self.clean(phone), language: language
+                password: password, phone: Self.clean(phone), language: language,
+                guardianCode: GuardianCode.normalized(guardianCode)
             )
             self.accept(result)
+            if let code = GuardianCode.normalized(guardianCode), result.session != nil {
+                self.defaults.set(code, forKey: GuardianCode.key)
+            }
         }
     }
 

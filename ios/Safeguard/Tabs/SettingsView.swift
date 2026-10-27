@@ -30,6 +30,7 @@ struct SettingsView: View {
         NavigationStack {
             Form {
                 accountSection
+                LiveSettingsSection()
                 profileSection
                 peopleSection
                 codephrasesSection

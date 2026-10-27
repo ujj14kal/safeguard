@@ -236,3 +236,22 @@ def test_secrets_stay_in_headers_not_in_responses(api, fake):
 def test_password_helper():
     assert accounts_mod.password_problem("Abcdefg1") is None
     assert accounts_mod.password_problem("x" * 80) is not None
+
+
+def test_signup_with_a_valid_guardian_code_saves_it(api, fake, monkeypatch):
+    from app.links import GuardianStore
+    store = GuardianStore()
+    code = store.create()
+    monkeypatch.setattr(main, "_guardians", store)
+    out = api.post("/auth/signup", json=signup_body(guardian_code=code.lower().replace("-", " "))).json()
+    assert out["user"]["guardian_code"] == code
+    assert fake.profiles[USER_ID]["guardian_code"] == code
+
+
+def test_signup_rejects_unknown_or_malformed_guardian_codes(api, monkeypatch):
+    from app.links import GuardianStore
+    monkeypatch.setattr(main, "_guardians", GuardianStore())
+    unknown = api.post("/auth/signup", json=signup_body(guardian_code="AAAA-BBBB-CCCC"))
+    assert unknown.status_code == 422 and "not found" in unknown.json()["detail"]
+    assert api.post("/auth/signup", json=signup_body(guardian_code="nonsense")).status_code == 422
+    assert api.post("/auth/signup", json=signup_body(guardian_code="  ")).status_code == 200

@@ -160,6 +160,35 @@ class Settings:
     supabase_service_role_key: str = field(
         default_factory=lambda: os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
     )
+    # "local" (files, development) or "supabase" (state and recordings live
+    # in the Supabase project, for hosts whose disk does not last).
+    storage_backend: str = field(
+        default_factory=lambda: os.environ.get("STORAGE_BACKEND", "local").lower()
+    )
+    state_bucket: str = field(
+        default_factory=lambda: os.environ.get("STATE_BUCKET", "safeguard-state")
+    )
+    evidence_bucket: str = field(
+        default_factory=lambda: os.environ.get("EVIDENCE_BUCKET", "safeguard-evidence")
+    )
+    # Telegram by webhook instead of a polling loop (needed when the host
+    # scales to zero). Defaults on in Supabase mode.
+    telegram_webhook: bool = field(
+        default_factory=lambda: os.environ.get(
+            "TELEGRAM_WEBHOOK",
+            "1" if os.environ.get("STORAGE_BACKEND", "local").lower() == "supabase" else "0",
+        ) == "1"
+    )
+    guardians_path: str = field(
+        default_factory=lambda: os.environ.get("GUARDIANS_PATH", "data/guardians.json")
+    )
+    channels_path: str = field(
+        default_factory=lambda: os.environ.get("CHANNELS_PATH", "data/channels.json")
+    )
+    # Days a finished incident stays reviewable by its guardian.
+    guardian_retention_days: int = field(
+        default_factory=lambda: int(os.environ.get("GUARDIAN_RETENTION_DAYS", "30"))
+    )
     auth_rate_per_min: int = field(
         default_factory=lambda: int(os.environ.get("AUTH_RATE_LIMIT_PER_MIN", "10"))
     )

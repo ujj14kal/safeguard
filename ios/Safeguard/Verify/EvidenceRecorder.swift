@@ -11,7 +11,16 @@ import Foundation
 /// the single microphone tap the listener owns. Nothing is recorded unless
 /// `start` was called, which only an SOS does.
 public final class EvidenceRecorder: @unchecked Sendable {
-    public static let segmentSeconds: TimeInterval = 8
+    /// Short parts reach the guardian sooner: a 4 s part is on the server
+    /// about 4 s after it was filmed (it was 8 s).
+    public static let segmentSeconds: TimeInterval = 4
+    /// Evidence needs to be watchable, not cinema: 15 frames a second at
+    /// about 960 px wide and 0.9 Mbit/s makes a 4 s part about 450 kB (it
+    /// was 30 fps at full size and 2 Mbit/s, about 2 MB per 8 s), so each
+    /// part uploads in a fraction of a second on an ordinary connection.
+    public static let frameInterval: TimeInterval = 1.0 / 15
+    public static let videoBitRate = 900_000
+    public static let maxVideoWidth = 960
 
     private let queue = DispatchQueue(label: "app.safeguard.evidence")
     private let uploader: EvidenceUploader
@@ -27,6 +36,7 @@ public final class EvidenceRecorder: @unchecked Sendable {
     private var videoSegmentStart: CMTime?
     private var videoSeq = 0
     private var videoURL: URL?
+    private var lastVideoFrameTime: CMTime?
 
     // Audio segment state (queue-confined).
     private var audioFile: AVAudioFile?
@@ -58,6 +68,7 @@ public final class EvidenceRecorder: @unchecked Sendable {
             self.progress = EvidenceProgress()
             self.videoSeq = 0
             self.audioSeq = 0
+            self.lastVideoFrameTime = nil
             try? FileManager.default.createDirectory(
                 at: self.folder(for: sessionID), withIntermediateDirectories: true
             )
@@ -81,6 +92,13 @@ public final class EvidenceRecorder: @unchecked Sendable {
         guard isRecording else { return }
         queue.async {
             guard self.sessionID != nil else { return }
+            // Thin the camera's 30 fps to 15: half the data, half the work.
+            if let last = self.lastVideoFrameTime,
+               CMTimeGetSeconds(CMTimeSubtract(time, last)) < Self.frameInterval * 0.9
+            {
+                return
+            }
+            self.lastVideoFrameTime = time
             if let start = self.videoSegmentStart,
                CMTimeGetSeconds(CMTimeSubtract(time, start)) >= Self.segmentSeconds
             {
@@ -121,11 +139,23 @@ public final class EvidenceRecorder: @unchecked Sendable {
         )
         try? FileManager.default.removeItem(at: url)
         guard let writer = try? AVAssetWriter(url: url, fileType: .mp4) else { return }
+        let size = Self.outputSize(
+            width: CVPixelBufferGetWidth(pixelBuffer), height: CVPixelBufferGetHeight(pixelBuffer)
+        )
         let input = AVAssetWriterInput(mediaType: .video, outputSettings: [
             AVVideoCodecKey: AVVideoCodecType.h264,
-            AVVideoWidthKey: CVPixelBufferGetWidth(pixelBuffer),
-            AVVideoHeightKey: CVPixelBufferGetHeight(pixelBuffer),
-            AVVideoCompressionPropertiesKey: [AVVideoAverageBitRateKey: 2_000_000],
+            AVVideoWidthKey: size.width,
+            AVVideoHeightKey: size.height,
+            AVVideoScalingModeKey: AVVideoScalingModeResizeAspect,
+            AVVideoCompressionPropertiesKey: [
+                AVVideoAverageBitRateKey: Self.videoBitRate,
+                AVVideoProfileLevelKey: AVVideoProfileLevelH264MainAutoLevel,
+                // No B-frames and a keyframe every 2 s: encodes and
+                // finishes quickly, and every part plays on its own.
+                AVVideoAllowFrameReorderingKey: false,
+                AVVideoMaxKeyFrameIntervalKey: 30,
+                AVVideoExpectedSourceFrameRateKey: 15,
+            ],
         ])
         input.expectsMediaDataInRealTime = true
         let adaptor = AVAssetWriterInputPixelBufferAdaptor(
@@ -140,6 +170,13 @@ public final class EvidenceRecorder: @unchecked Sendable {
         self.adaptor = adaptor
         videoSegmentStart = time
         videoURL = url
+    }
+
+    /// Fits the camera size inside `maxVideoWidth`, even numbers only (H.264).
+    static func outputSize(width: Int, height: Int) -> (width: Int, height: Int) {
+        guard width > maxVideoWidth else { return (width & ~1, height & ~1) }
+        let scale = Double(maxVideoWidth) / Double(width)
+        return (maxVideoWidth, Int((Double(height) * scale).rounded()) & ~1)
     }
 
     private func closeVideoSegment() {

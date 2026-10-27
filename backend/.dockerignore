@@ -1,0 +1,12 @@
+.venv
+__pycache__
+*.pyc
+tests
+eval
+data
+logs
+evidence
+scripts
+requirements-dev.txt
+Dockerfile
+.dockerignore

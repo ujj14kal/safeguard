@@ -4,7 +4,8 @@ import Foundation
 /// tested with a fake and no network.
 public protocol AccountService: Sendable {
     func signUp(
-        name: String, email: String, password: String, phone: String?, language: String
+        name: String, email: String, password: String, phone: String?, language: String,
+        guardianCode: String?
     ) async throws -> AccountAuthResult
     func signIn(email: String, password: String) async throws -> AccountAuthResult
     func refresh(refreshToken: String) async throws -> AccountSession
@@ -59,13 +60,15 @@ public struct AccountClient: AccountService {
     // MARK: Calls
 
     public func signUp(
-        name: String, email: String, password: String, phone: String?, language: String
+        name: String, email: String, password: String, phone: String?, language: String,
+        guardianCode: String?
     ) async throws -> AccountAuthResult {
         var body: [String: Any] = [
             "name": name, "email": email, "password": password,
             "language": language, "consent": true,
         ]
         if let phone, !phone.isEmpty { body["phone"] = phone }
+        if let guardianCode, !guardianCode.isEmpty { body["guardian_code"] = guardianCode }
         return try await auth("auth/signup", body: body)
     }
 

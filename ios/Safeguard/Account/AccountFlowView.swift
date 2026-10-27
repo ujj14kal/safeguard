@@ -16,11 +16,12 @@ struct AccountFlowView: View {
     @State private var email = ""
     @State private var password: String = ""
     @State private var phone = ""
+    @State private var guardianCode: String = ""
     @State private var consent = false
     @State private var showPassword = false
     @FocusState private var focus: Field?
 
-    private enum Field { case name, email, password, phone }
+    private enum Field { case name, email, password, phone, guardian }
 
     /// Called when an account is ready (signed in) or the person skips.
     var onFinished: (() -> Void)?
@@ -104,6 +105,8 @@ struct AccountFlowView: View {
                 field("Phone (optional)", text: $phone, symbol: "phone.fill", focus: .phone)
                     .keyboardType(.phonePad)
                     .textContentType(.telephoneNumber)
+                field("Guardian code (optional)", text: $guardianCode, symbol: "shield.lefthalf.filled", focus: .guardian)
+                    .textInputAutocapitalization(.characters)
                 passwordHint
                 consentRow
             }
@@ -202,7 +205,7 @@ struct AccountFlowView: View {
             case .create:
                 ok = await store.signUp(
                     name: name, email: email, password: password, phone: phone,
-                    consent: consent, language: AppLanguage.alertLang
+                    consent: consent, language: AppLanguage.alertLang, guardianCode: guardianCode
                 )
             case .signIn:
                 ok = await store.signIn(email: email, password: password)

@@ -69,6 +69,17 @@ The first request asks for local-network permission. Plain `http://` is
 allowed only for local addresses (`NSAllowsLocalNetworking`); use an `https://`
 tunnel URL for anything else. The simulator can keep using `127.0.0.1`.
 
+## Live link and guardian
+
+- **Live link**: Settings -> Live stream -> "Create my live link" (asks first).
+  One URL for every live stream and SOS; share it by hand; SOS shares it with
+  emergency contacts automatically. Delete it to revoke it.
+- **Guardian**: the guardian opens `<your address>/guardian` and taps "Get my
+  guardian code", then gives the code to the person they protect. She enters it
+  at sign-up or in Settings -> Guardian. The guardian enters the same code on the
+  page to see her recordings, newest first (video and audio, with the date, a map
+  trail and a "play all in order" button). Read-only.
+
 ## Third-party components
 
 - **MediaPipe Tasks Vision** and its `gesture_recognizer.task` and

@@ -87,7 +87,7 @@ final class AccountStoreTests: XCTestCase {
             )
         }
 
-        func signUp(name: String, email: String, password: String, phone: String?, language: String) async throws -> AccountAuthResult {
+        func signUp(name: String, email: String, password: String, phone: String?, language: String, guardianCode: String?) async throws -> AccountAuthResult {
             signUpCalls += 1
             return result(name: name, email: email, withSession: !requireConfirmation)
         }
@@ -218,5 +218,47 @@ final class AccountStoreTests: XCTestCase {
         XCTAssertTrue(good)
         XCTAssertEqual(store.profile?.name, "Asha R")
         XCTAssertEqual(suite.string(forKey: "wearerName"), "Asha R")
+    }
+}
+
+final class GuardianCodeTests: XCTestCase {
+    func testNormalisesCaseSpacesAndDashes() {
+        XCTAssertEqual(GuardianCode.normalized("abcd efgh jk23"), "ABCD-EFGH-JK23")
+        XCTAssertEqual(GuardianCode.normalized("ABCD-EFGH-JK23"), "ABCD-EFGH-JK23")
+        XCTAssertEqual(GuardianCode.normalized("  abcdefghjk23 "), "ABCD-EFGH-JK23")
+    }
+
+    func testRejectsWrongLengthAndConfusingCharacters() {
+        XCTAssertNil(GuardianCode.normalized(""))
+        XCTAssertNil(GuardianCode.normalized("ABCD-EFGH"))
+        XCTAssertNil(GuardianCode.normalized("ABCD-EFGH-JK234"))
+        XCTAssertNil(GuardianCode.normalized("ABCD-EFGH-JK20"), "0 is not in the alphabet")
+        XCTAssertNil(GuardianCode.normalized("ABCD-EFGH-JKLI"), "L and I are not in the alphabet")
+    }
+}
+
+final class EvidenceTuningTests: XCTestCase {
+    func testPartsAreShortAndSmall() {
+        XCTAssertEqual(EvidenceRecorder.segmentSeconds, 4)
+        XCTAssertEqual(EvidenceRecorder.frameInterval, 1.0 / 15, accuracy: 0.0001)
+        // 4 s at 0.9 Mbit/s is about 450 kB.
+        let bytes = Double(EvidenceRecorder.videoBitRate) / 8 * EvidenceRecorder.segmentSeconds
+        XCTAssertLessThan(bytes, 600_000)
+    }
+
+    func testOutputSizeShrinksBigFramesKeepingAspectAndEvenSizes() {
+        let big = EvidenceRecorder.outputSize(width: 1920, height: 1080)
+        XCTAssertEqual(big.width, 960)
+        XCTAssertEqual(big.height, 540)
+        let odd = EvidenceRecorder.outputSize(width: 1281, height: 721)
+        XCTAssertEqual(odd.width % 2, 0)
+        XCTAssertEqual(odd.height % 2, 0)
+        let small = EvidenceRecorder.outputSize(width: 640, height: 480)
+        XCTAssertEqual(small.width, 640)
+        XCTAssertEqual(small.height, 480)
+    }
+
+    func testFirstRetryIsQuick() {
+        XCTAssertEqual(EvidenceRetryPolicy().delay(beforeRetry: 1), 1)
     }
 }

@@ -23,7 +23,7 @@ _UUID_RE = re.compile(r"^[0-9a-fA-F-]{36}$")
 
 MIN_PASSWORD_LEN = 8
 MAX_PASSWORD_LEN = 72
-PROFILE_FIELDS = ("name", "phone", "language")
+PROFILE_FIELDS = ("name", "phone", "language", "guardian_code")
 
 
 class AccountsError(Exception):
@@ -66,7 +66,7 @@ def clean_profile(fields: dict) -> dict:
         if key not in fields or fields[key] is None:
             continue
         value = str(fields[key]).strip()
-        out[key] = value or None if key == "phone" else value
+        out[key] = (value or None) if key in ("phone", "guardian_code") else value
     return out
 
 

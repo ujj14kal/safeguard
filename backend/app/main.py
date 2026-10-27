@@ -10,13 +10,16 @@ keys in code: all configuration comes from environment variables (see
 import asyncio
 import base64
 import binascii
+import hashlib
+import hmac
 import json
 import logging
 import os
 import re
 import secrets
 import shutil
-from collections import Counter
+import time
+from collections import Counter, deque
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
@@ -24,7 +27,7 @@ from pathlib import Path
 
 import httpx
 from fastapi import FastAPI, Header, HTTPException, Request, WebSocket, WebSocketDisconnect, status
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from pydantic import BaseModel, Field
 
 from .accounts import (
@@ -37,6 +40,7 @@ from .accounts import (
 from .config import SETTINGS
 from .contacts import ContactLimitError, ContactStore, invite_link, link_from_updates
 from .incidents import IncidentStore
+from .links import ChannelStore, GuardianStore, normalize_code
 from .muse import MuseClient, MuseError
 from .notify import (
     TELEGRAM_API,
@@ -52,7 +56,8 @@ from .notify import (
 )
 from .ratelimit import RateLimiter
 from .sam2_local import Sam2Runner, Sam2Unavailable
-from .viewer import render_viewer_page
+from .storage import EvidenceBackend, StorageUnavailable, make_evidence, make_state_file
+from .viewer import render_guardian_page, render_viewer_page
 
 logger = logging.getLogger("safeguard.verify")
 
@@ -66,13 +71,24 @@ async def lifespan(app: FastAPI):
         )
     poll_task = None
     if SETTINGS.notify_mode == "telegram" and SETTINGS.telegram_bot_token:
-        poll_task = asyncio.create_task(_telegram_poll_loop())
+        if SETTINGS.telegram_webhook:
+            await _register_telegram_webhook()
+        else:
+            poll_task = asyncio.create_task(_telegram_poll_loop())
     yield
     if poll_task is not None:
         poll_task.cancel()
 
 
 app = FastAPI(title="Safeguard backend", lifespan=lifespan)
+
+
+@app.exception_handler(StorageUnavailable)
+async def _storage_unavailable(_request: Request, exc: StorageUnavailable):
+    # The data store could not be reached: say so (retry later) instead of
+    # pretending nothing exists or silently losing a write.
+    logger.warning("storage unavailable: %s", exc)
+    return JSONResponse(status_code=503, content={"detail": "storage unavailable, try again"})
 
 _muse_limiter = RateLimiter(SETTINGS.muse_calls_per_min)
 _speech_limiter = RateLimiter(SETTINGS.speech_calls_per_min)
@@ -122,7 +138,9 @@ _incident_limiter = RateLimiter(SETTINGS.incident_rate_per_min)
 def get_contact_store() -> ContactStore:
     global _contact_store
     if _contact_store is None:
-        _contact_store = ContactStore(SETTINGS.contacts_path)
+        _contact_store = ContactStore(
+            make_state_file(SETTINGS, "contacts.json", SETTINGS.contacts_path)
+        )
     return _contact_store
 
 
@@ -130,22 +148,95 @@ def get_incidents() -> IncidentStore:
     global _incidents
     if _incidents is None:
         _incidents = IncidentStore(
-            path=SETTINGS.incidents_path,
+            path=make_state_file(SETTINGS, "incidents.json", SETTINGS.incidents_path),
             ttl_after_end_s=SETTINGS.incident_token_ttl_hours * 3600,
             max_active_s=SETTINGS.incident_max_active_hours * 3600,
+            guardian_ttl_after_end_s=SETTINGS.guardian_retention_days * 86400,
         )
     return _incidents
+
+
+_guardians: GuardianStore | None = None
+_channels: ChannelStore | None = None
+
+
+def get_guardians() -> GuardianStore:
+    global _guardians
+    if _guardians is None:
+        _guardians = GuardianStore(
+            make_state_file(SETTINGS, "guardians.json", SETTINGS.guardians_path)
+        )
+    return _guardians
+
+
+def get_channels() -> ChannelStore:
+    global _channels
+    if _channels is None:
+        _channels = ChannelStore(
+            make_state_file(SETTINGS, "channels.json", SETTINGS.channels_path)
+        )
+    return _channels
 
 
 def live_url_for(share_token: str) -> str:
     return f"{SETTINGS.public_base_url.rstrip('/')}/live/{share_token}"
 
 
+def _telegram_webhook_secret() -> str:
+    """Telegram echoes this in a header on every webhook call; derived from
+    the bot token so there is nothing extra to configure."""
+    return hashlib.sha256(("safeguard-tg:" + SETTINGS.telegram_bot_token).encode()).hexdigest()[:48]
+
+
+async def _register_telegram_webhook() -> None:
+    """For hosts that scale to zero: Telegram calls us, nobody polls."""
+    base = SETTINGS.public_base_url.rstrip("/")
+    if not base.startswith("https://"):
+        logger.warning("telegram webhook needs an https PUBLIC_BASE_URL (got %r)", base)
+        return
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            response = await client.post(
+                f"{TELEGRAM_API}/bot{SETTINGS.telegram_bot_token}/setWebhook",
+                json={
+                    "url": f"{base}/telegram/webhook",
+                    "secret_token": _telegram_webhook_secret(),
+                    "allowed_updates": ["message"],
+                },
+            )
+        logger.info("telegram webhook registered: %s", response.status_code)
+    except httpx.HTTPError as exc:
+        logger.warning("telegram webhook registration failed: %s", type(exc).__name__)
+
+
+@app.post("/telegram/webhook")
+async def telegram_webhook(
+    request: Request, x_telegram_bot_api_secret_token: str | None = Header(default=None)
+) -> dict:
+    if not SETTINGS.telegram_bot_token or not secrets.compare_digest(
+        x_telegram_bot_api_secret_token or "", _telegram_webhook_secret()
+    ):
+        raise HTTPException(status_code=401, detail="bad webhook secret")
+    try:
+        update = await request.json()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="bad body")
+    linked, _ = link_from_updates({"result": [update]}, get_contact_store())
+    if linked:
+        logger.info("telegram linked %d contact(s)", len(linked))
+    return {"ok": True}
+
+
 async def _telegram_poll_loop() -> None:
-    """No public webhook: poll getUpdates and link /start <code> senders."""
+    """Local development: poll getUpdates and link /start <code> senders."""
     token = SETTINGS.telegram_bot_token
     offset = None
     async with httpx.AsyncClient(timeout=25) as client:
+        # Telegram refuses getUpdates while a webhook is set.
+        try:
+            await client.post(f"{TELEGRAM_API}/bot{token}/deleteWebhook")
+        except httpx.HTTPError:
+            pass
         while True:
             try:
                 response = await client.get(
@@ -308,6 +399,8 @@ def log_speech_call(muse_latency: float, verdict: dict) -> None:
     }
     line = json.dumps(record)
     logger.info(line)
+    if SETTINGS.storage_backend == "supabase":
+        return  # logged above to stdout (Cloud Logging); no local disk to fill
     try:
         os.makedirs(os.path.dirname(SETTINGS.verify_log_path) or ".", exist_ok=True)
         with open(SETTINGS.verify_log_path, "a") as handle:
@@ -333,6 +426,8 @@ def log_call(
     }
     line = json.dumps(record)
     logger.info(line)
+    if SETTINGS.storage_backend == "supabase":
+        return  # logged above to stdout (Cloud Logging); no local disk to fill
     try:
         os.makedirs(os.path.dirname(SETTINGS.verify_log_path) or ".", exist_ok=True)
         with open(SETTINGS.verify_log_path, "a") as handle:
@@ -345,6 +440,20 @@ def log_call(
 
 _SESSION_RE = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
 _EVIDENCE_KINDS = {"video": {"mp4"}, "audio": {"m4a"}}
+
+
+_evidence_backend: EvidenceBackend | None = None
+
+
+def get_evidence() -> EvidenceBackend:
+    """Local folders in development (rebuilt each call so settings changes
+    apply), a cached Supabase Storage client in Supabase mode."""
+    global _evidence_backend
+    if SETTINGS.storage_backend != "supabase":
+        return make_evidence(SETTINGS)
+    if _evidence_backend is None:
+        _evidence_backend = make_evidence(SETTINGS)
+    return _evidence_backend
 
 
 def _evidence_root() -> Path:
@@ -399,9 +508,7 @@ async def upload_evidence(
         raise HTTPException(status_code=422, detail="empty segment")
     if len(body) > limit:
         raise HTTPException(status_code=413, detail="segment too large")
-    folder = _evidence_root() / session
-    folder.mkdir(parents=True, exist_ok=True)
-    (folder / f"{kind}-{seq:05d}.{ext}").write_bytes(body)
+    get_evidence().put(session, f"{kind}-{seq:05d}.{ext}", body)
     logger.info("evidence stored kind=%s seq=%d bytes=%d", kind, seq, len(body))
     return {"stored": True, "bytes": len(body)}
 
@@ -416,10 +523,9 @@ def list_evidence(
     _check_evidence_or_app_token(x_evidence_token, x_safeguard_token)
     if not _SESSION_RE.match(session):
         raise HTTPException(status_code=422, detail="bad session id")
-    folder = _evidence_root() / session
-    if not folder.is_dir():
+    files = get_evidence().segments(session)
+    if files is None:
         raise HTTPException(status_code=404, detail="no such session")
-    files = [{"name": f.name, "bytes": f.stat().st_size} for f in sorted(folder.iterdir())]
     return {"session": session, "files": files}
 
 
@@ -433,10 +539,8 @@ def delete_evidence(
     require_app_token(x_safeguard_token)
     if not _SESSION_RE.match(session):
         raise HTTPException(status_code=422, detail="bad session id")
-    folder = _evidence_root() / session
-    if not folder.is_dir():
+    if not get_evidence().delete_session(session):
         return {"deleted": False}
-    shutil.rmtree(folder)
     logger.info("evidence deleted session=%s", session)
     return {"deleted": True}
 
@@ -448,6 +552,9 @@ def delete_evidence(
 
 _APPLOG_MAX_EVENTS = 200
 _APPLOG_MAX_FIELD = 600
+
+
+_applog_ring: "deque[str]" = deque(maxlen=2000)
 
 
 def _applog_path() -> Path:
@@ -475,7 +582,10 @@ def post_applog(
         }
         clean["server_ts"] = now
         lines.append(json.dumps(clean, ensure_ascii=False))
-    if lines:
+    if lines and SETTINGS.storage_backend == "supabase":
+        # No disk to keep: a bounded in-memory tail, readable via GET.
+        _applog_ring.extend(lines)
+    elif lines:
         with _applog_path().open("a", encoding="utf-8") as handle:
             handle.write("\n".join(lines) + "\n")
     return {"stored": len(lines)}
@@ -487,10 +597,13 @@ def get_applog(
     x_safeguard_token: str | None = Header(default=None),
 ) -> dict:
     require_app_token(x_safeguard_token)
+    count = max(1, min(n, 1000))
+    if SETTINGS.storage_backend == "supabase":
+        return {"events": [json.loads(line) for line in list(_applog_ring)[-count:]]}
     path = _applog_path()
     if not path.exists():
         return {"events": []}
-    tail = path.read_text(encoding="utf-8").splitlines()[-max(1, min(n, 1000)):]
+    tail = path.read_text(encoding="utf-8").splitlines()[-count:]
     return {"events": [json.loads(line) for line in tail if line.strip()]}
 
 
@@ -649,6 +762,12 @@ class IncidentStartRequest(BaseModel):
     lang: str = Field(default="en", pattern="^(en|hi)$")
     lat: float | None = None
     lon: float | None = None
+    # "live": a stream the person chose to share; nobody is messaged.
+    mode: str = Field(default="sos", pattern="^(sos|live)$")
+    # The person's standing live link (see /live/channel); keeps the URL stable.
+    channel_token: str | None = Field(default=None, max_length=64)
+    # The guardian watching over this person (optional).
+    guardian_code: str | None = Field(default=None, max_length=24)
 
 
 class LocationPoint(BaseModel):
@@ -728,6 +847,8 @@ def incident_start(
     _check_fix(body.lat, body.lon)
     wearer = " ".join(body.wearer_name.split())
     store = get_incidents()
+    channel = get_channels().by_token(body.channel_token) if body.channel_token else None
+    guardian = normalize_code(body.guardian_code or "")
     incident, fresh = store.start(
         session=body.session,
         wearer_name=wearer,
@@ -735,6 +856,9 @@ def incident_start(
         test=body.test,
         dry_run=body.dry_run,
         lang=body.lang,
+        share_token=channel["token"] if channel else None,
+        mode=body.mode,
+        guardian_code=guardian,
     )
     live = live_url_for(incident.share_token)
     if not fresh:
@@ -756,6 +880,17 @@ def incident_start(
     if body.lat is not None:
         store.add_point(incident.id, body.lat, body.lon)
         pin = (body.lat, body.lon)
+    if body.mode == "live":
+        # The person shares this link themselves; no automatic messages.
+        store.save()
+        return {
+            "id": incident.id,
+            "share_token": incident.share_token,
+            "live_url": live,
+            "delivery": [],
+            "fresh": True,
+            "preview_text": "",
+        }
     if body.test:
         text = test_text(wearer, live, lang=body.lang)
     else:
@@ -860,16 +995,21 @@ def _live_incident_or_404(share_token: str):
     return incident
 
 
+def _idle_channel(share_token: str):
+    """The standing link's owner, when nothing is streaming right now."""
+    return get_channels().by_token(share_token)
+
+
 _SEGMENT_NAME_RE = re.compile(r"^(video|audio)-(\d{5})\.(mp4|m4a)$")
 
 
 def _live_segments(incident) -> list:
-    folder = _evidence_root() / incident.session
-    if not folder.is_dir():
+    files = get_evidence().segments(incident.session)
+    if not files:
         return []
     found = []
-    for path in sorted(folder.iterdir()):
-        match = _SEGMENT_NAME_RE.match(path.name)
+    for entry in files:
+        match = _SEGMENT_NAME_RE.match(entry["name"])
         if not match:
             continue
         kind, seq, ext = match.groups()
@@ -878,9 +1018,9 @@ def _live_segments(incident) -> list:
         found.append({
             "kind": kind,
             "seq": int(seq),
-            "name": path.name,
-            "bytes": path.stat().st_size,
-            "url": f"segments/{path.name}",
+            "name": entry["name"],
+            "bytes": entry["bytes"],
+            "url": f"segments/{entry['name']}",
         })
     found.sort(key=lambda item: (item["seq"], item["kind"]))
     return found
@@ -889,15 +1029,26 @@ def _live_segments(incident) -> list:
 @app.get("/live/{share_token}", response_class=HTMLResponse)
 def live_page(share_token: str) -> str:
     # Share token only — no app token. A wrong token is a plain 404.
-    _live_incident_or_404(share_token)
+    if get_incidents().get_by_token(share_token) is None and _idle_channel(share_token) is None:
+        raise HTTPException(status_code=404, detail="no such live page")
     return render_viewer_page(share_token)
 
 
 @app.get("/live/{share_token}/state")
 def live_state(share_token: str) -> dict:
-    incident = _live_incident_or_404(share_token)
+    incident = get_incidents().get_by_token(share_token)
+    if incident is None:
+        owner = _idle_channel(share_token)
+        if owner is None:
+            raise HTTPException(status_code=404, detail="no such live page")
+        return {
+            "status": "idle", "mode": "live", "wearer_name": owner.get("wearer_name", ""),
+            "started_at": None, "ended_at": None, "latest": None, "trail": [],
+            "segments": [], "test": False,
+        }
     points = list(incident.points)
     return {
+        "mode": incident.mode,
         "status": incident.status,
         "wearer_name": incident.wearer_name,
         "started_at": incident.created_at,
@@ -910,7 +1061,7 @@ def live_state(share_token: str) -> dict:
 
 
 @app.get("/live/{share_token}/segments/{name}")
-def live_segment(share_token: str, name: str):
+def live_segment(share_token: str, name: str, request: Request):
     """Serves one segment file — but only from this token's own session."""
     incident = _live_incident_or_404(share_token)
     match = _SEGMENT_NAME_RE.match(name)
@@ -919,11 +1070,13 @@ def live_segment(share_token: str, name: str):
     kind, _, ext = match.groups()
     if ext not in _EVIDENCE_KINDS[kind]:
         raise HTTPException(status_code=404, detail="no such segment")
-    path = _evidence_root() / incident.session / name
-    if not path.is_file():
-        raise HTTPException(status_code=404, detail="no such segment")
     media = "video/mp4" if kind == "video" else "audio/mp4"
-    return FileResponse(path, media_type=media, filename=name)
+    served = get_evidence().response(
+        incident.session, name, media, request.headers.get("range")
+    ) if get_evidence().exists(incident.session, name) else None
+    if served is None:
+        raise HTTPException(status_code=404, detail="no such segment")
+    return served
 
 
 
@@ -972,6 +1125,7 @@ def _profile_out(row: dict, user: dict | None = None) -> dict:
         "name": row.get("name") or "",
         "phone": row.get("phone"),
         "language": row.get("language") or "en",
+        "guardian_code": row.get("guardian_code"),
         "created_at": row.get("created_at"),
     }
 
@@ -988,6 +1142,8 @@ class SignupRequest(BaseModel):
     language: str = Field(default="en", pattern="^(en|hi)$")
     # The wearer agreed to the privacy notice (what is stored and why).
     consent: bool = False
+    # The code of the guardian who watches over her recordings (optional).
+    guardian_code: str | None = Field(default=None, max_length=24)
 
 
 class LoginRequest(BaseModel):
@@ -1003,6 +1159,19 @@ class ProfileUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=60)
     phone: str | None = Field(default=None, max_length=24)
     language: str | None = Field(default=None, pattern="^(en|hi)$")
+    guardian_code: str | None = Field(default=None, max_length=24)
+
+
+def _checked_guardian_code(raw: str | None) -> str | None:
+    """Normalised code, None when blank; 422 when malformed or unknown."""
+    if raw is None or not raw.strip():
+        return None
+    code = normalize_code(raw)
+    if not code:
+        raise HTTPException(status_code=422, detail="enter the guardian code as XXXX-XXXX-XXXX")
+    if not get_guardians().exists(code):
+        raise HTTPException(status_code=422, detail="that guardian code was not found")
+    return code
 
 
 @app.post("/auth/signup")
@@ -1021,6 +1190,7 @@ def auth_signup(
     if not body.consent:
         raise HTTPException(status_code=422, detail="agree to the privacy notice to continue")
     name = " ".join(body.name.split())
+    guardian = _checked_guardian_code(body.guardian_code)
     try:
         user, session = accounts.sign_up(
             email, body.password,
@@ -1028,7 +1198,8 @@ def auth_signup(
         )
         row = accounts.upsert_profile(
             user["id"], email,
-            {"name": name, "phone": body.phone, "language": body.language},
+            {"name": name, "phone": body.phone, "language": body.language,
+             "guardian_code": guardian},
             consent_at=datetime.now(timezone.utc).isoformat(),
         )
     except AccountsError as exc:
@@ -1116,6 +1287,8 @@ def me_put(
     if body.phone and not valid_phone(body.phone):
         raise HTTPException(status_code=422, detail="enter a valid phone number")
     fields = body.model_dump(exclude_unset=True)
+    if "guardian_code" in fields:
+        fields["guardian_code"] = _checked_guardian_code(fields["guardian_code"]) or ""
     if "name" in fields and fields["name"]:
         fields["name"] = " ".join(fields["name"].split())
     try:
@@ -1137,3 +1310,184 @@ def me_delete(
     except AccountsError as exc:
         raise _fail(exc) from exc
     return {"deleted": True}
+
+
+# --- Standing live link and guardians ----------------------------------------------
+# The standing link is created on the person's approval (Settings) and stays
+# the same for every live stream and SOS. Guardians open /guardian with a
+# code and see a READ-ONLY list of the recordings of the people who entered
+# it. There is no write route behind a guardian code.
+
+_guardian_register_limiter = RateLimiter(6, 3600.0)
+_guardian_fail_limiters: dict[str, RateLimiter] = {}
+_guardian_ok_limiter = RateLimiter(240)
+_MEDIA_SECRET = secrets.token_bytes(32)
+_MEDIA_TTL_S = 3600
+_DEVICE_ID_RE = re.compile(r"^[A-Za-z0-9-]{8,64}$")
+
+
+def _client_ip(request: Request) -> str:
+    # Behind the Cloudflare tunnel every request arrives from localhost.
+    return (
+        request.headers.get("cf-connecting-ip")
+        or (request.client.host if request.client else "")
+        or "?"
+    )
+
+
+class ChannelRequest(BaseModel):
+    device_id: str
+    wearer_name: str = Field(default="", max_length=60)
+
+
+@app.post("/live/channel")
+def live_channel_create(
+    body: ChannelRequest, x_safeguard_token: str | None = Header(default=None)
+) -> dict:
+    require_app_token(x_safeguard_token)
+    if not _DEVICE_ID_RE.match(body.device_id):
+        raise HTTPException(status_code=422, detail="bad device id")
+    entry = get_channels().get_or_create(body.device_id, " ".join(body.wearer_name.split()))
+    return {"token": entry["token"], "live_url": live_url_for(entry["token"])}
+
+
+@app.delete("/live/channel/{device_id}")
+def live_channel_revoke(
+    device_id: str, x_safeguard_token: str | None = Header(default=None)
+) -> dict:
+    require_app_token(x_safeguard_token)
+    if not _DEVICE_ID_RE.match(device_id):
+        raise HTTPException(status_code=422, detail="bad device id")
+    return {"revoked": get_channels().revoke(device_id)}
+
+
+@app.get("/guardian", response_class=HTMLResponse)
+def guardian_page() -> str:
+    return render_guardian_page()
+
+
+@app.post("/guardian/register")
+def guardian_register(request: Request) -> dict:
+    """A guardian asks for a code of their own to give to the person they
+    watch over. Open to anyone (the guardian has no app), so it is tightly
+    rate-limited; a code alone shows nothing until someone enters it."""
+    if not _guardian_register_limiter.allow():
+        raise HTTPException(status_code=429, detail="too many codes requested")
+    return {"code": get_guardians().create()}
+
+
+@app.get("/guardian/check/{code}")
+def guardian_check(code: str, x_safeguard_token: str | None = Header(default=None)) -> dict:
+    """The app asks whether a code exists before saving it."""
+    require_app_token(x_safeguard_token)
+    return {"valid": get_guardians().exists(code)}
+
+
+def _guardian_from_header(request: Request, code: str | None) -> str:
+    ip = _client_ip(request)
+    limiter = _guardian_fail_limiters.setdefault(ip, RateLimiter(10))
+    if not _guardian_ok_limiter.allow():
+        raise HTTPException(status_code=429, detail="busy, try again in a minute")
+    normalized = normalize_code(code or "")
+    if not normalized or not get_guardians().exists(normalized):
+        if not limiter.allow():
+            raise HTTPException(status_code=429, detail="too many wrong codes, wait a minute")
+        raise HTTPException(status_code=403, detail="that code is not valid")
+    return normalized
+
+
+def _media_sig(incident_id: str, name: str, expires: int) -> str:
+    message = f"{incident_id}|{name}|{expires}".encode()
+    return hmac.new(_MEDIA_SECRET, message, hashlib.sha256).hexdigest()[:40]
+
+
+def _signed_media_url(incident_id: str, name: str) -> str:
+    expires = int(time.time()) + _MEDIA_TTL_S
+    sig = _media_sig(incident_id, name, expires)
+    return f"/guardian/media/{incident_id}/{name}?exp={expires}&sig={sig}"
+
+
+def _guardian_summary(incident) -> dict:
+    segments = _live_segments(incident)
+    latest = incident.latest()
+    return {
+        "id": incident.id,
+        "wearer_name": incident.wearer_name,
+        "mode": incident.mode,
+        "status": incident.status,
+        "test": incident.test,
+        "started_at": incident.created_at,
+        "ended_at": incident.ended_at or None,
+        "latest": latest,
+        "videos": sum(1 for item in segments if item["kind"] == "video"),
+        "audios": sum(1 for item in segments if item["kind"] == "audio"),
+        "bytes": sum(item["bytes"] for item in segments),
+    }
+
+
+@app.get("/guardian/api/incidents")
+def guardian_incidents(
+    request: Request, x_guardian_code: str | None = Header(default=None)
+) -> dict:
+    code = _guardian_from_header(request, x_guardian_code)
+    items = [_guardian_summary(i) for i in get_incidents().for_guardian(code)]
+    return {"incidents": items}
+
+
+@app.get("/guardian/api/incidents/{incident_id}")
+def guardian_incident(
+    incident_id: str, request: Request, x_guardian_code: str | None = Header(default=None)
+) -> dict:
+    code = _guardian_from_header(request, x_guardian_code)
+    incident = get_incidents().get(incident_id)
+    if incident is None or incident.guardian_code != code:
+        raise HTTPException(status_code=404, detail="no such incident")
+    detail = _guardian_summary(incident)
+    detail["trail"] = [{"lat": p["lat"], "lon": p["lon"], "ts": p.get("ts")} for p in incident.points]
+    detail["segments"] = [
+        {**item, "url": _signed_media_url(incident.id, item["name"])}
+        for item in _live_segments(incident)
+    ]
+    return detail
+
+
+@app.get("/guardian/media/{incident_id}/{name}")
+def guardian_media(incident_id: str, name: str, request: Request, exp: int = 0, sig: str = ""):
+    if exp < time.time() or not hmac.compare_digest(sig, _media_sig(incident_id, name, exp)):
+        raise HTTPException(status_code=403, detail="link expired, reload the page")
+    incident = get_incidents().get(incident_id)
+    match = _SEGMENT_NAME_RE.match(name)
+    if incident is None or not incident.guardian_code or not match:
+        raise HTTPException(status_code=404, detail="no such recording")
+    kind, _, ext = match.groups()
+    if ext not in _EVIDENCE_KINDS[kind]:
+        raise HTTPException(status_code=404, detail="no such recording")
+    media = "video/mp4" if kind == "video" else "audio/mp4"
+    served = get_evidence().response(
+        incident.session, name, media, request.headers.get("range")
+    ) if get_evidence().exists(incident.session, name) else None
+    if served is None:
+        raise HTTPException(status_code=404, detail="no such recording")
+    return served
+
+
+@app.get("/keepalive")
+def keepalive() -> dict:
+    """Touches the Supabase project (a Storage read and a tiny database
+    query) so a free project is never idle for a week and paused. Called on
+    a schedule (see deploy/CLOUD_RUN.md). Reveals nothing."""
+    if SETTINGS.storage_backend == "supabase" and SETTINGS.accounts_enabled:
+        get_guardians()  # reads the state bucket
+        try:
+            httpx.get(
+                f"{SETTINGS.supabase_url}/rest/v1/profiles",
+                params={"select": "id", "limit": "1"},
+                headers={
+                    "apikey": SETTINGS.supabase_service_role_key,
+                    "Authorization": f"Bearer {SETTINGS.supabase_service_role_key}",
+                },
+                timeout=10,
+            )
+        except httpx.HTTPError:
+            pass
+    return {"ok": True}

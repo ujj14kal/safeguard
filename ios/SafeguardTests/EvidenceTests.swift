@@ -102,9 +102,9 @@ final class EvidenceUploadTests: XCTestCase {
 
     func testRetryPolicyGrowsThenStops() {
         let policy = EvidenceRetryPolicy()
-        XCTAssertEqual(policy.delay(beforeRetry: 1), 2)
-        XCTAssertEqual(policy.delay(beforeRetry: 5), 60)
-        XCTAssertNil(policy.delay(beforeRetry: 6))
+        XCTAssertEqual(policy.delay(beforeRetry: 1), 1)
+        XCTAssertEqual(policy.delay(beforeRetry: 6), 60)
+        XCTAssertNil(policy.delay(beforeRetry: 7))
         XCTAssertNil(policy.delay(beforeRetry: 0))
     }
 

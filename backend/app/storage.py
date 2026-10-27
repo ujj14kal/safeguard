@@ -1,0 +1,294 @@
+"""Where the backend keeps its data.
+
+Locally (development) everything is files, as before. On a host whose disk
+disappears when it sleeps or restarts (Google Cloud Run, Render free), the
+same data lives in the Supabase project instead:
+
+* small JSON documents (incidents, contacts, guardian codes, live links)
+  are objects in a private Storage bucket, read once when the process
+  starts and written back whenever they change;
+* recording segments are objects in a second private bucket.
+
+Selected with STORAGE_BACKEND=supabase. Everything here goes through the two
+small functions `_http` and `_stream`, which tests replace; the Supabase
+keys are only ever sent in headers and never logged.
+"""
+
+from __future__ import annotations
+
+import json as _json
+import logging
+import os
+import shutil
+from pathlib import Path
+from urllib.parse import quote
+
+import httpx
+from fastapi.responses import FileResponse, StreamingResponse
+
+logger = logging.getLogger("safeguard.storage")
+
+
+class StorageUnavailable(Exception):
+    """The store could not be read or written right now (not 'missing')."""
+
+
+# --- the only two network calls ------------------------------------------------
+
+def _http(method, url, *, headers, content=None, json=None, timeout=20.0):
+    try:
+        response = httpx.request(
+            method, url, headers=headers, content=content, json=json, timeout=timeout
+        )
+    except httpx.HTTPError as exc:
+        raise StorageUnavailable(type(exc).__name__) from exc
+    return response.status_code, response.headers, response.content
+
+
+def _stream(url, *, headers, timeout=30.0):
+    """Returns (status, response headers, byte iterator). The iterator owns
+    the connection and closes it when exhausted."""
+    client = httpx.Client(timeout=timeout)
+    try:
+        request = client.build_request("GET", url, headers=headers)
+        response = client.send(request, stream=True)
+    except httpx.HTTPError as exc:
+        client.close()
+        raise StorageUnavailable(type(exc).__name__) from exc
+
+    def body():
+        try:
+            yield from response.iter_bytes()
+        finally:
+            response.close()
+            client.close()
+
+    return response.status_code, response.headers, body()
+
+
+# --- small JSON documents ----------------------------------------------------------
+
+class StateFile:
+    """One JSON document. `read()` returns the text, or None when it does
+    not exist yet, and raises StorageUnavailable when it cannot be told."""
+
+    def read(self) -> str | None:
+        raise NotImplementedError
+
+    def write(self, text: str) -> None:
+        raise NotImplementedError
+
+
+class LocalStateFile(StateFile):
+    def __init__(self, path: str):
+        self.path = path
+
+    def read(self):
+        try:
+            with open(self.path, encoding="utf-8") as handle:
+                return handle.read()
+        except FileNotFoundError:
+            return None
+        except OSError:
+            return None
+
+    def write(self, text):
+        parent = os.path.dirname(self.path)
+        if parent:
+            os.makedirs(parent, exist_ok=True)
+        tmp = f"{self.path}.tmp"
+        with open(tmp, "w", encoding="utf-8") as handle:
+            handle.write(text)
+        os.replace(tmp, self.path)
+
+
+class SupabaseStateFile(StateFile):
+    def __init__(self, supabase: "SupabaseObjects", name: str):
+        self._s = supabase
+        self._name = name
+
+    def read(self):
+        data = self._s.get(self._name)
+        return None if data is None else data.decode("utf-8")
+
+    def write(self, text):
+        self._s.put(self._name, text.encode("utf-8"), "application/json")
+
+
+def as_state_file(value) -> "StateFile | None":
+    """A path string becomes a local file; a StateFile passes through."""
+    if value is None or value == "":
+        return None
+    if isinstance(value, StateFile):
+        return value
+    return LocalStateFile(str(value))
+
+
+# --- Supabase Storage --------------------------------------------------------------
+
+class SupabaseObjects:
+    """One private Storage bucket, driven with the service-role key."""
+
+    def __init__(self, url: str, service_key: str, bucket: str):
+        self.base = f"{url.rstrip('/')}/storage/v1"
+        self.bucket = bucket
+        self._key = service_key
+
+    def _headers(self, extra=None):
+        headers = {"apikey": self._key, "Authorization": f"Bearer {self._key}"}
+        headers.update(extra or {})
+        return headers
+
+    def _object_url(self, path: str) -> str:
+        return f"{self.base}/object/{self.bucket}/{quote(path, safe='/')}"
+
+    def ensure_bucket(self) -> None:
+        status, _, _ = _http(
+            "POST", f"{self.base}/bucket", headers=self._headers(),
+            json={"id": self.bucket, "name": self.bucket, "public": False},
+        )
+        if status not in (200, 201, 400, 409):  # 400/409: already exists
+            raise StorageUnavailable(f"bucket {self.bucket}: {status}")
+
+    def get(self, path: str) -> bytes | None:
+        status, _, content = _http("GET", self._object_url(path), headers=self._headers())
+        if status == 200:
+            return content
+        if status in (400, 404):  # Storage answers 400 "not found" for a missing object
+            return None
+        raise StorageUnavailable(f"read {path}: {status}")
+
+    def put(self, path: str, data: bytes, content_type: str) -> None:
+        status, _, _ = _http(
+            "POST", self._object_url(path),
+            headers=self._headers({"Content-Type": content_type, "x-upsert": "true"}),
+            content=data,
+        )
+        if status not in (200, 201):
+            raise StorageUnavailable(f"write {path}: {status}")
+
+    def list_objects(self, prefix: str) -> list[dict]:
+        status, _, content = _http(
+            "POST", f"{self.base}/object/list/{self.bucket}", headers=self._headers(),
+            json={"prefix": prefix, "limit": 1000, "offset": 0,
+                  "sortBy": {"column": "name", "order": "asc"}},
+        )
+        if status != 200:
+            raise StorageUnavailable(f"list {prefix}: {status}")
+        return _json.loads(content or b"[]")
+
+    def delete(self, paths: list[str]) -> None:
+        if not paths:
+            return
+        status, _, _ = _http(
+            "DELETE", f"{self.base}/object/{self.bucket}", headers=self._headers(),
+            json={"prefixes": paths},
+        )
+        if status not in (200, 204):
+            raise StorageUnavailable(f"delete: {status}")
+
+    def stream(self, path: str, range_header: str | None):
+        extra = {"Range": range_header} if range_header else None
+        return _stream(self._object_url(path), headers=self._headers(extra))
+
+
+# --- recordings -------------------------------------------------------------------
+
+class EvidenceBackend:
+    def put(self, session: str, name: str, data: bytes) -> None: ...
+    def segments(self, session: str) -> list[dict] | None: ...  # None = no such session
+    def delete_session(self, session: str) -> bool: ...
+    def exists(self, session: str, name: str) -> bool: ...
+    def response(self, session: str, name: str, media_type: str, range_header: str | None): ...
+
+
+class LocalEvidence(EvidenceBackend):
+    def __init__(self, root: Path):
+        self.root = Path(root)
+
+    def put(self, session, name, data):
+        folder = self.root / session
+        folder.mkdir(parents=True, exist_ok=True)
+        (folder / name).write_bytes(data)
+
+    def segments(self, session):
+        folder = self.root / session
+        if not folder.is_dir():
+            return None
+        return [{"name": f.name, "bytes": f.stat().st_size} for f in sorted(folder.iterdir())]
+
+    def delete_session(self, session):
+        folder = self.root / session
+        if not folder.is_dir():
+            return False
+        shutil.rmtree(folder)
+        return True
+
+    def exists(self, session, name):
+        return (self.root / session / name).is_file()
+
+    def response(self, session, name, media_type, range_header):
+        return FileResponse(self.root / session / name, media_type=media_type, filename=None)
+
+
+class SupabaseEvidence(EvidenceBackend):
+    def __init__(self, objects: SupabaseObjects):
+        self._o = objects
+
+    def put(self, session, name, data):
+        content_type = "video/mp4" if name.endswith(".mp4") else "audio/mp4"
+        self._o.put(f"{session}/{name}", data, content_type)
+
+    def segments(self, session):
+        items = [i for i in self._o.list_objects(session) if i.get("id")]  # skip folders
+        if not items:
+            return None
+        return [
+            {"name": i["name"], "bytes": int((i.get("metadata") or {}).get("size") or 0)}
+            for i in sorted(items, key=lambda i: i["name"])
+        ]
+
+    def delete_session(self, session):
+        items = self.segments(session)
+        if not items:
+            return False
+        self._o.delete([f"{session}/{i['name']}" for i in items])
+        return True
+
+    def exists(self, session, name):
+        items = self.segments(session) or []
+        return any(i["name"] == name for i in items)
+
+    def response(self, session, name, media_type, range_header):
+        status, headers, body = self._o.stream(f"{session}/{name}", range_header)
+        if status not in (200, 206):
+            for _ in body:  # drain and close
+                pass
+            return None
+        out = {"Accept-Ranges": "bytes"}
+        for key in ("Content-Length", "Content-Range"):
+            if key in headers:
+                out[key] = headers[key]
+        return StreamingResponse(body, status_code=status, media_type=media_type, headers=out)
+
+
+# --- choosing the backend ------------------------------------------------------------
+
+def make_state_file(settings, name: str, local_path: str):
+    """Local file in development, a Storage object in Supabase mode."""
+    if settings.storage_backend == "supabase":
+        return SupabaseStateFile(
+            SupabaseObjects(settings.supabase_url, settings.supabase_service_role_key,
+                            settings.state_bucket),
+            name,
+        )
+    return local_path
+
+
+def make_evidence(settings) -> EvidenceBackend:
+    if settings.storage_backend == "supabase":
+        return SupabaseEvidence(
+            SupabaseObjects(settings.supabase_url, settings.supabase_service_role_key,
+                            settings.evidence_bucket)
+        )
+    return LocalEvidence(Path(settings.evidence_dir))

@@ -85,7 +85,10 @@ public struct IncidentClient: Sendable {
         test: Bool = false,
         lang: String = AppLanguage.alertLang,
         latitude: Double? = nil,
-        longitude: Double? = nil
+        longitude: Double? = nil,
+        mode: String = "sos",
+        channelToken: String? = nil,
+        guardianCode: String? = nil
     ) async throws -> IncidentStartResult {
         var body: [String: Any] = [
             "session": sessionID,
@@ -99,6 +102,9 @@ public struct IncidentClient: Sendable {
             body["lat"] = latitude
             body["lon"] = longitude
         }
+        if mode != "sos" { body["mode"] = mode }
+        if let channelToken, !channelToken.isEmpty { body["channel_token"] = channelToken }
+        if let guardianCode, !guardianCode.isEmpty { body["guardian_code"] = guardianCode }
         let (data, response) = try await session.data(for: post("incident/start", json: body))
         let parsed: StartBody = try decode(data, response: response)
         return IncidentStartResult(
@@ -199,6 +205,44 @@ public struct IncidentClient: Sendable {
         let (data, response) = try await session.data(for: delete("contacts/\(code)"))
         let parsed: DeleteBody = try decode(data, response: response)
         return parsed.deleted
+    }
+
+    // MARK: - Standing live link and guardian
+
+    private struct ChannelBody: Decodable {
+        var token: String
+        var live_url: String
+    }
+
+    /// Creates (or returns) this phone's standing live link.
+    public func createChannel(deviceID: String, wearerName: String) async throws -> (token: String, url: String) {
+        let (data, response) = try await session.data(
+            for: post("live/channel", json: ["device_id": deviceID, "wearer_name": wearerName])
+        )
+        let parsed: ChannelBody = try decode(data, response: response)
+        return (parsed.token, parsed.live_url)
+    }
+
+    private struct RevokedBody: Decodable {
+        var revoked: Bool
+    }
+
+    @discardableResult
+    public func revokeChannel(deviceID: String) async throws -> Bool {
+        let (data, response) = try await session.data(for: delete("live/channel/\(deviceID)"))
+        let parsed: RevokedBody = try decode(data, response: response)
+        return parsed.revoked
+    }
+
+    private struct ValidBody: Decodable {
+        var valid: Bool
+    }
+
+    /// Does this guardian code exist? (Asked before it is saved.)
+    public func guardianCodeExists(_ code: String) async throws -> Bool {
+        let (data, response) = try await session.data(for: get("guardian/check/\(code)"))
+        let parsed: ValidBody = try decode(data, response: response)
+        return parsed.valid
     }
 
     // MARK: - Private

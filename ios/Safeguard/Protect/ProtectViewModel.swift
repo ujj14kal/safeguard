@@ -323,6 +323,7 @@ final class ProtectViewModel: ObservableObject {
     }
 
     func stop() {
+        stopLiveStream()
         isStarting = false
         // Stopping during an SOS goes through the same end flow as the
         // hold-to-End button: contacts hear "SOS ended" once, tracks stop.
@@ -683,8 +684,8 @@ final class ProtectViewModel: ObservableObject {
     }
 
     /// SOS: start recording video and audio, saved to the backend in parts.
-    private func startEvidence() {
-        guard recordOnSOS, !usingReplay, !evidence.isRecording else { return }
+    private func startEvidence(force: Bool = false) {
+        guard force || recordOnSOS, !usingReplay, !evidence.isRecording else { return }
         evidence.retryPending()
         let sessionID = EvidenceSessionID.make()
         evidenceSessionID = sessionID
@@ -1297,6 +1298,13 @@ final class ProtectViewModel: ObservableObject {
     /// Unsafe just began: location + all four tracks start in parallel.
     private func startEscalation() {
         guard !sosActive else { return }
+        if liveStreaming {
+            // Hand the running stream over to the SOS: the camera, sound and
+            // tracker keep going; the stream's incident ends in ensureIncident.
+            liveStreaming = false
+            liveTimer?.invalidate()
+            liveTimer = nil
+        }
         sosActive = true
         sosStartedAt = Date()
         sosCause = resolveSosCause()
@@ -1459,6 +1467,13 @@ final class ProtectViewModel: ObservableObject {
     private func ensureIncident() async -> Bool {
         if incidentID != nil { return true }
         guard let session = evidenceSessionID else { return false }
+        // An SOS that begins during a live stream takes over: the stream's
+        // incident ends first so this session can start an SOS one (the
+        // same standing link, now with contacts alerted).
+        if let live = liveIncidentID {
+            liveIncidentID = nil
+            _ = try? await incidentClient.endIncident(live)
+        }
         let fix = locationTracker.latest
         do {
             let result = try await incidentClient.startIncident(
@@ -1467,7 +1482,9 @@ final class ProtectViewModel: ObservableObject {
                 contactCodes: sosContacts.linkedCodes,
                 dryRun: !sendRealAlerts,
                 latitude: fix?.coordinate.latitude,
-                longitude: fix?.coordinate.longitude
+                longitude: fix?.coordinate.longitude,
+                channelToken: LiveLinkStore.shared.token,
+                guardianCode: LiveLinkStore.shared.guardianCode
             )
             incidentID = result.id
             liveURL = result.liveURL
@@ -1790,6 +1807,85 @@ final class ProtectViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Live stream (the person's own, shared by hand)
+
+    @Published private(set) var liveStreaming = false
+    private var liveIncidentID: String?
+    private var liveTimer: Timer?
+
+    /// Starts a live stream on the person's standing link: camera, sound
+    /// and location go to it, and NOBODY is messaged (they share the link
+    /// themselves). Needs the camera, so protection starts if it is off.
+    func startLiveStream() async {
+        guard !liveStreaming, !sosActive else { return }
+        guard LiveLinkStore.shared.url != nil else {
+            showToast(String(localized: "Create your live link first"))
+            return
+        }
+        if !isProtecting {
+            NotificationCenter.default.post(name: .safeguardGoBack, object: nil)
+            await startCamera()
+        }
+        guard isProtecting else { return }
+        liveStreaming = true
+        locationTracker.requestPermission()
+        locationTracker.start()
+        startEvidence(force: true)
+        let session = evidenceSessionID ?? EvidenceSessionID.make()
+        evidenceSessionID = session
+        let fix = locationTracker.latest
+        do {
+            let result = try await incidentClient.startIncident(
+                sessionID: session,
+                wearerName: wearerName.isEmpty ? String(localized: "Someone") : wearerName,
+                contactCodes: [], dryRun: true,
+                latitude: fix?.coordinate.latitude, longitude: fix?.coordinate.longitude,
+                mode: "live",
+                channelToken: LiveLinkStore.shared.token,
+                guardianCode: LiveLinkStore.shared.guardianCode
+            )
+            liveIncidentID = result.id
+            AppLog.shared.event("live_start", ["session": session])
+            liveTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in
+                Task { @MainActor [weak self] in self?.streamLiveLocation() }
+            }
+            showToast(String(localized: "You are live. Share your link with who you choose."))
+        } catch {
+            liveStreaming = false
+            stopEvidence()
+            locationTracker.stop()
+            showToast(String(localized: "Could not start the live stream"))
+        }
+    }
+
+    func stopLiveStream() {
+        guard liveStreaming else { return }
+        liveStreaming = false
+        liveTimer?.invalidate()
+        liveTimer = nil
+        if let id = liveIncidentID {
+            liveIncidentID = nil
+            Task { _ = try? await incidentClient.endIncident(id) }
+        }
+        if !sosActive {
+            stopEvidence()
+            locationTracker.stop()
+        }
+        AppLog.shared.event("live_end")
+        showToast(String(localized: "Live stream ended"))
+    }
+
+    private func streamLiveLocation() {
+        guard liveStreaming, let id = liveIncidentID, let fix = locationTracker.latest else { return }
+        Task {
+            try? await incidentClient.sendLocation(
+                incidentID: id, latitude: fix.coordinate.latitude, longitude: fix.coordinate.longitude,
+                accuracy: fix.horizontalAccuracy >= 0 ? fix.horizontalAccuracy : nil,
+                timestamp: fix.timestamp.timeIntervalSince1970
+            )
+        }
+    }
+
     // MARK: - SOS location stream
 
     private func startSOSLocationTimer() {
@@ -1998,6 +2094,11 @@ final class ProtectViewModel: ObservableObject {
             accountDeleted = await AccountStore.shared.deleteAccount()
         }
         AccountStore.shared.clearLocal()
+        if LiveLinkStore.shared.url != nil {
+            let revoked = await LiveLinkStore.shared.deleteLink()
+            if !revoked { LiveLinkStore.shared.forgetLink() }
+        }
+        LiveLinkStore.shared.clearGuardian()
         var report = DataWipe.wipeLocal(keeping: keepingSetup ? ["setupComplete"] : [])
         sosContacts = SOSContactStore()
         history = IncidentHistory()

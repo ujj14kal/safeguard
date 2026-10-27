@@ -6,8 +6,9 @@ against the code. Persisted to a gitignored JSON file.
 """
 
 import json
-import os
 import secrets
+
+from .storage import StorageUnavailable, as_state_file
 
 MAX_CONTACTS = 5
 
@@ -22,7 +23,7 @@ class ContactLimitError(Exception):
 
 class ContactStore:
     def __init__(self, path):
-        self._path = path
+        self._file = as_state_file(path)
         self._contacts = None
 
     @property
@@ -32,10 +33,14 @@ class ContactStore:
         return self._contacts
 
     def _load(self):
+        if self._file is None:
+            return []
+        text = self._file.read()  # StorageUnavailable propagates: never start empty by mistake
+        if text is None:
+            return []
         try:
-            with open(self._path) as handle:
-                body = json.load(handle)
-        except (OSError, ValueError):
+            body = json.loads(text)
+        except ValueError:
             return []
         if not isinstance(body, dict) or not isinstance(body.get("contacts"), list):
             return []
@@ -55,11 +60,12 @@ class ContactStore:
         return kept[:MAX_CONTACTS]
 
     def _save(self):
-        parent = os.path.dirname(self._path)
-        if parent:
-            os.makedirs(parent, exist_ok=True)
-        with open(self._path, "w") as handle:
-            json.dump({"contacts": self.contacts}, handle)
+        if self._file is None:
+            return
+        try:
+            self._file.write(json.dumps({"contacts": self.contacts}))
+        except StorageUnavailable:
+            pass  # kept in memory; the next change retries
 
     def invite(self, name):
         """Adds a contact, returning its record (with a fresh code)."""

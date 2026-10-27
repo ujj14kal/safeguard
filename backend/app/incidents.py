@@ -8,11 +8,15 @@ cap bounds memory per incident.
 """
 
 import json
-import os
+import logging
 import secrets
 import time
 from collections import deque
 from dataclasses import dataclass, field
+
+from .storage import StorageUnavailable, as_state_file
+
+logger = logging.getLogger("safeguard.incidents")
 
 MAX_POINTS = 500
 
@@ -41,12 +45,19 @@ class Incident:
     ended_at: float = 0
     alerted: bool = False
     end_sent: bool = False
+    # "sos" (alerts contacts) or "live" (a stream the person chose to share:
+    # nobody is messaged automatically).
+    mode: str = "sos"
+    # Guardian code of the person watching over this wearer (normalised),
+    # or "". Incidents with one are kept longer so the guardian can review.
+    guardian_code: str = ""
 
     def latest(self):
         return self.points[-1] if self.points else None
 
 
 DEFAULT_TTL_AFTER_END_S = 6 * 3600
+DEFAULT_GUARDIAN_TTL_AFTER_END_S = 30 * 86400
 DEFAULT_MAX_ACTIVE_S = 24 * 3600
 _SAVE_EVERY_S = 5
 
@@ -58,12 +69,14 @@ class IncidentStore:
         ttl_after_end_s=DEFAULT_TTL_AFTER_END_S,
         max_active_s=DEFAULT_MAX_ACTIVE_S,
         clock=time.time,
+        guardian_ttl_after_end_s=DEFAULT_GUARDIAN_TTL_AFTER_END_S,
     ):
         self._by_id = {}
         self._by_session = {}
         self._by_token = {}
-        self._path = path
+        self._file = as_state_file(path)
         self._ttl_after_end_s = ttl_after_end_s
+        self._guardian_ttl_after_end_s = guardian_ttl_after_end_s
         self._max_active_s = max_active_s
         self._clock = clock
         self._last_save = 0.0
@@ -74,18 +87,21 @@ class IncidentStore:
     def expired(self, incident) -> bool:
         now = self._clock()
         if incident.status == "ended":
-            return now - incident.ended_at > self._ttl_after_end_s
+            keep = self._guardian_ttl_after_end_s if incident.guardian_code else self._ttl_after_end_s
+            return now - incident.ended_at > keep
         return now - incident.created_at > self._max_active_s
 
     # -- persistence ----------------------------------------------------
 
     def _load(self):
-        if not self._path or not os.path.exists(self._path):
+        if self._file is None:
+            return
+        text = self._file.read()  # StorageUnavailable propagates
+        if text is None:
             return
         try:
-            with open(self._path, encoding="utf-8") as handle:
-                records = json.load(handle)
-        except (OSError, json.JSONDecodeError):
+            records = json.loads(text)
+        except json.JSONDecodeError:
             return
         for record in records:
             try:
@@ -106,7 +122,7 @@ class IncidentStore:
     def save(self, force=True):
         """Writes all unexpired incidents. Location points call this with
         force=False, which saves at most every few seconds."""
-        if not self._path:
+        if self._file is None:
             return
         now = self._clock()
         if not force and now - self._last_save < _SAVE_EVERY_S:
@@ -116,7 +132,8 @@ class IncidentStore:
         for incident in list(self._by_id.values()):
             if self.expired(incident):
                 self._by_id.pop(incident.id, None)
-                self._by_token.pop(incident.share_token, None)
+                if self._by_token.get(incident.share_token) is incident:
+                    self._by_token.pop(incident.share_token, None)
                 if self._by_session.get(incident.session) is incident:
                     self._by_session.pop(incident.session, None)
                 continue
@@ -125,21 +142,20 @@ class IncidentStore:
                 for key in (
                     "id", "session", "wearer_name", "contact_codes", "share_token",
                     "test", "dry_run", "lang", "status", "created_at", "ended_at",
-                    "alerted", "end_sent",
+                    "alerted", "end_sent", "mode", "guardian_code",
                 )
             }
             record["points"] = list(incident.points)
             records.append(record)
         try:
-            os.makedirs(os.path.dirname(self._path) or ".", exist_ok=True)
-            tmp = f"{self._path}.tmp"
-            with open(tmp, "w", encoding="utf-8") as handle:
-                json.dump(records, handle)
-            os.replace(tmp, self._path)
-        except OSError:
-            pass
+            self._file.write(json.dumps(records))
+        except (OSError, StorageUnavailable) as exc:
+            logger.warning("could not save incidents: %s", type(exc).__name__)
 
-    def start(self, session, wearer_name, contact_codes, test=False, dry_run=True, lang="en"):
+    def start(
+        self, session, wearer_name, contact_codes, test=False, dry_run=True, lang="en",
+        share_token=None, mode="sos", guardian_code="",
+    ):
         """Creates an incident — unless this session already has an active
         one, in which case the existing incident is returned and NO new
         alert burst goes out. Returns (incident, fresh)."""
@@ -151,11 +167,13 @@ class IncidentStore:
             session=session,
             wearer_name=wearer_name,
             contact_codes=list(contact_codes),
-            share_token=make_share_token(),
+            share_token=share_token or make_share_token(),
             test=test,
             dry_run=dry_run,
             lang=lang if lang in ("en", "hi") else "en",
             created_at=self._clock(),
+            mode=mode if mode in ("sos", "live") else "sos",
+            guardian_code=guardian_code,
         )
         self._index(incident)
         self.save()
@@ -163,6 +181,14 @@ class IncidentStore:
 
     def get(self, incident_id):
         return self._by_id.get(incident_id)
+
+    def for_guardian(self, guardian_code):
+        """This guardian's unexpired incidents, newest first."""
+        found = [
+            incident for incident in self._by_id.values()
+            if incident.guardian_code == guardian_code and not self.expired(incident)
+        ]
+        return sorted(found, key=lambda item: item.created_at, reverse=True)
 
     def get_by_token(self, share_token):
         incident = self._by_token.get(share_token)

@@ -8,10 +8,15 @@ create table if not exists public.profiles (
   name        text not null default '',
   phone       text,
   language    text not null default 'en' check (language in ('en', 'hi')),
+  -- The guardian who may review this person's recordings (XXXX-XXXX-XXXX).
+  guardian_code text,
   consent_at  timestamptz,
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );
+
+-- Existing projects that already ran the first version of this file:
+alter table public.profiles add column if not exists guardian_code text;
 
 -- Row level security: a signed-in user can read and edit only their own
 -- row. The backend writes with the service-role key, which bypasses RLS;

@@ -7,6 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D30A76262B09EE00D88CE841 /* LiveSettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3530D8636BEE50AB954BF0E /* LiveSettingsSection.swift */; };
+		D474D400D39644B7D6B85017 /* LiveLinkStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D38FBA25D03880860EE730A3 /* LiveLinkStore.swift */; };
+		D31AF04A71E5780AC981AE1B /* LiveLinkStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D38FBA25D03880860EE730A3 /* LiveLinkStore.swift */; };
+		D41C270B6FF1E18ED4E155DE /* GuardianCode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D328B0DDB453F536DFD90741 /* GuardianCode.swift */; };
+		D38FB7125F7835E180A367B0 /* GuardianCode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D328B0DDB453F536DFD90741 /* GuardianCode.swift */; };
 		D4B5D57CDE8235244ED89383 /* UberDeepLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3212D41F7A01FC88794D27C /* UberDeepLink.swift */; };
 		D3A8492215BC8F40A588827C /* UberDeepLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3212D41F7A01FC88794D27C /* UberDeepLink.swift */; };
 		D4B416DE4A9E7DD1640105AF /* UnwantedGestureCounter.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3AA48741B5CCBBCA91B37A8 /* UnwantedGestureCounter.swift */; };
@@ -177,6 +182,9 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		D3530D8636BEE50AB954BF0E /* LiveSettingsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveSettingsSection.swift; sourceTree = "<group>"; };
+		D38FBA25D03880860EE730A3 /* LiveLinkStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveLinkStore.swift; sourceTree = "<group>"; };
+		D328B0DDB453F536DFD90741 /* GuardianCode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuardianCode.swift; sourceTree = "<group>"; };
 		D3212D41F7A01FC88794D27C /* UberDeepLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UberDeepLink.swift; sourceTree = "<group>"; };
 		D3AA48741B5CCBBCA91B37A8 /* UnwantedGestureCounter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnwantedGestureCounter.swift; sourceTree = "<group>"; };
 		D3535E2B9271729BAE77DC1E /* MediaPipeCueEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaPipeCueEngine.swift; sourceTree = "<group>"; };
@@ -321,6 +329,7 @@
 		D584F9DF9B6B42A842B7BE04 /* Account */ = {
 			isa = PBXGroup;
 			children = (
+				D328B0DDB453F536DFD90741 /* GuardianCode.swift */,
 				D33D9CE5EE39158BF27D7676 /* AccountFlowView.swift */,
 				D38A556EA82C00AAB711E1A3 /* AccountStore.swift */,
 				D3CA465994CC966FDD93527F /* AccountClient.swift */,
@@ -417,6 +426,7 @@
 		A10000000000000000000016 /* Tabs */ = {
 			isa = PBXGroup;
 			children = (
+				D3530D8636BEE50AB954BF0E /* LiveSettingsSection.swift */,
 				D3755B6E7787565AC33A8D91 /* Readiness.swift */,
 				D34E73CF3271830AD2BB74B0 /* DashboardView.swift */,
 				A100000000000000000000CD /* SettingsView.swift */,
@@ -511,6 +521,7 @@
 		A1000000000000000000009E /* Escalation */ = {
 			isa = PBXGroup;
 			children = (
+				D38FBA25D03880860EE730A3 /* LiveLinkStore.swift */,
 				D3212D41F7A01FC88794D27C /* UberDeepLink.swift */,
 				D3B95933BB2350AAAEB8AC15 /* LocationFixPolicy.swift */,
 				A1000000000000000000009F /* EscalationCoordinator.swift */,
@@ -685,6 +696,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D30A76262B09EE00D88CE841 /* LiveSettingsSection.swift in Sources */,
+				D31AF04A71E5780AC981AE1B /* LiveLinkStore.swift in Sources */,
+				D38FB7125F7835E180A367B0 /* GuardianCode.swift in Sources */,
 				D3A8492215BC8F40A588827C /* UberDeepLink.swift in Sources */,
 				D3DD9E720FB00671515DE1B0 /* UnwantedGestureCounter.swift in Sources */,
 				D3B04A6B6BAA7C8FFE3B8697 /* MediaPipeCueEngine.swift in Sources */,
@@ -777,6 +791,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D474D400D39644B7D6B85017 /* LiveLinkStore.swift in Sources */,
+				D41C270B6FF1E18ED4E155DE /* GuardianCode.swift in Sources */,
 				D4B5D57CDE8235244ED89383 /* UberDeepLink.swift in Sources */,
 				D4B416DE4A9E7DD1640105AF /* UnwantedGestureCounter.swift in Sources */,
 				D4056915C495DA434CD43945 /* LatencyMeter.swift in Sources */,

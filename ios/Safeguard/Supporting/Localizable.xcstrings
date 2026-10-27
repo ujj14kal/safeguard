@@ -929,6 +929,22 @@
         }
       }
     },
+    "Anyone with the link can see your location, camera and sound while you are live or in an SOS. Share it only with people you trust. You can delete it any time.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anyone with the link can see your location, camera and sound while you are live or in an SOS. Share it only with people you trust. You can delete it any time."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "लिंक वाला कोई भी व्यक्ति आपके लाइव या SOS के दौरान आपकी लोकेशन, कैमरा और आवाज़ देख-सुन सकता है। इसे सिर्फ़ भरोसेमंद लोगों के साथ साझा करें। आप इसे कभी भी हटा सकते हैं।"
+          }
+        }
+      }
+    },
     "Apple Maps": {
       "localizations": {
         "en": {
@@ -1809,6 +1825,22 @@
         }
       }
     },
+    "Could not create the link. Check your connection and try again.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not create the link. Check your connection and try again."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "लिंक नहीं बन पाया। कनेक्शन जाँचकर फिर कोशिश करें।"
+          }
+        }
+      }
+    },
     "Could not place the call on this device": {
       "localizations": {
         "en": {
@@ -1837,6 +1869,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "Safeguard सर्वर तक नहीं पहुँच पाए। अपना कनेक्शन जाँचें।"
+          }
+        }
+      }
+    },
+    "Could not reach the server to check the code.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not reach the server to check the code."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कोड जाँचने के लिए सर्वर तक नहीं पहुँच पाए।"
+          }
+        }
+      }
+    },
+    "Could not reach the server, so the link may still work. Try again.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not reach the server, so the link may still work. Try again."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सर्वर तक नहीं पहुँच पाए, इसलिए लिंक अब भी चल सकता है। फिर कोशिश करें।"
           }
         }
       }
@@ -1889,6 +1953,22 @@
         }
       }
     },
+    "Could not start the live stream": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not start the live stream"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "लाइव स्ट्रीम शुरू नहीं हो पाई"
+          }
+        }
+      }
+    },
     "Couldn't reach the backend, so there is no exact text to show. The real SOS retries automatically when offline.": {
       "localizations": {
         "en": {
@@ -1937,6 +2017,22 @@
         }
       }
     },
+    "Create my live link": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create my live link"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "मेरा लाइव लिंक बनाएँ"
+          }
+        }
+      }
+    },
     "Create your account": {
       "localizations": {
         "en": {
@@ -1949,6 +2045,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "अपना खाता बनाएँ"
+          }
+        }
+      }
+    },
+    "Create your live link first": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create your live link first"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "पहले अपना लाइव लिंक बनाएँ"
+          }
+        }
+      }
+    },
+    "Create your live link?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create your live link?"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अपना लाइव लिंक बनाएँ?"
           }
         }
       }
@@ -2177,6 +2305,22 @@
         }
       }
     },
+    "Delete the link": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete the link"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "लिंक हटाएँ"
+          }
+        }
+      }
+    },
     "Delete this event": {
       "localizations": {
         "en": {
@@ -2205,6 +2349,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "यह इवेंट हटाएँ?"
+          }
+        }
+      }
+    },
+    "Delete this link": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete this link"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "यह लिंक हटाएँ"
+          }
+        }
+      }
+    },
+    "Delete this link?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete this link?"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "यह लिंक हटाएँ?"
           }
         }
       }
@@ -2657,6 +2833,22 @@
         }
       }
     },
+    "Enter the code as XXXX-XXXX-XXXX.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter the code as XXXX-XXXX-XXXX."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कोड XXXX-XXXX-XXXX के रूप में लिखें।"
+          }
+        }
+      }
+    },
     "Enter your name (1 to 40 characters).": {
       "localizations": {
         "en": {
@@ -2909,6 +3101,54 @@
           "stringUnit": {
             "state": "translated",
             "value": "Google Maps"
+          }
+        }
+      }
+    },
+    "Guardian": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guardian"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अभिभावक"
+          }
+        }
+      }
+    },
+    "Guardian code": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guardian code"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अभिभावक कोड"
+          }
+        }
+      }
+    },
+    "Guardian code (optional)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guardian code (optional)"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अभिभावक कोड (वैकल्पिक)"
           }
         }
       }
@@ -3549,6 +3789,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "लाइव स्ट्रीम"
+          }
+        }
+      }
+    },
+    "Live stream ended": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Live stream ended"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "लाइव स्ट्रीम खत्म हुई"
           }
         }
       }
@@ -4977,6 +5233,22 @@
         }
       }
     },
+    "Remove guardian": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove guardian"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अभिभावक हटाएँ"
+          }
+        }
+      }
+    },
     "Removed: %@.": {
       "localizations": {
         "en": {
@@ -5581,6 +5853,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "नमूना ट्रैक: रास्ता, संपर्क, लाइव स्ट्रीम, कैब"
+          }
+        }
+      }
+    },
+    "Save guardian code": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save guardian code"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अभिभावक कोड सहेजें"
           }
         }
       }
@@ -6257,6 +6545,22 @@
         }
       }
     },
+    "Start live stream": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start live stream"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "लाइव स्ट्रीम शुरू करें"
+          }
+        }
+      }
+    },
     "Start protecting": {
       "localizations": {
         "en": {
@@ -6513,6 +6817,22 @@
         }
       }
     },
+    "Stop live stream": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop live stream"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "लाइव स्ट्रीम रोकें"
+          }
+        }
+      }
+    },
     "Stop protecting": {
       "localizations": {
         "en": {
@@ -6657,6 +6977,22 @@
         }
       }
     },
+    "That guardian code was not found. Check it with your guardian.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "That guardian code was not found. Check it with your guardian."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "यह अभिभावक कोड नहीं मिला। अपने अभिभावक से जाँच लें।"
+          }
+        }
+      }
+    },
     "The Mac running the backend, on the same Wi-Fi. Leave empty to use the build-time URL. 127.0.0.1 only works in the Simulator.": {
       "localizations": {
         "en": {
@@ -6673,6 +7009,22 @@
         }
       }
     },
+    "The address stops working for everyone who has it.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The address stops working for everyone who has it."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "यह पता उन सभी के लिए काम करना बंद कर देगा जिनके पास है।"
+          }
+        }
+      }
+    },
     "The safe phrase would always trigger Unsafe instead.": {
       "localizations": {
         "en": {
@@ -6685,6 +7037,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "सेफ वाक्य हमेशा Unsafe ही ट्रिगर करेगा।"
+          }
+        }
+      }
+    },
+    "The same link works for every live stream and is sent to your emergency contacts automatically in an SOS. Starting a live stream shares nothing by itself: you send the link to whoever you choose.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The same link works for every live stream and is sent to your emergency contacts automatically in an SOS. Starting a live stream shares nothing by itself: you send the link to whoever you choose."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "वही लिंक हर लाइव स्ट्रीम के लिए काम करता है और SOS में आपके आपातकालीन संपर्कों को अपने-आप भेजा जाता है। लाइव स्ट्रीम शुरू करने से अपने-आप कुछ साझा नहीं होता: लिंक आप जिसे चाहें उसे भेजें।"
           }
         }
       }
@@ -7489,6 +7857,22 @@
         }
       }
     },
+    "Watch my live location and video": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Watch my live location and video"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "मेरी लाइव लोकेशन और वीडियो देखें"
+          }
+        }
+      }
+    },
     "Watching for threatening behaviour nearby.": {
       "localizations": {
         "en": {
@@ -7713,6 +8097,22 @@
         }
       }
     },
+    "You are live. Share your link with who you choose.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You are live. Share your link with who you choose."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आप लाइव हैं। अपना लिंक जिसे चाहें उसे भेजें।"
+          }
+        }
+      }
+    },
     "You are protected": {
       "localizations": {
         "en": {
@@ -7901,6 +8301,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "आपका दिखने वाला नाम"
+          }
+        }
+      }
+    },
+    "Your guardian gets a code from the guardian page and gives it to you. With it they can watch your recordings, read-only. Remove it any time to stop new recordings reaching them.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your guardian gets a code from the guardian page and gives it to you. With it they can watch your recordings, read-only. Remove it any time to stop new recordings reaching them."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आपके अभिभावक को अभिभावक पेज से एक कोड मिलता है जो वे आपको देते हैं। इससे वे आपकी रिकॉर्डिंग सिर्फ़ देख सकते हैं। नई रिकॉर्डिंग उन तक पहुँचना रोकने के लिए इसे कभी भी हटाएँ।"
           }
         }
       }

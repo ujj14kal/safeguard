@@ -2,6 +2,95 @@
 
 Log of every deviation from the project brief, with reasons. Newest first.
 
+## Phase 10 (2026-10-27): running without the Mac (Cloud Run + Supabase)
+
+Backend 186 passed (1 skipped). The hosted mode was run locally against the
+REAL Supabase project, including a process restart: state, live page,
+guardian list and range requests on recordings all survived. Not deployed
+to Cloud Run yet (that needs the user's project and billing).
+
+**Update (same day): deployed** to project `safeguard-512917`, region
+`asia-south1`, service `safeguard-backend`, at
+`https://safeguard-backend-1067547469878.asia-south1.run.app` (permanent).
+Verified through that address: token enforced, guardian code, standing link,
+live incident, 120 kB upload (about 1 s from the Mac), family page, guardian
+list, byte-identical media and a Range request. The daily keep-alive Cloud
+Scheduler job `safeguard-keepalive` (06:00 IST) was created by the user in their
+own terminal, because the tooling here refuses to create standing jobs.
+
+1. **Why**: the submission must work while the Mac is off. Chosen path:
+   Google Cloud Run (free allowance, needs a card on file) plus Supabase for
+   data. Alternatives researched and rejected: Render free (sleeps, one
+   minute cold start, "not for production"), Fly.io and Koyeb and Hugging
+   Face Docker Spaces (no longer free), Oracle Always Free (best fit but
+   reclaimable and fiddly).
+2. **`STORAGE_BACKEND=supabase`**: small JSON documents (incidents, contacts,
+   guardian codes, live links) are objects in a private bucket
+   (`safeguard-state`), read once at start and written on change; recordings
+   are objects in `safeguard-evidence`, streamed back with Range support. Local
+   files remain the default for development. A failed READ raises (503), never
+   "start empty", so a hiccup cannot overwrite real data.
+3. **One instance, none warm**: `--max-instances 1` because state lives in
+   memory between saves; `--min-instances 0` because a warm instance is not
+   free. Cost: a few seconds on the first request after idle.
+4. **Telegram by webhook** in this mode (polling cannot run at zero).
+5. **Logs** go to stdout (Cloud Logging); the debug app log is a bounded
+   in-memory tail. `/keepalive` keeps the free Supabase project from pausing.
+6. **Buckets were created in the user's Supabase project** by
+   `backend/scripts/init_supabase_storage.py` (private, service-role only).
+7. **Known gaps**: no automatic clean-up of old recordings; the free quotas
+   (1 GB storage) are small; `/guardian/register` is public by design.
+
+### Cost control for Phase 10 (added the same day)
+
+Cloud Billing and Budgets APIs enabled on `safeguard-512917`. A budget of
+INR 400 (the billing account is in rupees; about $5) alerts at 50, 90 and 100
+percent for that project only; it does not cap spending. `scripts/cost-check.sh`
+reads Cloud Monitoring (free) and compares the month's billable time and
+requests with Cloud Run's free allowance, and is run by the deploy script
+before and after each deploy. Service settings lowered to timeout 900 s,
+concurrency 20, no startup CPU boost, one instance at most, none warm.
+
+## Phase 9 (2026-10-27): standing live link, guardian page, faster uploads
+
+Backend 173 passed (1 skipped); iOS 452/452. The whole backend flow was run
+through the real Cloudflare tunnel against the real backend (code minted,
+channel created, live incident, guardian list, signed media 200, tampered
+signature 403, wrong code 403). On the iPhone build; not tried by hand.
+
+1. **Standing live link** (`POST /live/channel`, Settings -> Live stream):
+   created only after a confirmation dialog, one per phone (random device id,
+   not tied to a person), the same URL for every live stream and every SOS.
+   While nothing streams the page says "not live right now". Delete revokes
+   it on the server at once. "Start live stream" needs the camera, records
+   sound and video to the link and messages NOBODY (mode `live`): the person
+   sends the link themselves. An SOS during a stream takes the stream over
+   (same URL, contacts alerted, incident switches from `live` to `sos`).
+2. **Guardian codes**: a guardian opens `/guardian`, taps "Get my guardian
+   code" (open, rate limited to 6 an hour) and hands the XXXX-XXXX-XXXX code to
+   the person they protect, who enters it at sign-up or in Settings (checked
+   against the server first). The code is the ONLY credential, as asked, so it
+   is long (12 characters from 31 = about 59 bits), wrong codes are throttled
+   (10 a minute per client address, via `cf-connecting-ip` behind the tunnel)
+   and the person can remove it any time. A code is never shown again by the
+   server after minting.
+3. **Read-only**: the guardian API has GET routes only; recordings are served
+   from signed links (HMAC, one hour) that are scoped to one incident and file.
+   The signing secret is random per process, so links die on restart and the
+   page just refetches.
+4. **Retention**: incidents with a guardian code are kept 30 days after they
+   end (`GUARDIAN_RETENTION_DAYS`); others keep the old 6 hours.
+5. **Profile**: `profiles.guardian_code` (migration updated, idempotent).
+   Sign-up rejects a code the server does not know.
+6. **Faster uploads**: parts are 4 s (were 8), 15 fps, at most 960 px wide at
+   0.9 Mbit/s with no B-frames (about 450 kB per part, was about 2 MB), one
+   shared URLSession with keep-alive and 4 parallel uploads, first retry after
+   1 s. Measured only on paper: the real figure needs a recording on the phone.
+7. **Not done**: the guardian page cannot yet delete or export anything (by
+   design), and `profiles` still has to be created in Supabase by someone who
+   can open its SQL editor (the migration file is ready). The service-role key
+   was pasted in chat: treat it as exposed and rotate it.
+
 ## Phase 8.1 (2026-10-27): rude-gesture counter, Uber ride link
 
 iOS 447/447, backend 154 passed (1 skipped). On the iPhone build; the Uber

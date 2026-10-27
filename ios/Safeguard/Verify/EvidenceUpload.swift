@@ -42,7 +42,7 @@ public enum EvidenceSegmentName {
 /// Upload retry schedule. Evidence matters more than a quick failure: keep
 /// trying with growing waits, and keep the file on disk if every try fails.
 public struct EvidenceRetryPolicy: Sendable {
-    public var delays: [TimeInterval] = [2, 5, 10, 30, 60]
+    public var delays: [TimeInterval] = [1, 3, 6, 15, 30, 60]
 
     public init() {}
 
@@ -66,9 +66,23 @@ public struct EvidenceUploader: Sendable {
     private let token: String?
     private let policy: EvidenceRetryPolicy
 
+    /// One session for all segments: keep-alive connections are reused (no
+    /// new TLS handshake per part), several parts upload at once, and a
+    /// part waits for the network to come back instead of failing at once.
+    public static let fastSession: URLSession = {
+        let configuration = URLSessionConfiguration.default
+        configuration.httpMaximumConnectionsPerHost = 4
+        configuration.waitsForConnectivity = true
+        configuration.allowsExpensiveNetworkAccess = true
+        configuration.allowsConstrainedNetworkAccess = true
+        configuration.timeoutIntervalForResource = 120
+        configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
+        return URLSession(configuration: configuration)
+    }()
+
     public init(
         config: @escaping @Sendable () -> VerifierConfig = { VerifierConfig.default },
-        urlSession: URLSession = .shared,
+        urlSession: URLSession = EvidenceUploader.fastSession,
         token: String? = nil,
         policy: EvidenceRetryPolicy = EvidenceRetryPolicy()
     ) {
