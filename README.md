@@ -93,6 +93,51 @@ it helps the microphone hear your surroundings instead of you, but it is
 not always possible or safe. If you need help right away, say your unsafe
 phrase at any time — it works even mid-sentence, with the toggle on or off.
 
+## SOS escalation (Phase 6)
+
+When the check-in goes unanswered, the unsafe phrase is heard, or a
+distress word survives its countdown, four tracks start in parallel: a
+safest-route map (nearest staffed/public places by walking ETA —
+documented in DECISIONS.md, not a crime-risk model), contact alerts with a
+live link, a live video + location page for family, and a clearly labelled
+DEMO cab sheet. Integrated police alerts are roadmap; the SOS screen has a
+"Call 112" button the wearer taps herself.
+
+### Demo end to end
+
+1. **Backend env** (see `.env.example`): set `SAFEGUARD_APP_TOKEN` first —
+   the tunnel below exposes the backend, and without the token every app
+   endpoint is open. Keep `NOTIFY_MODE` empty for dry-run (alerts land in
+   `backend/logs/notifications.jsonl`, nothing is sent), or set it to
+   `telegram` plus `TELEGRAM_BOT_TOKEN` from [@BotFather](https://t.me/BotFather)
+   for real sends.
+2. **Run the backend** on `0.0.0.0:8000` (above).
+3. **Tunnel** (contacts and the live page need a public URL): e.g.
+   `cloudflared tunnel --url http://127.0.0.1:8000` or
+   `ngrok http 8000`. Copy the `https://…` URL into `PUBLIC_BASE_URL` and
+   restart the backend so links bake it in.
+4. **Build the app** with the same token the backend has:
+   `SAFEGUARD_APP_TOKEN=<same-token> ./scripts/build.sh device`
+   (Simulator: `run-sim.sh`). The token rides in Info.plist from the
+   build setting and is never committed.
+5. **Link one Telegram account**: Contacts tab → Add contact → share the
+   invite link to your own Telegram account → press **Start** once in the
+   bot chat. The row flips to Linked within ~10 s. (No Start, no alerts —
+   Telegram cannot message strangers.)
+6. **Trigger an SOS**: Start protecting, then say the unsafe phrase (or
+   let a check-in go unanswered). The SOS screen shows the four track
+   chips, the route map, per-contact delivery and the live link.
+7. **Open the live link** from the Telegram message (or Copy/Share on the
+   SOS screen) in any phone browser: location trail, status and the
+   newest video/audio segments, about 10-15 s behind (segment-based,
+   never called real-time).
+8. **End**: hold End 3 s (or say the safe phrase). Contacts get "SOS
+   ended" once; location, recording and tracks stop.
+
+SMS (needs DLT registration in India) and WhatsApp (needs template
+approval) are roadmap: the notifier interface already fits them, only
+dry-run and Telegram are implemented.
+
 ## App icon and launch screen
 
 The icon, launch logo and splash are generated from `design/logo-source.png`:
@@ -170,4 +215,13 @@ voice commands (stop confirmation, dim, toasts). 214/214 iOS tests pass
 on the Simulator; backend `cd backend && .venv/bin/python -m pytest`
 (51 passed, 1 skipped). See DECISIONS.md for what is still unverified
 on a real iPhone (speech accuracy, HUD feel, voice commands end to end).
-Next: Phase 6 (the four escalation tracks).
+Phase 6 done: SOS escalation on four parallel tracks — safest route
+(MapKit, lowest walking ETA among nearest 3 staffed/public places),
+Telegram contact alerts with live link (dry-run default, Start-to-link,
+max 5), self-contained live viewer page (segment-based, ~10-15 s behind),
+DEMO cab sheet, tap-only Call 112, hold-3-s end flow; app-token auth on
+all app endpoints. 334/334 iOS tests pass on the Simulator; backend
+`cd backend && .venv/bin/python -m pytest` (116 passed, 1 skipped).
+See DECISIONS.md for deviations and what is still unverified on a real
+iPhone (MapKit search, live viewer on a phone browser, Telegram linking,
+SOS screen feel, mock cab is a demo).

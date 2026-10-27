@@ -2,6 +2,77 @@
 
 Log of every deviation from the project brief, with reasons. Newest first.
 
+## Phase 6 (2026-10-27): SOS escalation, four parallel tracks
+
+Shipped in small commits (backend notify + linking + incidents + viewer +
+auth, iOS coordinator + client + tracker + SOS screen + contacts tab +
+settings). Backend `cd backend && .venv/bin/python -m pytest` (116 passed,
+1 skipped); iOS `./scripts/test.sh` (334/334 on the Simulator).
+
+Backend — `notify.py` (`DryRunNotifier` default, `TelegramNotifier` over
+httpx; `SmsNotifier`/`WhatsAppNotifier` are interface-shaped roadmap only —
+SMS needs DLT in India, WhatsApp needs template approval). Contact linking
+with no public webhook: `POST /contacts/invite` mints a code, a background
+task polls Telegram `getUpdates` for `/start <code>`, chat ids persist to
+gitignored `backend/data/contacts.json` (max 5). Incidents: unguessable
+`token_urlsafe(24)` share token, one alert burst per incident (repeat start
+returns fresh=False, no delivery), 429 rate limit, last-500 location points,
+"SOS ended" once. The live viewer is one self-contained dark page (Leaflet
+1.9.4 pinned CDN) polling `/live/{token}/state` every 2 s; state + segments
+are scoped to that token's session only. Auth: `X-Safeguard-Token` on every
+app endpoint when `SAFEGUARD_APP_TOKEN` is set (unset allows + warns, for
+local dev); `/health` + `/live` stay public.
+
+iOS — `EscalationCoordinator` starts route + contacts + stream + cab
+together; each chip shows pending/running/done/failed, retries back off
+[2,8,30], one track never stops the others. Route = lowest walking ETA
+among the nearest 3 MapKit "police station"/"hospital" hits within ~3 km,
+drawn on the SOS map with ETA + Open in Maps. Contacts tab (add/remove ≤5,
+Telegram invite share sheet, Linked/Waiting, 10 s re-poll while anyone
+waits). Settings: wearer name, "Send real alerts" OFF + confirm dialog,
+test alert. Live link gets Copy + Share; cab is a DEMO sheet (fake driver,
+plate, countdown, re-share to Telegram); "Call 112" uses `tel:112` on tap
+only. End = hold 3 s or the safe phrase; Stop mid-SOS runs the same flow.
+
+Deviations and judgment calls:
+
+1. **"Safest" means staffed/public by ETA, not a crime-risk model**: the
+   route answers "where can people help me fastest". Documented here, in
+   the code, and nowhere near a risk claim.
+2. **Incidents are in-memory**: a backend restart drops active incidents
+   (evidence files + contacts survive). Persistence is roadmap.
+3. **The route waits through its retries for a first fix** ("Waiting for
+   location…" while retryable, "Location unavailable" when terminal): on a
+   cold start the fix often lands seconds after Unsafe.
+4. **Dry-run is two independent switches**: the app's "Send real alerts"
+   sends `dry_run` per incident, the backend's `NOTIFY_MODE` picks the
+   notifier. Either side can force dry-run; a real Telegram send needs
+   both (app ON + backend `NOTIFY_MODE=telegram` + bot token).
+5. **`/verify`, `/evidence` and friends now need the app token** when it
+   is set (401 without); the viewer needs only its share token. The token
+   rides in Info.plist from the `SAFEGUARD_APP_TOKEN` build setting, never
+   committed; `scripts/build.sh` passes it through.
+6. **Contact names ride in dry-run logs** (`logs/notifications.jsonl`):
+   the brief's "counts and status only" applies to AppLog events and the
+   delivery API; the dry-run log exists precisely to show what WOULD have
+   been sent, and contains no transcripts, appearance or third parties.
+7. **No SMS/WhatsApp**: interface-ready, listed as roadmap in README.
+8. **No unit tests for the Settings toggle default or the confirm
+   dialog**: the VM starts the mic + timers on init, so no test
+   instantiates it; the `dry_run` wire default IS pinned in
+   `IncidentClientTests`, and the toggle/dialog are covered by the demo.
+   Same for the 3 s hold and the cab countdown (UI glue over tested
+   coordinator/builder logic).
+
+Honest status: everything above is green on the Simulator, but no real
+iPhone has run it yet — MapKit search quality, the live viewer on a phone
+browser, Telegram linking end to end, the TTS/voice interplay mid-SOS and
+the feel of the SOS screen are all unverified. The live video is
+segment-based (the page says "about 10-15 s behind", never real-time);
+Telegram contacts MUST press Start once or no alert can reach them; the
+demo tunnel exposes the backend, so `SAFEGUARD_APP_TOKEN` must be set
+first; the mock cab books nothing.
+
 ## Phase 5 (2026-10-27): voice check-in, listener, window, HUD, commands
 
 Shipped in small commits (A core, A wiring, B backend, B speech core,
