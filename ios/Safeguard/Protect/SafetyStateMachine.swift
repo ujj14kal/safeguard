@@ -416,8 +416,13 @@ public struct CodePhraseMatcher: Sendable {
     private let unsafe: [[String]]
 
     public init(config: SafetyConfig = SafetyConfig()) {
-        self.safe = config.safePhrases.map(Self.words(in:))
-        self.unsafe = config.unsafePhrases.map(Self.words(in:))
+        self.init(safePhrases: config.safePhrases, unsafePhrases: config.unsafePhrases)
+    }
+
+    /// Matches against explicit phrase lists (the wearer's customs).
+    public init(safePhrases: [String], unsafePhrases: [String]) {
+        self.safe = safePhrases.map(Self.words(in:))
+        self.unsafe = unsafePhrases.map(Self.words(in:))
     }
 
     public func match(_ transcript: String) -> UserReply? {

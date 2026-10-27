@@ -34,20 +34,26 @@ final class CheckInSpeaker: NSObject, CheckInSpeaking, AVSpeechSynthesizerDelega
         fireStopped()
         self.onStarted = onStarted
         self.onStopped = onStopped
-        let utterance = AVSpeechUtterance(string: phrase)
-        utterance.volume = volume
-        utterance.rate = AVSpeechUtteranceDefaultSpeechRate
-        synthesizer.speak(utterance)
+        synthesizer.speak(utterance(string: phrase, volume: volume))
     }
 
     func speak(text: String, volume: Float, onStopped: @escaping () -> Void) {
         fireStarted()
         fireStopped()
         self.onStopped = onStopped
-        let utterance = AVSpeechUtterance(string: text)
+        synthesizer.speak(utterance(string: text, volume: volume))
+    }
+
+    /// Hindi voice when the app runs in Hindi (nil on English keeps the
+    /// system default). A missing Hindi voice falls back silently.
+    private func utterance(string: String, volume: Float) -> AVSpeechUtterance {
+        let utterance = AVSpeechUtterance(string: string)
         utterance.volume = volume
         utterance.rate = AVSpeechUtteranceDefaultSpeechRate
-        synthesizer.speak(utterance)
+        if let language = AppLanguage.speechVoiceLanguage {
+            utterance.voice = AVSpeechSynthesisVoice(language: language)
+        }
+        return utterance
     }
 
     func stop() {

@@ -112,7 +112,7 @@ final class ProtectViewModel: ObservableObject {
 
     /// Everything voice shares one listener (one engine, one recognizer).
     private let listener = ConversationListener()
-    private let phraseMatcher: CodePhraseMatcher
+    private var phraseMatcher: CodePhraseMatcher
     private let speechConfig = SpeechConfig()
     private let speechMatcher: SpeechMatcher
     private var window: TranscriptWindow
@@ -158,7 +158,10 @@ final class ProtectViewModel: ObservableObject {
     }
 
     init() {
-        self.phraseMatcher = CodePhraseMatcher(config: safetyConfig)
+        self.phraseMatcher = CodePhraseMatcher(
+            safePhrases: CodePhraseStore.effectiveSafe(),
+            unsafePhrases: CodePhraseStore.effectiveUnsafe()
+        )
         self.speechMatcher = SpeechMatcher(config: speechConfig)
         self.window = TranscriptWindow(windowSeconds: speechConfig.windowSeconds)
         self.speechGate = SpeechVerifyGate(
@@ -186,6 +189,8 @@ final class ProtectViewModel: ObservableObject {
         // code phrases, no window, no threat scan, no backend call.
         startListener()
         loadContacts()
+        history = IncidentHistory.load()
+        saveHistory() // persists the 30-day purge, if any
     }
 
     // CIContext is Sendable; shared for off-main replay frame conversion.
@@ -478,7 +483,7 @@ final class ProtectViewModel: ObservableObject {
         guard safety.takeAskSpeechDue() else { return }
         speakingNow = true
         speaker.speakAsk(
-            phrase: safetyConfig.askPhrase, volume: safetyConfig.askVolume
+            phrase: String(localized: "Are you safe?"), volume: safetyConfig.askVolume
         ) { [weak self] in
             Task { @MainActor [weak self] in
                 self?.safety.noteAskSpeechStarted(at: Self.now)
@@ -550,12 +555,16 @@ final class ProtectViewModel: ObservableObject {
         let sessionID = EvidenceSessionID.make()
         evidenceSessionID = sessionID
         AppLog.shared.event("evidence_start", ["session": sessionID])
+        lastEvidenceProgress = EvidenceProgress()
         evidence.start(sessionID: sessionID) { [weak self] progress in
             AppLog.shared.event("evidence", [
                 "segments": String(progress.segments), "uploaded": String(progress.uploaded),
                 "failed": String(progress.failed),
             ])
-            Task { @MainActor [weak self] in self?.evidenceStatus = progress.summary }
+            Task { @MainActor [weak self] in
+                self?.evidenceStatus = progress.summary
+                self?.lastEvidenceProgress = progress
+            }
         }
         listener.setAudioSink { [evidence] buffer in evidence.appendAudio(buffer) }
         evidenceStatus = EvidenceProgress().summary
@@ -623,6 +632,13 @@ final class ProtectViewModel: ObservableObject {
                 beginCountdown()
             } else if previous == .countdown {
                 endCountdown()
+                if mapped != .unsafe {
+                    // Cancelled countdown: a later SOS is not shout-caused.
+                    pendingShoutCause = false
+                }
+            }
+            if mapped == .asking, previous != .asking {
+                askTrigger = conversationFlag != nil ? "flag" : "checkin"
             }
             if mapped == .unsafe {
                 startEvidence()
@@ -710,6 +726,7 @@ final class ProtectViewModel: ObservableObject {
         }
         if loudness.feed(levelDB: db, at: now) {
             AppLog.shared.event("shout", ["peak_db": String(format: "%.0f", db), "protecting": String(isProtecting)])
+            pendingShoutCause = true
             if isProtecting { distressHeard() } else { distressHeardWhileIdle() }
         }
     }
@@ -784,6 +801,18 @@ final class ProtectViewModel: ObservableObject {
         ])
         let alreadyHandled = partialGate.finishUtterance()
         if !isProtecting {
+            if practicingPhrases {
+                // Setup/Settings practice: report only, never act.
+                switch phraseMatcher.match(text) {
+                case .safePhrase:
+                    practiceHeard = .safe
+                case .unsafePhrase:
+                    practiceHeard = .unsafe
+                case .tap, .none:
+                    practiceHeard = .noMatch
+                }
+                return
+            }
             if !speakingNow, let command = commandParser.parse(text) {
                 runCommand(command)
             } else if distressWordsEnabled, !speakingNow, distressMatcher.matches(text) {
@@ -1132,6 +1161,9 @@ final class ProtectViewModel: ObservableObject {
     private func startEscalation() {
         guard !sosActive else { return }
         sosActive = true
+        sosStartedAt = Date()
+        sosCause = resolveSosCause()
+        pendingShoutCause = false
         escalation = EscalationCoordinator()
         escalation.start()
         incidentID = nil
@@ -1174,6 +1206,7 @@ final class ProtectViewModel: ObservableObject {
     private func endSOS() {
         guard sosActive else { return }
         sosActive = false
+        recordHistoryEntry()
         escalation.end()
         sosLocationTimer?.invalidate()
         sosLocationTimer = nil
@@ -1548,6 +1581,152 @@ final class ProtectViewModel: ObservableObject {
             }
             saveContacts()
         }
+    }
+
+    // MARK: - Phase 7: practice, history, data
+
+    /// Code-phrase practice outcome for setup/Settings ("Heard: …").
+    enum PracticeHeard: Equatable {
+        case none
+        case noMatch
+        case safe
+        case unsafe
+    }
+
+    @Published var practiceHeard = PracticeHeard.none
+    private var practicingPhrases = false
+
+    func startPhrasePractice() {
+        practiceHeard = .none
+        practicingPhrases = true
+    }
+
+    func stopPhrasePractice() {
+        practicingPhrases = false
+    }
+
+    /// Rebuilds the matcher after the wearer edits code phrases.
+    func refreshPhrases() {
+        phraseMatcher = CodePhraseMatcher(
+            safePhrases: CodePhraseStore.effectiveSafe(),
+            unsafePhrases: CodePhraseStore.effectiveUnsafe()
+        )
+    }
+
+    func setContactAgreed(code: String, agreed: Bool) {
+        sosContacts.setAgreed(code: code, agreed: agreed)
+        saveContacts()
+    }
+
+    func requestLocationPermission() {
+        locationTracker.requestPermission()
+    }
+
+    // MARK: - Incident history (Activity tab)
+
+    @Published var history = IncidentHistory()
+    private var sosStartedAt: Date?
+    private var sosCause: String?
+    private var lastEvidenceProgress = EvidenceProgress()
+    /// Set when shouting triggers the distress path; consumed at SOS start.
+    private var pendingShoutCause = false
+    /// What triggered the current check-in ("flag" or "checkin").
+    private var askTrigger = "checkin"
+
+    private func saveHistory() {
+        history.save()
+    }
+
+    func deleteHistoryEntry(id: UUID) {
+        history.remove(id: id)
+        saveHistory()
+    }
+
+    func deleteHistoryAll() {
+        history.removeAll()
+        saveHistory()
+    }
+
+    private func recordHistoryEntry() {
+        guard let started = sosStartedAt else { return }
+        var outcomes: [String: String] = [:]
+        for track in EscalationTrack.allCases {
+            let status = shortStatus(escalation.status(of: track))
+            if let reason = escalation.reason(of: track) {
+                outcomes[track.rawValue] = "\(status): \(reason)"
+            } else {
+                outcomes[track.rawValue] = status
+            }
+        }
+        let alerted = deliveryStatus.filter {
+            $0.status == "sent" || $0.status == "dry-run"
+        }
+        history.append(IncidentHistoryEntry(
+            startedAt: started, endedAt: Date(),
+            cause: sosCause ?? "noReply", trackOutcomes: outcomes,
+            contactsAlerted: alerted.count,
+            contactNames: alerted.compactMap(\.name),
+            evidenceSaved: lastEvidenceProgress.uploaded,
+            evidenceWaiting: max(
+                0, lastEvidenceProgress.segments - lastEvidenceProgress.uploaded
+            ),
+            liveURL: liveURL, evidenceSessionID: evidenceSessionID
+        ))
+        saveHistory()
+        sosStartedAt = nil
+        sosCause = nil
+    }
+
+    private func resolveSosCause() -> String {
+        switch safety.unsafeCause {
+        case .unsafePhrase:
+            return "unsafePhrase"
+        case .distressWord:
+            return pendingShoutCause ? "shouting" : "distressWord"
+        case .noReply, .none:
+            return askTrigger == "flag" ? "flag" : "noReply"
+        }
+    }
+
+    // MARK: - Delete all my data (Settings → Data)
+
+    /// Wipes local data, then asks the backend to delete this device's
+    /// evidence sessions and contacts. Refuses during an active SOS.
+    /// Returns what happened, honestly (offline failures listed).
+    func deleteAllMyData() async -> DataWipeReport? {
+        guard !sosActive else {
+            showToast("End the SOS first")
+            return nil
+        }
+        let sessions = Set(history.entries.compactMap(\.evidenceSessionID))
+        let codes = sosContacts.contacts.map(\.code)
+        var report = DataWipe.wipeLocal()
+        sosContacts = SOSContactStore()
+        history = IncidentHistory()
+        refreshPhrases()
+        for session in sessions {
+            do {
+                _ = try await incidentClient.deleteEvidence(sessionID: session)
+                report.backendDeleted.append("evidence")
+            } catch {
+                report.backendFailed.append("evidence")
+            }
+        }
+        for code in codes {
+            do {
+                _ = try await incidentClient.deleteContact(code: code)
+                report.backendDeleted.append("contact")
+            } catch {
+                report.backendFailed.append("contact")
+            }
+        }
+        AppLog.shared.event("data_wipe", [
+            "keys": String(report.removedKeys.count),
+            "files": String(report.removedFiles.count),
+            "backend_ok": String(report.backendDeleted.count),
+            "backend_failed": String(report.backendFailed.count),
+        ])
+        return report
     }
 
     /// Settings test button: a test-flagged incident, ended right away.

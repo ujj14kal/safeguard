@@ -15,6 +15,8 @@ public struct IncidentStartResult: Sendable, Equatable {
     public var liveURL: String
     public var delivery: [IncidentDelivery]
     public var fresh: Bool
+    /// Exact alert text contacts received (setup dry-run shows it).
+    public var previewText: String
 }
 
 /// Parsed contact status from GET /contacts/{code}.
@@ -69,6 +71,7 @@ public struct IncidentClient: Sendable {
         var live_url: String
         var delivery: [IncidentDelivery]
         var fresh: Bool
+        var preview_text: String?
     }
 
     /// Starts the SOS incident (alerts linked contacts). `dryRun` defaults
@@ -80,6 +83,7 @@ public struct IncidentClient: Sendable {
         contactCodes: [String],
         dryRun: Bool = true,
         test: Bool = false,
+        lang: String = AppLanguage.alertLang,
         latitude: Double? = nil,
         longitude: Double? = nil
     ) async throws -> IncidentStartResult {
@@ -89,6 +93,7 @@ public struct IncidentClient: Sendable {
             "contact_codes": contactCodes,
             "dry_run": dryRun,
             "test": test,
+            "lang": lang,
         ]
         if let latitude, let longitude {
             body["lat"] = latitude
@@ -101,7 +106,8 @@ public struct IncidentClient: Sendable {
             shareToken: parsed.share_token,
             liveURL: parsed.live_url,
             delivery: parsed.delivery,
-            fresh: parsed.fresh
+            fresh: parsed.fresh,
+            previewText: parsed.preview_text ?? ""
         )
     }
 

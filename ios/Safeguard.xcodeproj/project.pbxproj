@@ -120,6 +120,8 @@
 		A100000000000000000000BB /* IncidentHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000BA /* IncidentHistory.swift */; };
 		B2000000000000000000004D /* IncidentHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000BA /* IncidentHistory.swift */; };
 		B2000000000000000000004E /* SetupTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000BC /* SetupTests.swift */; };
+		A100000000000000000000BE /* AppLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000BD /* AppLanguage.swift */; };
+		B2000000000000000000004F /* AppLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000BD /* AppLanguage.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -204,6 +206,7 @@
 		A100000000000000000000B8 /* DataWipe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataWipe.swift; sourceTree = "<group>"; };
 		A100000000000000000000BA /* IncidentHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IncidentHistory.swift; sourceTree = "<group>"; };
 		A100000000000000000000BC /* SetupTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupTests.swift; sourceTree = "<group>"; };
+		A100000000000000000000BD /* AppLanguage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLanguage.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -406,6 +409,7 @@
 				A100000000000000000000B4 /* CodePhrases.swift */,
 				A100000000000000000000B6 /* SetupMachine.swift */,
 				A100000000000000000000B8 /* DataWipe.swift */,
+				A100000000000000000000BD /* AppLanguage.swift */,
 			);
 			path = Setup;
 			sourceTree = "<group>";
@@ -585,6 +589,7 @@
 				A100000000000000000000B7 /* SetupMachine.swift in Sources */,
 				A100000000000000000000B9 /* DataWipe.swift in Sources */,
 				A100000000000000000000BB /* IncidentHistory.swift in Sources */,
+				A100000000000000000000BE /* AppLanguage.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -646,6 +651,7 @@
 				B2000000000000000000004C /* DataWipe.swift in Sources */,
 				B2000000000000000000004D /* IncidentHistory.swift in Sources */,
 				B2000000000000000000004E /* SetupTests.swift in Sources */,
+				B2000000000000000000004F /* AppLanguage.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -127,6 +127,26 @@ final class IncidentClientTests: XCTestCase {
         )
     }
 
+    func testStartSendsLangAndParsesPreview() async throws {
+        let body = startJSON.replacingOccurrences(
+            of: "\"fresh\": true", with: "\"fresh\": true, \"preview_text\": \"SOS from Aarav\""
+        )
+        let (session, capture) = captureSession(body: body)
+        let result = try await client(session).startIncident(
+            sessionID: "sos-abcdef12", wearerName: "Aarav", contactCodes: [],
+            lang: "hi"
+        )
+        XCTAssertEqual(try jsonBody(capture)["lang"] as? String, "hi")
+        XCTAssertEqual(result.previewText, "SOS from Aarav")
+    }
+
+    func testStartPreviewDefaultsToEmpty() async throws {
+        let result = try await client(stubSession(body: startJSON)).startIncident(
+            sessionID: "sos-abcdef12", wearerName: "Aarav", contactCodes: []
+        )
+        XCTAssertEqual(result.previewText, "")
+    }
+
     func testUnauthorizedMapsToServerStatus() async {
         do {
             _ = try await client(stubSession(status: 401, body: "{}")).startIncident(
