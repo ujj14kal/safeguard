@@ -21,15 +21,25 @@ public final class AccountStore: ObservableObject {
     private let service: AccountService
     private let secrets: SecretStore
     private let defaults: UserDefaults
+    private let avatarCache: URL
+
+    /// The profile picture (JPEG bytes), nil when the person set none.
+    /// Kept on the server with the account; a copy is cached here.
+    @Published public private(set) var avatarData: Data?
 
     public init(
         service: AccountService = AccountClient(),
         secrets: SecretStore = KeychainSecretStore(),
-        defaults: UserDefaults = .standard
+        defaults: UserDefaults = .standard,
+        avatarCache: URL = FileManager.default
+            .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("account-avatar.jpg")
     ) {
         self.service = service
         self.secrets = secrets
         self.defaults = defaults
+        self.avatarCache = avatarCache
+        avatarData = try? Data(contentsOf: avatarCache)
         if let data = defaults.data(forKey: Self.profileKey),
            let cached = try? JSONDecoder().decode(AccountProfile.self, from: data),
            loadSession() != nil
@@ -104,6 +114,8 @@ public final class AccountStore: ObservableObject {
     public func clearLocal() {
         secrets.remove(Self.sessionKey)
         defaults.removeObject(forKey: Self.profileKey)
+        try? FileManager.default.removeItem(at: avatarCache)
+        avatarData = nil
         profile = nil
         needsConfirmation = false
     }
@@ -139,6 +151,49 @@ public final class AccountStore: ObservableObject {
         if let fresh = try? await service.profile(accessToken: token) {
             profile = fresh
             persist(fresh)
+        }
+        await loadAvatar()
+    }
+
+    /// Fetches the picture from the server (a new phone, or a change made
+    /// elsewhere). A failed fetch keeps whatever is cached.
+    public func loadAvatar() async {
+        guard isSignedIn, let token = await validAccessToken() else { return }
+        guard let fetched = try? await service.avatar(accessToken: token) else { return }
+        cacheAvatar(fetched)
+    }
+
+    /// Saves a new picture (optional feature): shrunk to a small JPEG,
+    /// stored on the server, cached here.
+    @discardableResult
+    public func setAvatar(_ image: UIImage) async -> Bool {
+        guard let jpeg = AvatarImage.jpeg(from: image) else {
+            errorMessage = String(localized: "Could not save the photo. Try again.")
+            return false
+        }
+        guard let token = await validAccessToken() else { return false }
+        let done = await run { try await self.service.setAvatar(accessToken: token, jpeg: jpeg) }
+        if done { cacheAvatar(jpeg) }
+        return done
+    }
+
+    @discardableResult
+    public func removeAvatar() async -> Bool {
+        guard let token = await validAccessToken() else { return false }
+        let done = await run { try await self.service.removeAvatar(accessToken: token) }
+        if done { cacheAvatar(nil) }
+        return done
+    }
+
+    private func cacheAvatar(_ data: Data?) {
+        avatarData = data
+        if let data {
+            try? FileManager.default.createDirectory(
+                at: avatarCache.deletingLastPathComponent(), withIntermediateDirectories: true
+            )
+            try? data.write(to: avatarCache, options: .atomic)
+        } else {
+            try? FileManager.default.removeItem(at: avatarCache)
         }
     }
 

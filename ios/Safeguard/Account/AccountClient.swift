@@ -15,6 +15,16 @@ public protocol AccountService: Sendable {
     ) async throws -> AccountProfile
     func signOut(accessToken: String) async
     func deleteAccount(accessToken: String) async throws
+    /// The optional profile picture (JPEG); nil when none was set.
+    func avatar(accessToken: String) async throws -> Data?
+    func setAvatar(accessToken: String, jpeg: Data) async throws
+    func removeAvatar(accessToken: String) async throws
+}
+
+extension AccountService {
+    public func avatar(accessToken: String) async throws -> Data? { nil }
+    public func setAvatar(accessToken: String, jpeg: Data) async throws {}
+    public func removeAvatar(accessToken: String) async throws {}
 }
 
 /// Talks to this app's own backend (never to Supabase directly: the keys
@@ -103,6 +113,25 @@ public struct AccountClient: AccountService {
 
     public func deleteAccount(accessToken: String) async throws {
         _ = try await send(request("me", method: "DELETE", bearer: accessToken))
+    }
+
+    public func avatar(accessToken: String) async throws -> Data? {
+        do {
+            return try await send(request("me/avatar", method: "GET", bearer: accessToken))
+        } catch let error as AccountError where error.status == 404 {
+            return nil
+        }
+    }
+
+    public func setAvatar(accessToken: String, jpeg: Data) async throws {
+        var put = try request("me/avatar", method: "PUT", bearer: accessToken)
+        put.setValue("image/jpeg", forHTTPHeaderField: "Content-Type")
+        put.httpBody = jpeg
+        _ = try await send(put)
+    }
+
+    public func removeAvatar(accessToken: String) async throws {
+        _ = try await send(request("me/avatar", method: "DELETE", bearer: accessToken))
     }
 
     // MARK: Plumbing

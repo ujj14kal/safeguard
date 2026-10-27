@@ -255,3 +255,45 @@ def test_signup_rejects_unknown_or_malformed_guardian_codes(api, monkeypatch):
     assert unknown.status_code == 422 and "not found" in unknown.json()["detail"]
     assert api.post("/auth/signup", json=signup_body(guardian_code="nonsense")).status_code == 422
     assert api.post("/auth/signup", json=signup_body(guardian_code="  ")).status_code == 200
+
+
+JPEG = b"\xff\xd8\xff\xe0" + b"x" * 100 + b"\xff\xd9"
+
+
+@pytest.fixture()
+def avatars(monkeypatch, tmp_path):
+    from app.storage import AvatarStore
+    store = AvatarStore(root=tmp_path)
+    monkeypatch.setattr(main, "_avatar_override", store)
+    return store
+
+
+def _auth(api):
+    api.post("/auth/signup", json=signup_body())
+    return {"Authorization": "Bearer acc-1"}
+
+
+def test_avatar_is_optional_then_round_trips(api, avatars):
+    headers = _auth(api)
+    assert api.get("/me/avatar", headers=headers).status_code == 404
+    assert api.put("/me/avatar", content=JPEG, headers=headers).status_code == 200
+    got = api.get("/me/avatar", headers=headers)
+    assert got.status_code == 200 and got.content == JPEG
+    assert got.headers["content-type"] == "image/jpeg"
+    assert api.delete("/me/avatar", headers=headers).status_code == 200
+    assert api.get("/me/avatar", headers=headers).status_code == 404
+
+
+def test_avatar_rejects_non_jpeg_and_huge(api, avatars):
+    headers = _auth(api)
+    assert api.put("/me/avatar", content=b"GIF89a....", headers=headers).status_code == 422
+    big = b"\xff\xd8\xff" + b"x" * 700_000 + b"\xff\xd9"
+    assert api.put("/me/avatar", content=big, headers=headers).status_code == 413
+
+
+def test_avatar_needs_sign_in_and_dies_with_account(api, avatars):
+    assert api.get("/me/avatar").status_code == 401
+    headers = _auth(api)
+    api.put("/me/avatar", content=JPEG, headers=headers)
+    assert api.delete("/me", headers=headers).status_code == 200
+    assert avatars.get(USER_ID) is None

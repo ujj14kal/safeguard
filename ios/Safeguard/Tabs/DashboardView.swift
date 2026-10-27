@@ -8,6 +8,7 @@ struct DashboardView: View {
     @Environment(\.openURL) private var openURL
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("wearerName") private var wearerName = ""
+    @StateObject private var account = AccountStore.shared
     @State private var loaded = false
     @State private var permissions: [SetupPermission: PermissionStatus] = [:]
 
@@ -52,8 +53,18 @@ struct DashboardView: View {
             }
             .navigationTitle(greeting)
             .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        NotificationCenter.default.post(name: .safeguardOpenSettings, object: nil)
+                    } label: {
+                        AvatarView(data: account.avatarData, name: wearerName, size: 34)
+                    }
+                }
+            }
         }
         .task {
+            await account.refreshProfile()
             await refresh()
             withAnimation(DS.Motion.smooth) { loaded = true }
         }

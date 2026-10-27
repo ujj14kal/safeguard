@@ -9,6 +9,7 @@ struct ContentView: View {
     @AppStorage("setupComplete") private var setupComplete = false
     @AppStorage("setupStep") private var savedStep = SetupStep.welcome.rawValue
     @State private var rerunSetup = false
+    @StateObject private var account = AccountStore.shared
 
     enum Tab: Hashable {
         case dashboard, protect, contacts, activity, settings
@@ -32,8 +33,18 @@ struct ContentView: View {
         return !setupComplete && !onboardingSeen
     }
 
+    /// An account is compulsory: nothing else is reachable until signed in.
+    private var needsAccount: Bool {
+        #if DEBUG
+            if onboardingBypassed { return false }
+        #endif
+        return !account.isSignedIn
+    }
+
     var body: some View {
-        if showSetup {
+        if needsAccount {
+            AccountGateView()
+        } else if showSetup {
             SetupFlowView(rerun: $rerunSetup)
         } else {
             tabsView

@@ -124,9 +124,16 @@ struct SettingsView: View {
     private var accountSection: some View {
         Section {
             if let profile = account.profile {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(profile.name).font(.headline)
-                    Text(profile.email).font(.footnote).foregroundStyle(.secondary)
+                NavigationLink {
+                    ProfileView()
+                } label: {
+                    HStack(spacing: 12) {
+                        AvatarView(data: account.avatarData, name: profile.name, size: 52)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(profile.name).font(.headline)
+                            Text(profile.email).font(.footnote).foregroundStyle(.secondary)
+                        }
+                    }
                 }
                 Button("Sign out") { Task { await account.signOut() } }
                 Button("Delete my account", role: .destructive) { confirmDeleteAccount = true }
@@ -139,7 +146,7 @@ struct SettingsView: View {
         } header: {
             Text("Account")
         } footer: {
-            Text("An account backs up your profile on the Safeguard server. The app works without one.")
+            Text("Your account keeps your profile and optional photo on the Safeguard server.")
         }
     }
 

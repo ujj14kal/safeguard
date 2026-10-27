@@ -42,3 +42,26 @@ final class HLSEvidenceTests: XCTestCase {
         XCTAssertFalse(EvidenceCapture().isRecording)
     }
 }
+
+final class AvatarImageTests: XCTestCase {
+    func testPhotoBecomesSmallSquareJPEG() throws {
+        let size = CGSize(width: 3000, height: 2000)
+        let renderer = UIGraphicsImageRenderer(size: size)
+        let photo = renderer.image { ctx in
+            UIColor.systemTeal.setFill()
+            ctx.fill(CGRect(origin: .zero, size: size))
+        }
+        let data = try XCTUnwrap(AvatarImage.jpeg(from: photo))
+        XCTAssertLessThanOrEqual(data.count, AvatarImage.maxBytes)
+        XCTAssertEqual(data.prefix(3), Data([0xFF, 0xD8, 0xFF]))
+        let back = try XCTUnwrap(UIImage(data: data))
+        XCTAssertEqual(back.size.width, 512, accuracy: 1)
+        XCTAssertEqual(back.size.height, 512, accuracy: 1)
+    }
+
+    func testInitials() {
+        XCTAssertEqual(AvatarImage.initials("Asha Rao"), "AR")
+        XCTAssertEqual(AvatarImage.initials("asha"), "A")
+        XCTAssertEqual(AvatarImage.initials("  "), "?")
+    }
+}

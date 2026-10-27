@@ -19,6 +19,7 @@ struct AccountFlowView: View {
     @State private var guardianCode: String = ""
     @State private var consent = false
     @State private var showPassword = false
+    @State private var photo: UIImage?
     @FocusState private var focus: Field?
 
     private enum Field { case name, email, password, phone, guardian }
@@ -102,6 +103,7 @@ struct AccountFlowView: View {
                 .textContentType(.emailAddress)
             passwordField
             if mode == .create {
+                photoRow
                 field("Phone (optional)", text: $phone, symbol: "phone.fill", focus: .phone)
                     .keyboardType(.phonePad)
                     .textContentType(.telephoneNumber)
@@ -111,6 +113,26 @@ struct AccountFlowView: View {
                 consentRow
             }
         }
+    }
+
+    private var photoRow: some View {
+        HStack(spacing: 14) {
+            if let photo {
+                Image(uiImage: photo).resizable().scaledToFill()
+                    .frame(width: 52, height: 52).clipShape(Circle())
+            } else {
+                Image(systemName: "person.crop.circle.fill")
+                    .font(.system(size: 52)).foregroundStyle(.secondary)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Profile photo (optional)").font(.subheadline.weight(.semibold))
+                PhotoChooser(image: $photo, title: photo == nil ? "Choose a photo" : "Change photo")
+                    .font(.footnote)
+            }
+            Spacer()
+        }
+        .padding(14)
+        .background(DS.Colors.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
     private func field(_ title: LocalizedStringKey, text: Binding<String>, symbol: String, focus: Field) -> some View {
@@ -211,6 +233,8 @@ struct AccountFlowView: View {
                 ok = await store.signIn(email: email, password: password)
             }
             if ok, store.isSignedIn {
+                if mode == .create, let photo { await store.setAvatar(photo) }
+                if mode == .signIn { await store.loadAvatar() }
                 UINotificationFeedbackGenerator().notificationOccurred(.success)
                 password.removeAll()
                 onFinished?()
@@ -219,11 +243,11 @@ struct AccountFlowView: View {
     }
 }
 
-/// Setup step 2: the account (skippable).
+/// Setup step 2: the account (required).
 struct SetupAccountStep: View {
     var onFinished: () -> Void
 
     var body: some View {
-        AccountFlowView(onFinished: onFinished, allowSkip: true)
+        AccountFlowView(onFinished: onFinished, allowSkip: false)
     }
 }

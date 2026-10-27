@@ -46,6 +46,7 @@ class Settings:
     # or mounted bucket. If EVIDENCE_TOKEN is set, uploads must send it in
     # the X-Evidence-Token header.
     evidence_dir: str = field(default_factory=lambda: os.environ.get("EVIDENCE_DIR", "evidence"))
+    avatar_dir: str = field(default_factory=lambda: os.environ.get("AVATAR_DIR", "avatars"))
     evidence_token: str = field(default_factory=lambda: os.environ.get("EVIDENCE_TOKEN", ""))
     evidence_max_mb: int = field(default_factory=lambda: _int("EVIDENCE_MAX_MB", 80))
 

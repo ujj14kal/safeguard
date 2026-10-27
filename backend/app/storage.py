@@ -310,3 +310,47 @@ def make_evidence(settings) -> EvidenceBackend:
                             settings.evidence_bucket)
         )
     return LocalEvidence(Path(settings.evidence_dir))
+
+
+# --- profile pictures ----------------------------------------------------------------
+
+class AvatarStore:
+    """One small JPEG per account: a file locally, a Storage object (in the
+    private state bucket) in Supabase mode."""
+
+    def __init__(self, objects: "SupabaseObjects | None" = None, root: Path | None = None):
+        self._objects = objects
+        self._root = root
+
+    @staticmethod
+    def _key(user_id: str) -> str:
+        return f"avatars/{user_id}.jpg"
+
+    def get(self, user_id: str) -> bytes | None:
+        if self._objects is not None:
+            return self._objects.get(self._key(user_id))
+        path = self._root / f"{user_id}.jpg"
+        return path.read_bytes() if path.is_file() else None
+
+    def put(self, user_id: str, data: bytes) -> None:
+        if self._objects is not None:
+            self._objects.put(self._key(user_id), data, "image/jpeg")
+            return
+        self._root.mkdir(parents=True, exist_ok=True)
+        tmp = self._root / f"{user_id}.jpg.tmp"
+        tmp.write_bytes(data)
+        os.replace(tmp, self._root / f"{user_id}.jpg")
+
+    def delete(self, user_id: str) -> None:
+        if self._objects is not None:
+            self._objects.delete([self._key(user_id)])
+            return
+        (self._root / f"{user_id}.jpg").unlink(missing_ok=True)
+
+
+def make_avatars(settings) -> AvatarStore:
+    if settings.storage_backend == "supabase":
+        return AvatarStore(objects=SupabaseObjects(
+            settings.supabase_url, settings.supabase_service_role_key, settings.state_bucket
+        ))
+    return AvatarStore(root=Path(settings.avatar_dir))

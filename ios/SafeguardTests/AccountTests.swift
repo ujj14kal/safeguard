@@ -73,6 +73,7 @@ final class AccountStoreTests: XCTestCase {
         var signedOut = false
         var failSignIn = false
         var requireConfirmation = false
+        var serverAvatar: Data?
         var expiresIn: TimeInterval = 3600
         let tokenBase = "tok-" + String(repeating: "x", count: 6)
 
@@ -97,6 +98,10 @@ final class AccountStoreTests: XCTestCase {
             return result(name: "Asha", email: email, withSession: true)
         }
 
+        func avatar(accessToken: String) async throws -> Data? { serverAvatar }
+        func setAvatar(accessToken: String, jpeg: Data) async throws { serverAvatar = jpeg }
+        func removeAvatar(accessToken: String) async throws { serverAvatar = nil }
+
         func refresh(refreshToken: String) async throws -> AccountSession {
             refreshCalls += 1
             return AccountSession(accessToken: "renewed", refreshToken: "ref2", expiresAt: Date().addingTimeInterval(3600))
@@ -119,6 +124,8 @@ final class AccountStoreTests: XCTestCase {
     private var service: FakeService!
     private var store: AccountStore!
     private let pw = "Zebra-crossing7"
+    private let avatarFile = FileManager.default.temporaryDirectory
+        .appendingPathComponent("avatar-\(UUID().uuidString).jpg")
 
     override func setUp() {
         super.setUp()
@@ -127,7 +134,37 @@ final class AccountStoreTests: XCTestCase {
         suite.removePersistentDomain(forName: name)
         secrets = InMemorySecretStore()
         service = FakeService()
-        store = AccountStore(service: service, secrets: secrets, defaults: suite)
+        store = AccountStore(service: service, secrets: secrets, defaults: suite, avatarCache: avatarFile)
+    }
+
+    func testPhotoIsOptionalSavedOnServerAndCleared() async throws {
+        await store.signIn(email: "a@b.co", password: pw)
+        XCTAssertNil(store.avatarData)
+        let photo = UIGraphicsImageRenderer(size: CGSize(width: 200, height: 100)).image { ctx in
+            UIColor.red.setFill(); ctx.fill(CGRect(x: 0, y: 0, width: 200, height: 100))
+        }
+        let saved = await store.setAvatar(photo)
+        XCTAssertTrue(saved)
+        XCTAssertNotNil(service.serverAvatar)
+        XCTAssertEqual(store.avatarData, service.serverAvatar)
+        // A new phone fetches it from the server.
+        let fresh = AccountStore(service: service, secrets: secrets, defaults: suite,
+                                 avatarCache: FileManager.default.temporaryDirectory
+                                     .appendingPathComponent("avatar-\(UUID().uuidString).jpg"))
+        await fresh.loadAvatar()
+        XCTAssertEqual(fresh.avatarData, service.serverAvatar)
+        await store.removeAvatar()
+        XCTAssertNil(store.avatarData)
+        XCTAssertNil(service.serverAvatar)
+    }
+
+    func testSignOutForgetsThePhotoOnThisPhone() async {
+        await store.signIn(email: "a@b.co", password: pw)
+        service.serverAvatar = Data([1, 2, 3])
+        await store.loadAvatar()
+        XCTAssertNotNil(store.avatarData)
+        await store.signOut()
+        XCTAssertNil(store.avatarData)
     }
 
     func testSignUpStoresSessionProfileAndName() async {
@@ -190,14 +227,14 @@ final class AccountStoreTests: XCTestCase {
 
     func testRestoresFromStorageOnNextLaunch() async {
         _ = await store.signIn(email: "a@b.co", password: pw)
-        let again = AccountStore(service: service, secrets: secrets, defaults: suite)
+        let again = AccountStore(service: service, secrets: secrets, defaults: suite, avatarCache: avatarFile)
         XCTAssertTrue(again.isSignedIn)
     }
 
     func testProfileWithoutSessionIsNotRestored() async {
         _ = await store.signIn(email: "a@b.co", password: pw)
         secrets.remove(AccountStore.sessionKey)
-        let again = AccountStore(service: service, secrets: secrets, defaults: suite)
+        let again = AccountStore(service: service, secrets: secrets, defaults: suite, avatarCache: avatarFile)
         XCTAssertFalse(again.isSignedIn)
     }
 

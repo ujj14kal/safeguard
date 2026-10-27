@@ -57,7 +57,7 @@ from .notify import (
 )
 from .ratelimit import RateLimiter
 from .sam2_local import Sam2Runner, Sam2Unavailable
-from .storage import EvidenceBackend, StorageUnavailable, make_evidence, make_state_file
+from .storage import EvidenceBackend, StorageUnavailable, make_avatars, make_evidence, make_state_file
 from .viewer import render_guardian_page, render_viewer_page
 
 logger = logging.getLogger("safeguard.verify")
@@ -1348,6 +1348,69 @@ def me_put(
     return _profile_out(row, user)
 
 
+_AVATAR_MAX_BYTES = 600_000
+_avatar_override = None  # tests inject a store
+
+
+def _avatars():
+    return _avatar_override or make_avatars(SETTINGS)
+
+
+def _is_jpeg(data: bytes) -> bool:
+    return len(data) > 4 and data[:3] == b"\xff\xd8\xff" and data[-2:] == b"\xff\xd9"
+
+
+@app.put("/me/avatar")
+async def me_avatar_put(
+    request: Request,
+    x_safeguard_token: str | None = Header(default=None),
+    authorization: str | None = Header(default=None),
+) -> dict:
+    """The profile picture: a small JPEG as the request body. Optional."""
+    accounts = _auth_guard(x_safeguard_token)
+    user = _current_user(accounts, authorization)
+    data = await request.body()
+    if not data or len(data) > _AVATAR_MAX_BYTES:
+        raise HTTPException(status_code=413, detail="picture is too large")
+    if not _is_jpeg(data):
+        raise HTTPException(status_code=422, detail="send a JPEG picture")
+    try:
+        _avatars().put(user["id"], data)
+    except StorageUnavailable as exc:
+        raise HTTPException(status_code=503, detail="picture storage unavailable") from exc
+    return {"ok": True, "bytes": len(data)}
+
+
+@app.get("/me/avatar")
+def me_avatar_get(
+    x_safeguard_token: str | None = Header(default=None),
+    authorization: str | None = Header(default=None),
+) -> Response:
+    accounts = _auth_guard(x_safeguard_token)
+    user = _current_user(accounts, authorization)
+    try:
+        data = _avatars().get(user["id"])
+    except StorageUnavailable as exc:
+        raise HTTPException(status_code=503, detail="picture storage unavailable") from exc
+    if data is None:
+        raise HTTPException(status_code=404, detail="no picture")
+    return Response(content=data, media_type="image/jpeg", headers={"Cache-Control": "private, no-cache"})
+
+
+@app.delete("/me/avatar")
+def me_avatar_delete(
+    x_safeguard_token: str | None = Header(default=None),
+    authorization: str | None = Header(default=None),
+) -> dict:
+    accounts = _auth_guard(x_safeguard_token)
+    user = _current_user(accounts, authorization)
+    try:
+        _avatars().delete(user["id"])
+    except StorageUnavailable as exc:
+        raise HTTPException(status_code=503, detail="picture storage unavailable") from exc
+    return {"ok": True}
+
+
 @app.delete("/me")
 def me_delete(
     x_safeguard_token: str | None = Header(default=None),
@@ -1357,6 +1420,10 @@ def me_delete(
     user = _current_user(accounts, authorization)
     try:
         accounts.delete_user(user["id"])
+        try:
+            _avatars().delete(user["id"])
+        except StorageUnavailable:
+            pass  # the account is gone; a leftover picture is unreachable
     except AccountsError as exc:
         raise _fail(exc) from exc
     return {"deleted": True}
