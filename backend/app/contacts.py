@@ -88,6 +88,15 @@ class ContactStore:
                 return dict(record)
         return None
 
+    def remove(self, code):
+        """Deletes a contact by invite code. True when one was removed."""
+        before = len(self.contacts)
+        self._contacts = [r for r in self.contacts if r["code"] != code]
+        if len(self.contacts) == before:
+            return False
+        self._save()
+        return True
+
 
 def invite_link(bot_username, code):
     return f"https://t.me/{bot_username}?start={code}"

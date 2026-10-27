@@ -15,6 +15,7 @@ import logging
 import os
 import re
 import secrets
+import shutil
 from collections import Counter
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -414,6 +415,24 @@ def list_evidence(
     return {"session": session, "files": files}
 
 
+@app.delete("/evidence/{session}")
+def delete_evidence(
+    session: str,
+    x_safeguard_token: str | None = Header(default=None),
+) -> dict:
+    """Deletes every segment stored for one SOS session. Idempotent: a
+    missing session deletes nothing and still returns 200."""
+    require_app_token(x_safeguard_token)
+    if not _SESSION_RE.match(session):
+        raise HTTPException(status_code=422, detail="bad session id")
+    folder = _evidence_root() / session
+    if not folder.is_dir():
+        return {"deleted": False}
+    shutil.rmtree(folder)
+    logger.info("evidence deleted session=%s", session)
+    return {"deleted": True}
+
+
 # --- App event log (debug) --------------------------------------------------
 # Unlike the verify logs, this one DOES hold what the app heard: it exists so
 # the developer can see what the app is doing while testing. The app only
@@ -595,6 +614,22 @@ def contact_status(
     if record is None:
         raise HTTPException(status_code=404, detail="no such invite code")
     return {"name": record["name"], "linked": record["chat_id"] is not None}
+
+
+_CODE_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+
+
+@app.delete("/contacts/{code}")
+def delete_contact(
+    code: str,
+    x_safeguard_token: str | None = Header(default=None),
+) -> dict:
+    """Deletes one linked contact. Idempotent: an unknown code deletes
+    nothing and still returns 200."""
+    require_app_token(x_safeguard_token)
+    if not _CODE_RE.match(code):
+        raise HTTPException(status_code=422, detail="bad invite code")
+    return {"deleted": get_contact_store().remove(code)}
 
 
 class IncidentStartRequest(BaseModel):
