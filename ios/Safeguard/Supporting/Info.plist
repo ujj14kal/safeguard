@@ -29,6 +29,8 @@
 	<string>Safeguard</string>
 	<key>BackendBaseURL</key>
 	<string>$(BACKEND_BASE_URL)</string>
+	<key>SafeguardAppToken</key>
+	<string>$(SAFEGUARD_APP_TOKEN)</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>

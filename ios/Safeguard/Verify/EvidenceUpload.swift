@@ -93,6 +93,9 @@ public struct EvidenceUploader: Sendable {
         var request = URLRequest(url: components.url!, timeoutInterval: 60)
         request.httpMethod = "POST"
         request.setValue("application/octet-stream", forHTTPHeaderField: "Content-Type")
+        // App token everywhere; the explicit legacy evidence token still
+        // goes out when provided (the backend accepts either).
+        request = base.authorize(request)
         if let token { request.setValue(token, forHTTPHeaderField: "X-Evidence-Token") }
         return request
     }

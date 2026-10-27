@@ -314,7 +314,7 @@ public final class VerifierClient: @unchecked Sendable {
             boxes_xyxy: payload.boxes
         )
         request.httpBody = try JSONEncoder().encode(body)
-        let (data, response) = try await session.data(for: request)
+        let (data, response) = try await session.data(for: config.authorize(request))
         guard let http = response as? HTTPURLResponse else {
             throw VerifierError.invalidResponse("not an HTTP response")
         }
@@ -369,7 +369,7 @@ public final class VerifierClient: @unchecked Sendable {
             snippet: snippet,
             on_device: .init(severity: onDeviceSeverity, category: onDeviceCategory)
         ))
-        let (data, response) = try await session.data(for: request)
+        let (data, response) = try await session.data(for: config.authorize(request))
         guard let http = response as? HTTPURLResponse else {
             throw VerifierError.invalidResponse("not an HTTP response")
         }

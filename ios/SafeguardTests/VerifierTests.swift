@@ -214,6 +214,20 @@ final class VerifierTests: XCTestCase {
         XCTAssertFalse(reason.isEmpty, "local network permission needs a usage description")
     }
 
+    func testInfoPlistHasAppTokenKey() throws {
+        // The app token rides a build setting, like the backend URL: the
+        // source plist must hold a $(...) reference, never a literal token.
+        let plistURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("Safeguard/Supporting/Info.plist")
+        let data = try Data(contentsOf: plistURL)
+        let plist = try XCTUnwrap(
+            PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any]
+        )
+        let value = try XCTUnwrap(plist["SafeguardAppToken"] as? String)
+        XCTAssertTrue(value.hasPrefix("$("), "app token must be a build setting")
+    }
+
     func testInfoPlistHasSpeechDescriptions() throws {
         // Without these the app crashes on first microphone/speech use.
         let plistURL = URL(fileURLWithPath: #filePath)

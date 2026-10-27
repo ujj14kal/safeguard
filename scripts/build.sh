@@ -6,6 +6,9 @@
 #                                     (needs DEVELOPMENT_TEAM env = Apple Team ID)
 # Optional: BACKEND_BASE_URL=http://<mac-ip>:8000 bakes the verification
 # backend URL into the build (Settings > Debug can override it at runtime).
+# Optional: SAFEGUARD_APP_TOKEN=<token> bakes the backend app token into the
+# build (Info.plist SafeguardAppToken). Never commit the value; pass it from
+# your environment. Local dev builds can leave it empty (backend allows).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -14,13 +17,15 @@ case "$MODE" in
   simulator)
     xcodebuild -project ios/Safeguard.xcodeproj -scheme Safeguard \
       -destination 'generic/platform=iOS Simulator' -configuration Debug \
-      CODE_SIGNING_ALLOWED=NO BACKEND_BASE_URL="${BACKEND_BASE_URL:-}" build
+      CODE_SIGNING_ALLOWED=NO BACKEND_BASE_URL="${BACKEND_BASE_URL:-}" \
+      SAFEGUARD_APP_TOKEN="${SAFEGUARD_APP_TOKEN:-}" build
     ;;
   device)
     : "${DEVELOPMENT_TEAM:?Set DEVELOPMENT_TEAM (your Apple Team ID) to build for device.}"
     xcodebuild -project ios/Safeguard.xcodeproj -scheme Safeguard \
       -destination 'generic/platform=iOS' -configuration Debug \
-      DEVELOPMENT_TEAM="$DEVELOPMENT_TEAM" BACKEND_BASE_URL="${BACKEND_BASE_URL:-}" build
+      DEVELOPMENT_TEAM="$DEVELOPMENT_TEAM" BACKEND_BASE_URL="${BACKEND_BASE_URL:-}" \
+      SAFEGUARD_APP_TOKEN="${SAFEGUARD_APP_TOKEN:-}" build
     ;;
   *)
     echo "Usage: $0 [simulator|device]" >&2

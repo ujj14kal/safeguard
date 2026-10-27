@@ -89,7 +89,8 @@ final class CloudEar: @unchecked Sendable {
         set(.connecting)
         let (task, gen): (URLSessionWebSocketTask, Int) = lock.withLock {
             generation += 1
-            let task = session.webSocketTask(with: url)
+            let request = VerifierConfig.default.authorize(URLRequest(url: url))
+            let task = session.webSocketTask(with: request)
             self.task = task
             ready = false
             inFlight = 0

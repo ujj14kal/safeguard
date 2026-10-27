@@ -92,6 +92,7 @@ public final class AppLog: @unchecked Sendable {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try? JSONSerialization.data(withJSONObject: ["events": batch])
+        request = config().authorize(request)
         session.dataTask(with: request) { [weak self] _, response, error in
             guard let self else { return }
             let ok = error == nil && (response as? HTTPURLResponse)?.statusCode == 200
