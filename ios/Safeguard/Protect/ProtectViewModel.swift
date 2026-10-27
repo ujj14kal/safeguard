@@ -1,7 +1,9 @@
 import AVFoundation
 import Combine
-import CoreMotion
 import CoreImage
+import CoreLocation
+import CoreMotion
+import MapKit
 import SwiftUI
 import UIKit
 
@@ -54,6 +56,45 @@ final class ProtectViewModel: ObservableObject {
     /// Near-black screen saver: the camera keeps running underneath.
     /// Lifted automatically when anything needs the wearer's eyes.
     @Published var dimmed = false
+
+    // MARK: - SOS escalation (Phase 6)
+
+    /// Four-track coordinator (route, contacts, stream, cab).
+    @Published var escalation = EscalationCoordinator()
+    @Published var incidentID: String?
+    @Published var liveURL: String?
+    @Published var deliveryStatus: [IncidentDelivery] = []
+    @Published var sosRouteMessage: String?
+    @Published var sosRoute: MKRoute?
+    @Published var sosDestinationName: String?
+    @Published var sosDestinationCoordinate: CLLocationCoordinate2D?
+    @Published var sosDestinationETA: String?
+    @Published var sosRegion: MKCoordinateRegion?
+    @Published var showingCabSheet = false
+    @Published var sosContacts = SOSContactStore()
+    /// Wearer's display name for SOS messages (Settings).
+    @AppStorage("wearerName") var wearerName = ""
+    /// OFF by default (dry-run): turning on needs a confirm dialog.
+    @AppStorage("sendRealAlerts") var sendRealAlerts = false
+
+    private let incidentClient = IncidentClient()
+    private let locationTracker = SOSLocationTracker()
+    private var sosActive = false
+    private var evidenceSessionID: String?
+    private var sosLocationTimer: Timer?
+    private var sosDestinationItem: MKMapItem?
+    private var routeWaitStart: TimeInterval?
+    /// Mock cab details (DEMO): fixed fake driver/plate + countdown end.
+    private(set) var cabDeadline: TimeInterval?
+    let cabDriver = "Demo Driver"
+    let cabPlate = "DL-1D-EMO"
+
+    /// Countdown text for the demo cab sheet (the 1 s tick refreshes it).
+    var cabCountdownText: String {
+        guard let deadline = cabDeadline else { return "--:--" }
+        let left = max(0, Int(deadline - Self.now))
+        return String(format: "%d:%02d", left / 60, left % 60)
+    }
 
     /// Conversation-listener opt-in (default OFF). On while protecting,
     /// transcripts feed the threat matcher; off, they are scanned for code
@@ -144,6 +185,7 @@ final class ProtectViewModel: ObservableObject {
         // mic in the background). Idle transcripts feed commands only: no
         // code phrases, no window, no threat scan, no backend call.
         startListener()
+        loadContacts()
     }
 
     // CIContext is Sendable; shared for off-main replay frame conversion.
@@ -246,6 +288,11 @@ final class ProtectViewModel: ObservableObject {
     }
 
     func stop() {
+        // Stopping during an SOS goes through the same end flow as the
+        // hold-to-End button: contacts hear "SOS ended" once, tracks stop.
+        if sosActive {
+            endSOS()
+        }
         stopEvidence()
         stopEgoMotion()
         hapticGate.reset()
@@ -303,6 +350,7 @@ final class ProtectViewModel: ObservableObject {
         safety.startProtecting(at: Self.now)
         refreshBackendStatus()
         startListener()
+        locationTracker.requestPermission()
         detectionQueue.sync { pipeline.reset() }
         fpsTimer?.invalidate()
         fpsTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
@@ -321,6 +369,7 @@ final class ProtectViewModel: ObservableObject {
         if let flag = conversationFlag, !flag.isActive(at: Self.now) { conversationFlag = nil }
         drainAskSpeech()
         syncProtectionState()
+        retryEscalationTracks()
     }
 
     fileprivate func publishReplayFrame(_ image: UIImage?) {
@@ -499,6 +548,7 @@ final class ProtectViewModel: ObservableObject {
         guard recordOnSOS, !usingReplay, !evidence.isRecording else { return }
         evidence.retryPending()
         let sessionID = EvidenceSessionID.make()
+        evidenceSessionID = sessionID
         AppLog.shared.event("evidence_start", ["session": sessionID])
         evidence.start(sessionID: sessionID) { [weak self] progress in
             AppLog.shared.event("evidence", [
@@ -574,7 +624,15 @@ final class ProtectViewModel: ObservableObject {
             } else if previous == .countdown {
                 endCountdown()
             }
-            if mapped == .unsafe { startEvidence() }
+            if mapped == .unsafe {
+                startEvidence()
+                startEscalation()
+            }
+            // Safe-from-Unsafe while an SOS runs = deliberate end (safe
+            // phrase or hold-to-End): notify contacts once, stop tracks.
+            if previous == .unsafe, mapped == .safe, sosActive {
+                endSOS()
+            }
             announce(mapped)
         }
     }
@@ -1009,7 +1067,7 @@ final class ProtectViewModel: ObservableObject {
         }
     }
 
-    private func showToast(_ text: String) {
+    func showToast(_ text: String) {
         toast = text
         Task {
             try? await Task.sleep(for: .seconds(3))
@@ -1066,6 +1124,456 @@ final class ProtectViewModel: ObservableObject {
         drainAskSpeech()
         syncProtectionState()
         lastSpeechInfo = "Speech: \(category) on-device (verification offline)"
+    }
+
+    // MARK: - SOS escalation (Phase 6)
+
+    /// Unsafe just began: location + all four tracks start in parallel.
+    private func startEscalation() {
+        guard !sosActive else { return }
+        sosActive = true
+        escalation = EscalationCoordinator()
+        escalation.start()
+        incidentID = nil
+        liveURL = nil
+        deliveryStatus = []
+        sosRoute = nil
+        sosRouteMessage = nil
+        sosDestinationName = nil
+        sosDestinationCoordinate = nil
+        sosDestinationETA = nil
+        sosRegion = nil
+        sosDestinationItem = nil
+        routeWaitStart = nil
+        if evidenceSessionID == nil {
+            // Recording off or replay: the incident still needs a session
+            // (the live page just shows no segments).
+            evidenceSessionID = EvidenceSessionID.make()
+        }
+        cabDeadline = Self.now + 300
+        AppLog.shared.event("sos_start", [
+            "cause": safety.unsafeCause.map { String(describing: $0) } ?? "",
+        ])
+        locationTracker.start()
+        startSOSLocationTimer()
+        runTrack(.contacts)
+        runTrack(.stream)
+        runTrack(.route)
+        runTrack(.cab)
+    }
+
+    /// Deliberate end (hold-to-End button): the machine goes Safe, and the
+    /// safe-from-Unsafe hook runs endSOS().
+    func endSOSButtonHeld() {
+        safety.endUnsafe(at: Self.now)
+        syncProtectionState()
+    }
+
+    /// Ends the SOS once: "SOS ended" goes out, tracks/location/recording
+    /// stop. Runs from the hold button, the safe phrase, or Stop.
+    private func endSOS() {
+        guard sosActive else { return }
+        sosActive = false
+        escalation.end()
+        sosLocationTimer?.invalidate()
+        sosLocationTimer = nil
+        locationTracker.stop()
+        stopEvidence()
+        let summary = EscalationTrack.allCases.map { track in
+            "\(track.rawValue):\(shortStatus(escalation.status(of: track)))"
+        }.joined(separator: ",")
+        AppLog.shared.event("sos_end", ["tracks": summary])
+        if let id = incidentID {
+            Task { try? await incidentClient.endIncident(id) }
+        }
+        incidentID = nil
+        liveURL = nil
+        deliveryStatus = []
+        sosRoute = nil
+        sosRouteMessage = nil
+        sosDestinationName = nil
+        sosDestinationCoordinate = nil
+        sosDestinationETA = nil
+        sosRegion = nil
+        sosDestinationItem = nil
+        routeWaitStart = nil
+        cabDeadline = nil
+        showingCabSheet = false
+        showToast("SOS ended")
+    }
+
+    private func shortStatus(_ status: TrackStatus) -> String {
+        switch status {
+        case .pending:
+            return "pending"
+        case .running:
+            return "running"
+        case .done:
+            return "done"
+        case .failed:
+            return "failed"
+        }
+    }
+
+    /// Retry pass on the 1 s tick: due tracks re-run their work.
+    private func retryEscalationTracks() {
+        guard sosActive else { return }
+        for track in escalation.dueRetries(at: Self.now) {
+            runTrack(track)
+        }
+    }
+
+    private func runTrack(_ track: EscalationTrack) {
+        guard sosActive, escalation.status(of: track) == .running else { return }
+        switch track {
+        case .contacts:
+            Task { await runContactsTrack() }
+        case .stream:
+            Task { await runStreamTrack() }
+        case .route:
+            Task { await runRouteTrack() }
+        case .cab:
+            Task { await runCabTrack() }
+        }
+    }
+
+    private func trackDone(_ track: EscalationTrack) {
+        escalation.complete(track)
+        AppLog.shared.event("sos_track", ["track": track.rawValue, "status": "done"])
+    }
+
+    private func trackFailed(_ track: EscalationTrack, reason: String) {
+        escalation.fail(track, reason: reason, at: Self.now)
+        AppLog.shared.event("sos_track", [
+            "track": track.rawValue,
+            "status": shortStatus(escalation.status(of: track)),
+        ])
+    }
+
+    private func trackReason(for error: Error) -> String {
+        if error is URLError {
+            return "backend unreachable"
+        }
+        if let failure = error as? VerifierError {
+            switch failure {
+            case .serverStatus(401):
+                return "bad app token"
+            case .serverStatus(429):
+                return "rate limited"
+            case .serverStatus(let code):
+                return "server error \(code)"
+            case .invalidResponse:
+                return "bad response"
+            }
+        }
+        return "failed"
+    }
+
+    /// Creates the incident once (the backend dedupes repeats per session):
+    /// contacts alerted, live page minted. True when an ID is known after.
+    private func ensureIncident() async -> Bool {
+        if incidentID != nil { return true }
+        guard let session = evidenceSessionID else { return false }
+        let fix = locationTracker.latest
+        do {
+            let result = try await incidentClient.startIncident(
+                sessionID: session,
+                wearerName: wearerName.isEmpty ? "Someone" : wearerName,
+                contactCodes: sosContacts.linkedCodes,
+                dryRun: !sendRealAlerts,
+                latitude: fix?.coordinate.latitude,
+                longitude: fix?.coordinate.longitude
+            )
+            incidentID = result.id
+            liveURL = result.liveURL
+            deliveryStatus = result.delivery
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    /// Contacts track: incident created = done (per-contact Sent / Failed /
+    /// Dry-run outcomes ride in the delivery chips, not the track status).
+    private func runContactsTrack() async {
+        guard sosActive else { return }
+        if await ensureIncident() {
+            trackDone(.contacts)
+        } else {
+            trackFailed(.contacts, reason: "could not reach backend")
+        }
+    }
+
+    /// Stream track: done when the live page exists (segments land on it
+    /// as the evidence uploader sends them).
+    private func runStreamTrack() async {
+        guard sosActive else { return }
+        if await ensureIncident(), liveURL != nil {
+            trackDone(.stream)
+        } else {
+            trackFailed(.stream, reason: "live page unavailable")
+        }
+    }
+
+    /// Route track: nearest staffed/public places by walking ETA, drawn on
+    /// the SOS map. Waits for the first fix; without one it says so.
+    private func runRouteTrack() async {
+        guard sosActive else { return }
+        guard let fix = locationTracker.latest else {
+            if routeWaitStart == nil { routeWaitStart = Self.now }
+            trackFailed(.route, reason: RouteChoice.noLocationMessage)
+            sosRouteMessage = escalation.status(of: .route) == .running
+                ? RouteChoice.waitingForLocationMessage : RouteChoice.noLocationMessage
+            return
+        }
+        routeWaitStart = nil
+        do {
+            let places = try await searchStaffedPlaces(near: fix.coordinate)
+            let nearest = places.sorted { $0.distance < $1.distance }.prefix(3)
+            guard !nearest.isEmpty else {
+                sosRouteMessage = RouteChoice.noPlacesMessage
+                trackFailed(.route, reason: "none found")
+                return
+            }
+            var options: [(candidate: RouteCandidate, route: MKRoute, item: MKMapItem)] = []
+            for place in nearest {
+                if let found = try? await walkingRoute(
+                    from: fix.coordinate, to: place.item
+                ) {
+                    options.append((
+                        RouteCandidate(
+                            name: place.name, distanceMeters: place.distance,
+                            etaSeconds: found.route.expectedTravelTime
+                        ),
+                        found.route, place.item
+                    ))
+                }
+            }
+            let candidates = options.map(\.candidate)
+            guard let pick = RouteChoice.pick(from: candidates),
+                  let won = options.first(where: { $0.candidate == pick })
+            else {
+                sosRouteMessage = RouteChoice.noRouteMessage
+                trackFailed(.route, reason: "no route")
+                return
+            }
+            sosRoute = won.route
+            sosDestinationName = pick.name
+            sosDestinationCoordinate = won.item.placemark.coordinate
+            sosDestinationETA = "\(Int((pick.etaSeconds + 30) / 60)) min walk"
+            sosDestinationItem = won.item
+            sosRegion = regionCovering(fix.coordinate, won.item.placemark.coordinate)
+            sosRouteMessage = nil
+            trackDone(.route)
+        } catch {
+            trackFailed(.route, reason: "search failed")
+        }
+    }
+
+    private func searchStaffedPlaces(
+        near coordinate: CLLocationCoordinate2D
+    ) async throws -> [(name: String, distance: Double, item: MKMapItem)] {
+        let here = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+        var found: [(name: String, distance: Double, item: MKMapItem)] = []
+        for query in ["police station", "hospital"] {
+            let request = MKLocalSearch.Request()
+            request.naturalLanguageQuery = query
+            request.region = MKCoordinateRegion(
+                center: coordinate, latitudinalMeters: 3000, longitudinalMeters: 3000
+            )
+            let response = try await MKLocalSearch(request: request).start()
+            for item in response.mapItems.prefix(5) {
+                let there = CLLocation(
+                    latitude: item.placemark.coordinate.latitude,
+                    longitude: item.placemark.coordinate.longitude
+                )
+                found.append((
+                    name: item.name ?? query.capitalized,
+                    distance: here.distance(from: there),
+                    item: item
+                ))
+            }
+        }
+        return found
+    }
+
+    private func walkingRoute(
+        from: CLLocationCoordinate2D, to destination: MKMapItem
+    ) async throws -> (route: MKRoute, item: MKMapItem) {
+        let request = MKDirections.Request()
+        request.source = MKMapItem(placemark: MKPlacemark(coordinate: from))
+        request.destination = destination
+        request.transportType = .walking
+        let response = try await MKDirections(request: request).calculate()
+        guard let route = response.routes.first else {
+            throw VerifierError.invalidResponse("no route")
+        }
+        return (route, destination)
+    }
+
+    private func regionCovering(
+        _ first: CLLocationCoordinate2D, _ second: CLLocationCoordinate2D
+    ) -> MKCoordinateRegion {
+        let latDelta = abs(first.latitude - second.latitude) * 1.6 + 0.005
+        let lonDelta = abs(first.longitude - second.longitude) * 1.6 + 0.005
+        return MKCoordinateRegion(
+            center: CLLocationCoordinate2D(
+                latitude: (first.latitude + second.latitude) / 2,
+                longitude: (first.longitude + second.longitude) / 2
+            ),
+            span: MKCoordinateSpan(latitudeDelta: latDelta, longitudeDelta: lonDelta)
+        )
+    }
+
+    func openDestinationInMaps() {
+        sosDestinationItem?.openInMaps(launchOptions: [
+            MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeWalking,
+        ])
+    }
+
+    /// Cab track (DEMO): shares the fake details with the contacts.
+    private func runCabTrack() async {
+        guard sosActive else { return }
+        guard await ensureIncident(), let id = incidentID else {
+            trackFailed(.cab, reason: "waiting for incident")
+            return
+        }
+        do {
+            let etaMinutes = max(1, Int(((cabDeadline ?? Self.now) - Self.now) / 60))
+            _ = try await incidentClient.shareCab(
+                incidentID: id, driver: cabDriver, plate: cabPlate, etaMinutes: etaMinutes
+            )
+            trackDone(.cab)
+        } catch {
+            trackFailed(.cab, reason: trackReason(for: error))
+        }
+    }
+
+    /// Manual re-share from the demo sheet.
+    func shareCabDetails() {
+        guard sosActive, let id = incidentID else {
+            showToast("No active SOS")
+            return
+        }
+        Task {
+            do {
+                let etaMinutes = max(1, Int(((cabDeadline ?? Self.now) - Self.now) / 60))
+                _ = try await incidentClient.shareCab(
+                    incidentID: id, driver: cabDriver, plate: cabPlate, etaMinutes: etaMinutes
+                )
+                showToast("Cab details shared")
+            } catch {
+                showToast("Could not share cab details")
+            }
+        }
+    }
+
+    // MARK: - SOS location stream
+
+    private func startSOSLocationTimer() {
+        sosLocationTimer?.invalidate()
+        sosLocationTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in self?.streamSOSLocation() }
+        }
+        streamSOSLocation()
+    }
+
+    private func streamSOSLocation() {
+        guard sosActive, let id = incidentID,
+              let fix = locationTracker.latest
+        else {
+            return
+        }
+        Task {
+            try? await incidentClient.sendLocation(
+                incidentID: id,
+                latitude: fix.coordinate.latitude,
+                longitude: fix.coordinate.longitude,
+                accuracy: fix.horizontalAccuracy >= 0 ? fix.horizontalAccuracy : nil,
+                timestamp: fix.timestamp.timeIntervalSince1970
+            )
+        }
+    }
+
+    // MARK: - Contacts (Phase 6)
+
+    private static let contactsDefaultsKey = "sosContactsJSON"
+
+    private func loadContacts() {
+        guard let data = UserDefaults.standard.data(forKey: Self.contactsDefaultsKey),
+              let decoded = try? JSONDecoder().decode([SOSContact].self, from: data)
+        else {
+            return
+        }
+        sosContacts = SOSContactStore(contacts: decoded)
+    }
+
+    private func saveContacts() {
+        if let data = try? JSONEncoder().encode(sosContacts.contacts) {
+            UserDefaults.standard.set(data, forKey: Self.contactsDefaultsKey)
+        }
+    }
+
+    /// Creates a backend invite and adds the contact. Returns the share link.
+    func inviteContact(name: String) async -> URL? {
+        guard !sosContacts.isFull else {
+            showToast("At most 5 contacts")
+            return nil
+        }
+        do {
+            let invite = try await incidentClient.inviteContact(name: name)
+            if sosContacts.add(name: invite.name, code: invite.code, link: invite.link) {
+                saveContacts()
+                AppLog.shared.event("contact_invite", ["linked": "false"])
+                return URL(string: invite.link)
+            }
+            return nil
+        } catch {
+            showToast("Could not create invite")
+            return nil
+        }
+    }
+
+    func removeContact(code: String) {
+        sosContacts.remove(code: code)
+        saveContacts()
+    }
+
+    func refreshContacts() {
+        Task {
+            for contact in sosContacts.contacts where !contact.linked {
+                if let status = try? await incidentClient.contactStatus(code: contact.code) {
+                    sosContacts.setLinked(code: contact.code, linked: status.linked)
+                }
+            }
+            saveContacts()
+        }
+    }
+
+    /// Settings test button: a test-flagged incident, ended right away.
+    func sendTestAlert() {
+        let codes = sosContacts.linkedCodes
+        guard !codes.isEmpty else {
+            showToast("Link a contact first")
+            return
+        }
+        Task {
+            do {
+                let result = try await incidentClient.startIncident(
+                    sessionID: EvidenceSessionID.make(),
+                    wearerName: wearerName.isEmpty ? "Someone" : wearerName,
+                    contactCodes: codes,
+                    dryRun: !sendRealAlerts,
+                    test: true
+                )
+                try? await incidentClient.endIncident(result.id)
+                showToast(sendRealAlerts ? "Test alert sent" : "Test alert logged (dry-run)")
+                AppLog.shared.event("test_alert", ["sent": "true"])
+            } catch {
+                showToast("Test alert failed")
+                AppLog.shared.event("test_alert", ["sent": "false"])
+            }
+        }
     }
 }
 
