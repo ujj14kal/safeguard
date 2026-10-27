@@ -10,10 +10,14 @@ public enum EscalationTrack: String, Sendable, CaseIterable {
 
     public var title: String {
         switch self {
-        case .route: "Route"
-        case .contacts: "Contacts"
-        case .stream: "Live stream"
-        case .cab: "Cab"
+        case .route:
+            return "Route"
+        case .contacts:
+            return "Contacts"
+        case .stream:
+            return "Live stream"
+        case .cab:
+            return "Cab"
         }
     }
 }
@@ -63,6 +67,21 @@ public struct EscalationCoordinator: Sendable {
 
     public func status(of track: EscalationTrack) -> TrackStatus {
         statuses[track] ?? .pending
+    }
+
+    /// 1-based attempt count (1 = the first run). The chip shows
+    /// "Retrying (n)" once a retry has been scheduled.
+    public func attempts(of track: EscalationTrack) -> Int {
+        if let count = attempts[track] { return count }
+        return started ? 1 : 0
+    }
+
+    /// Terminal failure reason, when the track failed for good.
+    public func reason(of track: EscalationTrack) -> String? {
+        if case .failed(let reason) = status(of: track) {
+            return reason
+        }
+        return nil
     }
 
     /// Starts all four tracks together. Later calls are no-ops.

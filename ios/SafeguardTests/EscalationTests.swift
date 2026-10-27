@@ -81,6 +81,24 @@ final class EscalationCoordinatorTests: XCTestCase {
             ["Route", "Contacts", "Live stream", "Cab"]
         )
     }
+
+    func testAttemptsAndReasonForChips() {
+        var coordinator = EscalationCoordinator()
+        XCTAssertEqual(coordinator.attempts(of: .route), 0, "not started")
+        XCTAssertNil(coordinator.reason(of: .route))
+        coordinator.start()
+        XCTAssertEqual(coordinator.attempts(of: .route), 1, "first run")
+        XCTAssertNil(coordinator.reason(of: .route), "no terminal failure yet")
+        coordinator.fail(.route, reason: "timeout", at: 100)
+        XCTAssertEqual(coordinator.attempts(of: .route), 2, "retry scheduled")
+        XCTAssertNil(coordinator.reason(of: .route), "still running")
+        coordinator.fail(.route, reason: "timeout", at: 102)
+        coordinator.fail(.route, reason: "timeout", at: 110)
+        coordinator.fail(.route, reason: "no route", at: 140)
+        XCTAssertEqual(coordinator.status(of: .route), .failed(reason: "no route"))
+        XCTAssertEqual(coordinator.reason(of: .route), "no route")
+        XCTAssertNil(coordinator.reason(of: .cab), "other tracks unaffected")
+    }
 }
 
 /// Contact list rules: at most 5, no blanks, no duplicate codes.
@@ -120,6 +138,18 @@ final class SOSContactStoreTests: XCTestCase {
         let many = (0..<9).map { SOSContact(name: "F\($0)", code: "c\($0)") }
         XCTAssertEqual(SOSContactStore(contacts: many).contacts.count, 5)
     }
+
+    func testInviteLinkRoundTrips() throws {
+        var store = SOSContactStore()
+        XCTAssertTrue(store.add(
+            name: "Meera", code: "a",
+            link: "https://t.me/DemoBot?start=a"
+        ))
+        let data = try JSONEncoder().encode(store.contacts)
+        let decoded = try JSONDecoder().decode([SOSContact].self, from: data)
+        XCTAssertEqual(decoded, store.contacts)
+        XCTAssertEqual(decoded[0].link, "https://t.me/DemoBot?start=a")
+    }
 }
 
 /// Route choice: lowest ETA among the nearest 3 — never a crime model.
@@ -141,6 +171,15 @@ final class RouteChoiceTests: XCTestCase {
         ]
         XCTAssertEqual(RouteChoice.pick(from: candidates)?.name, "Only")
         XCTAssertNil(RouteChoice.pick(from: []))
+    }
+
+    func testNoResultsMessagesAreClear() {
+        // No results never fails silently: the SOS screen shows one of
+        // these. Pinned exactly, like the cab share wording.
+        XCTAssertEqual(RouteChoice.noLocationMessage, "Location unavailable")
+        XCTAssertEqual(RouteChoice.waitingForLocationMessage, "Waiting for location…")
+        XCTAssertEqual(RouteChoice.noPlacesMessage, "No staffed places found nearby")
+        XCTAssertEqual(RouteChoice.noRouteMessage, "No walking route found")
     }
 }
 

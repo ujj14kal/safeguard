@@ -19,6 +19,12 @@ public struct RouteCandidate: Sendable, Equatable {
 /// staffed/public places (police stations, hospitals). This is NOT a
 /// crime-risk model — it answers "where can people help me fastest".
 public enum RouteChoice {
+    /// Shown instead of failing silently when there is no route.
+    public static let noLocationMessage = "Location unavailable"
+    public static let waitingForLocationMessage = "Waiting for location…"
+    public static let noPlacesMessage = "No staffed places found nearby"
+    public static let noRouteMessage = "No walking route found"
+
     public static func pick(from candidates: [RouteCandidate]) -> RouteCandidate? {
         let nearest = candidates.sorted { $0.distanceMeters < $1.distanceMeters }.prefix(3)
         return nearest.min { $0.etaSeconds < $1.etaSeconds }
