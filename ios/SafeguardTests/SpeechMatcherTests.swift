@@ -219,7 +219,7 @@ final class HindiSpeechTests: XCTestCase {
     }
 
     func testSingleCussWordIsTrackedButBelowCheckInThreshold() {
-        for text in ["you bitch", "अबे साले", "kamina hai tu", "madarchod"] {
+        for text in ["bitch", "अबे साले", "kamina hai tu", "madarchod"] {
             let match = matcher.match(text)
             XCTAssertEqual(match?.category, .anger, text)
             XCTAssertLessThan(match?.severity ?? 1, SafetyConfig().speechStrongThreshold, text)
@@ -284,5 +284,192 @@ final class HindiSpeechTests: XCTestCase {
         XCTAssertEqual(SpeechLocale.resolve(setting: "en", preferredLanguages: ["hi-IN"]), "en-IN")
         XCTAssertEqual(SpeechLocale.resolve(setting: "auto", preferredLanguages: ["hi-IN"]), "hi-IN")
         XCTAssertEqual(SpeechLocale.resolve(setting: "auto", preferredLanguages: ["en-GB"]), "en-IN")
+    }
+}
+
+/// Bigger vocabulary, spelling tolerance and silent rating.
+final class VocabularyAndRatingTests: XCTestCase {
+    private let matcher = SpeechMatcher()
+
+    func testUserExamplePropositionIsFlagged() {
+        let match = matcher.match("free ho kya aap aaj raat ko")
+        XCTAssertEqual(match?.category, .proposition)
+        XCTAssertGreaterThanOrEqual(match?.severity ?? 0, SafetyConfig().speechStrongThreshold)
+    }
+
+    func testUserExampleCussWordsAreAllTracked() {
+        for word in ["chutiya", "bhosdike", "randi"] {
+            XCTAssertEqual(matcher.match(word)?.category, .anger, word)
+        }
+        let run = matcher.match("chutiya bhosdike randi")
+        XCTAssertGreaterThanOrEqual(run?.severity ?? 0, SafetyConfig().speechStrongThreshold)
+    }
+
+    func testSpellingVariantsMatchTheSameWord() {
+        for variant in ["chutia", "chootiya", "bhosadike", "bhosdika", "madarchod", "maderchod", "randii", "saala", "sala"] {
+            XCTAssertNotNil(matcher.match(variant), variant)
+        }
+    }
+
+    func testFuzzyKeyDoesNotMergeUnrelatedEverydayWords() {
+        for text in [
+            "hum kal market ja rahe hain", "tum kaisi ho", "main ghar ja raha hoon",
+            "khana kha liya kya", "aaj raat ko khana banega", "meeting ka time kya hai",
+            "kitne baje aana hai", "free time mein kya karte ho",
+        ] {
+            XCTAssertNil(matcher.match(text), text)
+        }
+    }
+
+    func testMoreHarassmentAndThreatPhrases() {
+        XCTAssertEqual(matcher.match("kitna loge raat ke liye")?.category, .proposition)
+        XCTAssertEqual(matcher.match("चलोगी क्या मेरे साथ")?.category, .proposition)
+        XCTAssertEqual(matcher.match("tujhe utha ke le jaunga")?.category, .threat)
+        XCTAssertEqual(matcher.match("chup chap chal warna")?.category, .coercion)
+    }
+
+    func testHapticLevels() {
+        XCTAssertEqual(SpeechHapticLevel.level(for: 0.1), .none)
+        XCTAssertEqual(SpeechHapticLevel.level(for: 0.45), .nudge)
+        XCTAssertEqual(SpeechHapticLevel.level(for: 0.6), .elevated)
+        XCTAssertEqual(SpeechHapticLevel.level(for: 0.9), .strong)
+    }
+
+    func testHapticGateThrottlesRepeatsButLetsHeavierThrough() {
+        var gate = SpeechHapticGate(minInterval: 2.5)
+        XCTAssertEqual(gate.consume(.nudge, at: 0), .nudge)
+        XCTAssertEqual(gate.consume(.nudge, at: 1), .none)
+        XCTAssertEqual(gate.consume(.strong, at: 1.2), .strong)
+        XCTAssertEqual(gate.consume(.elevated, at: 2), .none)
+        XCTAssertEqual(gate.consume(.nudge, at: 5), .nudge)
+        XCTAssertEqual(gate.consume(.none, at: 6), .none)
+    }
+}
+
+/// The wearer walking toward a still person must not look like an approach.
+final class EgoMotionTests: XCTestCase {
+    private let config = ThreatConfig()
+
+    private func growingTrack(_ i: Int) -> Track {
+        let h = 0.20 + 0.03 * Double(i)
+        return Track(
+            id: 1, box: CGRect(x: 0.4, y: 0.2, width: 0.3, height: h),
+            confidence: 0.9, age: 10, missed: 0
+        )
+    }
+
+    private func features(accel: Double?) -> PersonFeatures? {
+        let extractor = FeatureExtractor(config: config)
+        for i in 0..<12 {
+            let t = Double(i) * 0.2
+            if let accel { extractor.setEgoMotion(accelRMS: accel, at: t) }
+            extractor.update(tracks: [growingTrack(i)], at: t)
+        }
+        return extractor.features(for: 1, at: 2.2)
+    }
+
+    func testStillWearerKeepsFullApproachScore() {
+        let still = features(accel: 0.0)
+        let none = features(accel: nil)
+        XCTAssertGreaterThan(still?.trend ?? 0, 0.5)
+        XCTAssertEqual(still?.trend ?? 0, none?.trend ?? 1, accuracy: 0.001)
+    }
+
+    func testWalkingWearerDiscountsApproach() {
+        let still = features(accel: 0.0)
+        let walking = features(accel: 0.4)
+        XCTAssertLessThan(walking?.trend ?? 1, (still?.trend ?? 0) * 0.3)
+        XCTAssertLessThan(walking?.speed ?? 1, (still?.speed ?? 0) * 0.3)
+    }
+
+    func testWalkingTowardStillPersonDoesNotAlert() {
+        let scorer = ThreatScorer(config: config)
+        let walking = features(accel: 0.4)!
+        let still = features(accel: 0.0)!
+        XCTAssertFalse(scorer.score(walking).alert)
+        XCTAssertTrue(scorer.score(still).value > scorer.score(walking).value)
+    }
+}
+
+final class MatcherSpeedTests: XCTestCase {
+    func testMatchingALongWindowIsFastEnoughToRunPerChunk() {
+        let matcher = SpeechMatcher()
+        let text = String(repeating: "aaj mausam bahut accha hai hum kal market ja rahe hain ", count: 8)
+        let start = Date()
+        for _ in 0..<5 { _ = matcher.match(text) }
+        let perCall = Date().timeIntervalSince(start) / 5
+        XCTAssertLessThan(perCall, 0.15, "one match over ~90 words must stay well under a chunk")
+    }
+}
+
+final class ConversationFlagTests: XCTestCase {
+    func testFlagLabelsAndExpiry() {
+        let flag = ConversationFlag(category: .proposition, severity: 0.7, at: 10)
+        XCTAssertEqual(flag.label, "Unwanted advances")
+        XCTAssertTrue(flag.isActive(at: 20))
+        XCTAssertFalse(flag.isActive(at: 23))
+    }
+
+    func testHeavierFlagReplacesLighterOne() {
+        let light = ConversationFlag(category: .anger, severity: 0.5, at: 0)
+        let heavy = ConversationFlag(category: .threat, severity: 0.95, at: 2)
+        XCTAssertEqual(ConversationFlag.merged(light, with: heavy).category, .threat)
+    }
+
+    func testLighterFlagKeepsBannerButRefreshesTime() {
+        let heavy = ConversationFlag(category: .threat, severity: 0.95, at: 0)
+        let light = ConversationFlag(category: .anger, severity: 0.5, at: 3)
+        let merged = ConversationFlag.merged(heavy, with: light)
+        XCTAssertEqual(merged.category, .threat)
+        XCTAssertEqual(merged.at, 3)
+    }
+
+    func testExpiredFlagIsReplaced() {
+        let old = ConversationFlag(category: .threat, severity: 0.95, at: 0)
+        let new = ConversationFlag(category: .anger, severity: 0.5, at: 30)
+        XCTAssertEqual(ConversationFlag.merged(old, with: new).category, .anger)
+    }
+
+    func testEveryCategoryHasALabel() {
+        for category in SpeechCategory.allCases {
+            XCTAssertFalse(ConversationFlag(category: category, severity: 0.5, at: 0).label.isEmpty)
+        }
+    }
+}
+
+final class EnglishCussTests: XCTestCase {
+    private let matcher = SpeechMatcher()
+
+    func testEnglishCussWordsAreTrackedAsAnger() {
+        for text in ["you bitch", "what an asshole", "fuck off", "stupid idiot", "that bastard", "shut up", "pervert"] {
+            let match = matcher.match(text)
+            XCTAssertNotNil(match, text)
+            XCTAssertTrue([.anger, .abuse].contains(match?.category), text)
+        }
+    }
+
+    func testDirectedSexualInsultsReachTheCheckInLevel() {
+        for text in ["you slut", "fuck you", "shut the fuck up", "you dirty whore", "i will fuck you up"] {
+            XCTAssertGreaterThanOrEqual(
+                matcher.match(text)?.severity ?? 0, SafetyConfig().speechStrongThreshold, text
+            )
+        }
+    }
+
+    func testRunOfMildCussingEscalates() {
+        XCTAssertGreaterThanOrEqual(
+            matcher.match("shit crap damn asshole")?.severity ?? 0, SafetyConfig().speechStrongThreshold
+        )
+    }
+
+    func testOrdinaryEnglishWithSubstringTrapsIsNotFlagged() {
+        for text in [
+            "the class assignment is due", "I passed the bass guitar exam", "assume the best",
+            "he is a classic cocktail bartender", "scunthorpe is a town", "grass is green",
+            "the document is hell to read", "please manage the stage", "pass the salt",
+            "I am dumbfounded by the analysis", "the title was a mistake",
+        ] {
+            XCTAssertNil(matcher.match(text) .flatMap { $0.severity >= 0.45 ? $0 : nil }, text)
+        }
     }
 }

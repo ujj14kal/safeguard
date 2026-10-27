@@ -135,3 +135,87 @@ public struct PartialReplyGate: Sendable {
         return handled
     }
 }
+
+/// Silent conversation rating: each rated chunk of talk maps to a vibration
+/// pattern, never a sound. Heavier talk, heavier pattern.
+public enum SpeechHapticLevel: Int, Sendable, Comparable, Equatable {
+    case none, nudge, elevated, strong
+
+    public static func < (a: Self, b: Self) -> Bool { a.rawValue < b.rawValue }
+
+    /// Thresholds: below 0.35 nothing (ordinary talk and mild words);
+    /// 0.35...0.55 a nudge; 0.55...0.7 elevated; 0.7+ strong (a check-in).
+    public static func level(for severity: Double) -> SpeechHapticLevel {
+        switch severity {
+        case ..<0.35: .none
+        case ..<0.55: .nudge
+        case ..<0.7: .elevated
+        default: .strong
+        }
+    }
+}
+
+/// Keeps vibrations from becoming a constant buzz: a repeat of the same or
+/// a lighter level inside `minInterval` is dropped; a heavier one gets through.
+public struct SpeechHapticGate: Sendable {
+    private let minInterval: TimeInterval
+    private var last: (level: SpeechHapticLevel, at: TimeInterval)?
+
+    public init(minInterval: TimeInterval = 2.5) {
+        self.minInterval = minInterval
+    }
+
+    public mutating func consume(_ level: SpeechHapticLevel, at time: TimeInterval) -> SpeechHapticLevel {
+        guard level != .none else { return .none }
+        if let last, time - last.at < minInterval, level <= last.level { return .none }
+        last = (level, time)
+        return level
+    }
+
+    public mutating func reset() { last = nil }
+}
+
+/// Concerning talk that was just heard: shown in red on the HUD with the
+/// option to start the safety measures. It fades by itself.
+public struct ConversationFlag: Sendable, Equatable {
+    public var category: SpeechCategory
+    public var severity: Double
+    public var at: TimeInterval
+
+    public init(category: SpeechCategory, severity: Double, at: TimeInterval) {
+        self.category = category
+        self.severity = severity
+        self.at = at
+    }
+
+    /// Talk at or above this severity raises a flag (vibration level "nudge"
+    /// and up).
+    public static let minSeverity = 0.45
+    public static let showSeconds: TimeInterval = 12
+
+    public var label: String {
+        switch category {
+        case .threat: "Threatening words"
+        case .coercion: "Someone is pressuring you"
+        case .pursuit: "Someone may be following you"
+        case .proposition: "Unwanted advances"
+        case .abuse, .anger: "Abusive or angry language"
+        case .distress: "A call for help"
+        }
+    }
+
+    public func isActive(at time: TimeInterval) -> Bool {
+        time - at < Self.showSeconds
+    }
+
+    /// A new flag replaces the shown one only when it is heavier or the
+    /// shown one has expired, so the banner does not flicker between labels.
+    public static func merged(_ current: ConversationFlag?, with new: ConversationFlag) -> ConversationFlag {
+        guard let current, current.isActive(at: new.at), current.severity > new.severity else {
+            return new
+        }
+        var kept = current
+        kept.at = new.at
+        return kept
+    }
+}

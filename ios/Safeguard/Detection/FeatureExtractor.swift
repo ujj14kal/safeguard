@@ -70,6 +70,7 @@ public final class FeatureExtractor {
     }
 
     private var histories: [Int: [Sample]] = [:]
+    private var egoSamples: [(time: TimeInterval, level: Double)] = []
 
     /// Latest speech severity + when it was reported. Speech is global
     /// (the mic hears the scene, not one track), so one value is stamped
@@ -81,7 +82,17 @@ public final class FeatureExtractor {
         self.config = config
     }
 
+    /// Wearer motion level 0 (still) ... 1 (walking or swinging the phone),
+    /// from the phone's accelerometer. Without it every level is 0, so a
+    /// replayed video keeps the old behaviour.
+    public func setEgoMotion(accelRMS: Double, at time: TimeInterval) {
+        let span = max(config.egoMovingAccel - config.egoStillAccel, 1e-6)
+        egoSamples.append((time, clamp01((accelRMS - config.egoStillAccel) / span)))
+        egoSamples.removeAll { time - $0.time > maxWindow }
+    }
+
     public func reset() {
+        egoSamples = []
         histories = [:]
         speechSeverity = 0
         speechAt = -.infinity
@@ -169,8 +180,22 @@ public final class FeatureExtractor {
             features.cornering = features.speed * centre * steadiness
         }
 
+        applyEgoMotionDiscount(to: &features, at: time)
         applyCues(to: &features, samples: samples, at: time)
         return features
+    }
+
+    /// A box that grows while the WEARER moves (walking up to a still
+    /// person) is mostly the wearer closing in. Discount the approach
+    /// features by the recent motion level; a still wearer keeps full weight.
+    private func applyEgoMotionDiscount(to features: inout PersonFeatures, at time: TimeInterval) {
+        let recent = egoSamples.filter { time - $0.time <= config.egoWindow }
+        guard !recent.isEmpty else { return }
+        let level = recent.map(\.level).reduce(0, +) / Double(recent.count)
+        let keep = 1 - config.egoMaxDiscount * level
+        features.trend *= keep
+        features.speed *= keep
+        features.cornering *= keep
     }
 
     /// Hand reach: the closest hand's size, scaled up when that hand is

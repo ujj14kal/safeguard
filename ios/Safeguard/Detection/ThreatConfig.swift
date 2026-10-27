@@ -114,6 +114,18 @@ public struct ThreatConfig: Sendable {
     public var weightHandReach: Double = 0.25
     public var weightShouting: Double = 0.15
 
+    // MARK: - Wearer motion (CoreMotion)
+
+    /// Phone acceleration (g, RMS over the window) below `egoStillAccel`
+    /// means the wearer is standing still; at `egoMovingAccel` or above the
+    /// wearer is walking or swinging the phone. Growth of a person's box
+    /// while the wearer moves is mostly the wearer closing in, so approach
+    /// features are discounted by up to `egoMaxDiscount`.
+    public var egoStillAccel: Double = 0.04
+    public var egoMovingAccel: Double = 0.20
+    public var egoMaxDiscount: Double = 0.85
+    public var egoWindow: TimeInterval = 1.5
+
     // MARK: - Close-person behaviour sweep (backend)
 
     /// Someone near for this long is sent to the backend for a behaviour

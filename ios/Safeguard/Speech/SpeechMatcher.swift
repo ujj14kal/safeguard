@@ -22,8 +22,19 @@ public struct SpeechMatch: Sendable, Equatable {
 public struct SpeechMatcher: Sendable {
     public let config: SpeechConfig
 
+    /// Patterns tokenised and keyed once, not on every match call.
+    private struct Compiled {
+        var pattern: SpeechPattern
+        var keys: [String]
+    }
+    private let compiled: [Compiled]
+
     public init(config: SpeechConfig = SpeechConfig()) {
         self.config = config
+        self.compiled = config.patterns.compactMap {
+            let keys = SpeechText.words(in: $0.phrase).map(SpeechText.fuzzyKey)
+            return keys.isEmpty ? nil : Compiled(pattern: $0, keys: keys)
+        }
     }
 
     /// Maps a /verify-speech severity onto the 0...1 machine input.
@@ -43,12 +54,14 @@ public struct SpeechMatcher: Sendable {
         guard !words.isEmpty else { return nil }
         let benignRanges = benignWordRanges(in: words)
         var best: SpeechMatch?
-        var hostileMatches = 0
-        for pattern in config.patterns {
-            let phrase = Self.words(in: pattern.phrase)
-            guard !phrase.isEmpty, words.count >= phrase.count else { continue }
+        var hostileStarts = Set<Int>()
+        let keys = words.map(SpeechText.fuzzyKey)
+        for entry in compiled {
+            let pattern = entry.pattern
+            let phrase = entry.keys
+            guard words.count >= phrase.count else { continue }
             for start in 0...(words.count - phrase.count) {
-                guard wordsMatch(words, at: start, phrase: phrase) else { continue }
+                guard keysMatch(keys, at: start, phrase: phrase) else { continue }
                 let end = start + phrase.count
                 if benignRanges.contains(where: { $0.contains(start) && $0.contains(end - 1) }) {
                     continue
@@ -65,8 +78,12 @@ public struct SpeechMatcher: Sendable {
                 let candidate = SpeechMatch(
                     category: pattern.category, severity: severity, wordIndex: start
                 )
-                if pattern.category == .anger || pattern.category == .abuse {
-                    hostileMatches += 1
+                if pattern.category == .anger || pattern.category == .abuse
+                    || pattern.category == .proposition
+                {
+                    // Distinct spoken words, not pattern hits: "kamina" must
+                    // not count three times for three spellings in the list.
+                    hostileStarts.insert(start)
                 }
                 if best == nil || candidate.severity > best!.severity {
                     best = candidate
@@ -74,7 +91,7 @@ public struct SpeechMatcher: Sendable {
             }
         }
         // Sustained cussing/anger: one word is a nudge, a run is hostility.
-        if hostileMatches >= config.repeatedAngerCount,
+        if hostileStarts.count >= config.repeatedAngerCount,
            (best?.severity ?? 0) < config.repeatedAngerSeverity
         {
             best = SpeechMatch(
@@ -165,9 +182,19 @@ public struct SpeechMatcher: Sendable {
         return false
     }
 
+    private func keysMatch(_ keys: [String], at start: Int, phrase: [String]) -> Bool {
+        guard start >= 0, start + phrase.count <= keys.count else { return false }
+        for offset in phrase.indices where !SpeechText.keysEqual(keys[start + offset], phrase[offset]) {
+            return false
+        }
+        return true
+    }
+
     private func wordsMatch(_ words: [String], at start: Int, phrase: [String]) -> Bool {
         guard start >= 0, start + phrase.count <= words.count else { return false }
-        return words[start..<(start + phrase.count)].elementsEqual(phrase)
+        return zip(words[start..<(start + phrase.count)], phrase).allSatisfy {
+            SpeechText.wordsEqual($0, $1)
+        }
     }
 
     private static func words(in text: String) -> [String] {

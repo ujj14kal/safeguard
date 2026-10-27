@@ -1,4 +1,5 @@
 import AVFoundation
+import CoreMotion
 import CoreImage
 import SwiftUI
 import UIKit
@@ -28,6 +29,8 @@ final class ProtectViewModel: ObservableObject {
     @Published var listenerLive = false
     @Published var listenerDeafReason: String?
     @Published var lastHeard = ""
+    /// Concerning talk heard in the last few seconds (red banner on the HUD).
+    @Published var conversationFlag: ConversationFlag?
     @Published var lastSpeechInfo: String?
     @Published var toast: String?
     /// Near-black screen saver: the camera keeps running underneath.
@@ -186,6 +189,7 @@ final class ProtectViewModel: ObservableObject {
             replayName = nil
             state = .monitoring
             beginSession(status: "Monitoring with phone camera")
+            startEgoMotion()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -209,6 +213,8 @@ final class ProtectViewModel: ObservableObject {
     }
 
     func stop() {
+        stopEgoMotion()
+        hapticGate.reset()
         source?.stop()
         source = nil
         cameraSession = nil
@@ -230,6 +236,7 @@ final class ProtectViewModel: ObservableObject {
         // The listener stays up for idle voice commands; the transcript
         // window is still discarded on every stop.
         window.clear()
+        conversationFlag = nil
         speechGate.reset()
         stopConfirmation.cancel()
         dimmed = false
@@ -274,6 +281,7 @@ final class ProtectViewModel: ObservableObject {
         let people = personCount == 1 ? "1 person" : "\(personCount) people"
         statusLine = "\(base) • \(fps) fps • \(people)"
         safety.tick(at: Self.now)
+        if let flag = conversationFlag, !flag.isActive(at: Self.now) { conversationFlag = nil }
         drainAskSpeech()
         syncProtectionState()
     }
@@ -466,6 +474,7 @@ final class ProtectViewModel: ObservableObject {
     /// Partial text: code phrases only, and each phrase once per utterance.
     fileprivate func handlePartial(_ text: String) {
         guard isProtecting else { return }
+        rateAndFlag(text)
         guard let reply = partialGate.consume(phraseMatcher.match(text)) else { return }
         safety.noteReply(reply, at: Self.now)
         drainAskSpeech()
@@ -514,12 +523,91 @@ final class ProtectViewModel: ObservableObject {
             return
         }
         guard listenerOptIn else { return }
+        rateAndFlag(text)
         window.append(text, at: Self.now)
         guard let found = speechMatcher.match(window.transcript) else { return }
         noteSpeechToPipeline(severity: found.severity, at: Self.now)
         if speechGate.consume(severity: found.severity, at: Self.now) {
             sendSpeechSnippet(match: found)
         }
+    }
+
+    // MARK: - Silent conversation rating
+
+    private var hapticGate = SpeechHapticGate()
+
+    /// Every chunk of talk is rated on its own and answered with a vibration
+    /// only (never a sound): a nudge, an elevated double tap, or a strong
+    /// warning pattern.
+    private func rateChunk(_ text: String) {
+        let severity = speechMatcher.match(text)?.severity ?? 0
+        let level = hapticGate.consume(SpeechHapticLevel.level(for: severity), at: Self.now)
+        // Soft taps only: one, two or three, never a sound.
+        let taps: Int
+        switch level {
+        case .none: return
+        case .nudge: taps = 1
+        case .elevated: taps = 2
+        case .strong: taps = 3
+        }
+        let generator = UIImpactFeedbackGenerator(style: .soft)
+        for index in 0..<taps {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.22 * Double(index)) {
+                generator.impactOccurred(intensity: 0.8)
+            }
+        }
+    }
+
+    /// Rates one piece of talk (a partial or a final): a soft vibration, a
+    /// red flag on the HUD, and the severity into the state machine, so the
+    /// wearer is warned while the sentence is still being spoken.
+    private func rateAndFlag(_ text: String) {
+        guard isProtecting, listenerOptIn, let found = speechMatcher.match(text) else { return }
+        rateChunk(text)
+        guard found.severity >= ConversationFlag.minSeverity else { return }
+        let flag = ConversationFlag(category: found.category, severity: found.severity, at: Self.now)
+        conversationFlag = ConversationFlag.merged(conversationFlag, with: flag)
+        noteSpeechToPipeline(severity: found.severity, at: Self.now)
+        dimmed = false
+    }
+
+    func dismissConversationFlag() {
+        conversationFlag = nil
+    }
+
+    /// The red banner's button: start the safety measures now.
+    func launchSafetyFromFlag() {
+        conversationFlag = nil
+        answerUnsafe()
+    }
+
+    // MARK: - Wearer motion
+
+    private let motionManager = CMMotionManager()
+    private var recentAccel: [Double] = []
+
+    /// Phone acceleration feeds the approach discount: a box that grows
+    /// while the wearer walks is the wearer closing in, not the person.
+    private func startEgoMotion() {
+        guard motionManager.isDeviceMotionAvailable, !motionManager.isDeviceMotionActive else { return }
+        recentAccel = []
+        motionManager.deviceMotionUpdateInterval = 0.05
+        motionManager.startDeviceMotionUpdates(to: .main) { [weak self] motion, _ in
+            guard let self, let a = motion?.userAcceleration else { return }
+            self.recentAccel.append((a.x * a.x + a.y * a.y + a.z * a.z).squareRoot())
+            if self.recentAccel.count > 20 { self.recentAccel.removeFirst() }
+            let rms = (self.recentAccel.map { $0 * $0 }.reduce(0, +)
+                / Double(self.recentAccel.count)).squareRoot()
+            let now = Self.now
+            self.detectionQueue.async { [pipeline = self.pipeline] in
+                pipeline.extractor.setEgoMotion(accelRMS: rms, at: now)
+            }
+        }
+    }
+
+    private func stopEgoMotion() {
+        motionManager.stopDeviceMotionUpdates()
+        recentAccel = []
     }
 
     // MARK: - Voice commands (Part D)

@@ -3,6 +3,7 @@ import SwiftUI
 struct ProtectView: View {
     @StateObject private var model = ProtectViewModel()
     @AppStorage("debugOverlayEnabled") private var debugOverlay = false
+    @AppStorage("listenerOptIn") private var listenerOptIn = false
 
     var body: some View {
         if model.isProtecting {
@@ -25,7 +26,7 @@ struct ProtectView: View {
                 config: model.threatConfig
             )
             .ignoresSafeArea()
-            if model.hasRedBox {
+            if model.hasRedBox || model.conversationFlag != nil {
                 RedVignette()
                     .ignoresSafeArea()
             }
@@ -46,6 +47,9 @@ struct ProtectView: View {
                 Spacer()
                 if model.state == .asking {
                     checkInCard
+                }
+                if let flag = model.conversationFlag {
+                    flagCard(flag)
                 }
                 if let cue = model.listeningCue {
                     hudCue(cue)
@@ -149,6 +153,11 @@ struct ProtectView: View {
                     .padding(8)
                     .safeguardPanel()
             }
+            if !listenerOptIn {
+                Text("Conversation rating is off: turn it on in Settings")
+                    .font(.footnote)
+                    .foregroundStyle(DS.Colors.warning)
+            }
             Text("Say: Safeguard, stop • status • dim")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
@@ -165,6 +174,31 @@ struct ProtectView: View {
             }
         }
         .padding()
+    }
+
+    /// Red banner for concerning talk: stays a few seconds, offers the
+    /// safety measures (the same path as saying the unsafe phrase).
+    private func flagCard(_ flag: ConversationFlag) -> some View {
+        VStack(spacing: DS.Spacing.small) {
+            Label(flag.label, systemImage: "exclamationmark.triangle.fill")
+                .font(.headline)
+                .foregroundStyle(DS.Colors.danger)
+            Text("Heard just now. Start the safety measures?")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+            HStack(spacing: DS.Spacing.medium) {
+                Button("Start safety measures", role: .destructive) { model.launchSafetyFromFlag() }
+                    .buttonStyle(DestructiveButtonStyle())
+                Button("Dismiss") { model.dismissConversationFlag() }
+                    .buttonStyle(SecondaryButtonStyle())
+            }
+        }
+        .padding()
+        .safeguardPanel()
+        .overlay(RoundedRectangle(cornerRadius: 20).stroke(DS.Colors.danger, lineWidth: 2))
+        .padding(.horizontal)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("\(flag.label). Start the safety measures?")
     }
 
     /// The spoken question's on-screen equivalent on the HUD: buttons, code
