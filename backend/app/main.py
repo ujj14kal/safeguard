@@ -31,7 +31,8 @@ from .accounts import (
 )
 from .config import SETTINGS
 from .contacts import (
-    ContactLimitError, ContactStore, guardian_invite_link, invite_link, link_from_updates,
+    ContactLimitError, ContactStore, apply_locations, guardian_invite_link, invite_link,
+    link_from_updates,
 )
 from . import hls
 from .incidents import IncidentStore
@@ -45,6 +46,7 @@ from .notify import (
     cab_text,
     end_text,
     make_notifier,
+    nearest_notes,
     maps_link,
     ride_link,
     test_text,
@@ -216,7 +218,7 @@ async def _register_telegram_webhook() -> None:
                 json={
                     "url": f"{base}/telegram/webhook",
                     "secret_token": _telegram_webhook_secret(),
-                    "allowed_updates": ["message"],
+                    "allowed_updates": ["message", "edited_message"],
                 },
             )
         logger.info("telegram webhook registered: %s", response.status_code)
@@ -236,10 +238,36 @@ async def telegram_webhook(
         update = await request.json()
     except ValueError:
         raise HTTPException(status_code=400, detail="bad body")
-    linked, _ = link_from_updates({"result": [update]}, get_contact_store(), get_guardians())
+    _handle_telegram_updates({"result": [update]})
+    return {"ok": True}
+
+
+_SHARE_PROMPT = {
+    "en": "You are now an emergency contact. Tap the button below to share your location once, so Safeguard can tell who is nearest if someone needs help. You can stop sharing any time.",
+    "hi": "अब आप आपातकालीन संपर्क हैं। अपनी लोकेशन एक बार साझा करने के लिए नीचे का बटन दबाएँ, ताकि ज़रूरत पड़ने पर Safeguard बता सके कि सबसे नज़दीक कौन है।",
+}
+_SHARE_BUTTON = "Share my location / लोकेशन साझा करें"
+_SHARE_THANKS = "Thanks, your location is saved. / धन्यवाद, आपकी लोकेशन सहेज ली गई।"
+
+
+def _handle_telegram_updates(payload: dict) -> None:
+    store = get_contact_store()
+    linked, _ = link_from_updates(payload, store, get_guardians())
     if linked:
         logger.info("telegram linked %d contact(s)", len(linked))
-    return {"ok": True}
+    try:
+        notifier = make_notifier(SETTINGS)
+    except NotifyConfigError:
+        return
+    for code in linked:
+        record = store.get(code)
+        if record and record.get("chat_id") is not None:
+            notifier.send_location_request(
+                record["chat_id"], _SHARE_PROMPT["en"] + "\n\n" + _SHARE_PROMPT["hi"], _SHARE_BUTTON
+            )
+    for chat_id, is_edit in apply_locations(payload, store, time.time()):
+        if not is_edit:
+            notifier.send_text(chat_id, _SHARE_THANKS)
 
 
 async def _telegram_poll_loop() -> None:
@@ -256,11 +284,11 @@ async def _telegram_poll_loop() -> None:
                     f"{TELEGRAM_API}/bot{token}/getUpdates",
                     params={"offset": offset, "timeout": 20},
                 )
-                linked, offset = link_from_updates(
-                    response.json(), get_contact_store(), get_guardians()
-                )
-                if linked:
-                    logger.info("telegram linked %d contact(s)", len(linked))
+                body = response.json()
+                _handle_telegram_updates(body)
+                updates = body.get("result") if isinstance(body, dict) else None
+                if isinstance(updates, list) and updates:
+                    offset = max(u.get("update_id", 0) for u in updates if isinstance(u, dict)) + 1
             except Exception as exc:
                 logger.warning("telegram poll failed: %s", exc)
                 await asyncio.sleep(5)
@@ -778,7 +806,7 @@ def _notifier_for(dry_run: bool):
         )
 
 
-def _send_to_codes(codes, text, dry_run, url_button=None, pin=None) -> list:
+def _send_to_codes(codes, text, dry_run, url_button=None, pin=None, notes=None) -> list:
     store = get_contact_store()
     notifier = _notifier_for(dry_run)
     delivery = []
@@ -787,8 +815,9 @@ def _send_to_codes(codes, text, dry_run, url_button=None, pin=None) -> list:
         if record is None or record.get("chat_id") is None:
             delivery.append({"code": code, "status": "skipped", "detail": "not linked"})
             continue
+        body = text + "\n\n" + notes[code] if notes and code in notes else text
         result = notifier.send_text(
-            record["chat_id"], text, url_button=url_button
+            record["chat_id"], body, url_button=url_button
         )
         detail = result.detail
         if result.ok and pin is not None:
@@ -878,9 +907,13 @@ def incident_start(
         maps = maps_link(*pin) if pin else None
         ride = ride_link(body.lat, body.lon) if body.lat is not None and body.lon is not None else None
         text = alert_text(wearer, live, maps_url=maps, lang=body.lang, ride_url=ride)
+    notes = {}
+    if not body.test:
+        located = [get_contact_store().get(code) for code in incident.contact_codes]
+        notes = nearest_notes([r for r in located if r], pin, lang=body.lang)
     delivery = _send_to_codes(
         incident.contact_codes, text, incident.dry_run,
-        url_button=("Open live view", live), pin=pin,
+        url_button=("Open live view", live), pin=pin, notes=notes,
     )
     if incident.guardian_code and not body.test:
         delivery.append(_alert_guardian(incident, text, live, pin))

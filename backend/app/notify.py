@@ -35,6 +35,10 @@ class Notifier:
         raise NotImplementedError
 
 
+    def send_location_request(self, chat_id, text, button) -> NotifyResult:
+        return NotifyResult(True, "skipped")
+
+
 class DryRunNotifier(Notifier):
 
     name = "dry-run"
@@ -125,6 +129,17 @@ class TelegramNotifier(Notifier):
             {"chat_id": chat_id, "latitude": lat, "longitude": lon},
         )
 
+    def send_location_request(self, chat_id, text, button) -> NotifyResult:
+        return self._call("sendMessage", {
+            "chat_id": chat_id,
+            "text": text,
+            "reply_markup": {
+                "keyboard": [[{"text": button, "request_location": True}]],
+                "resize_keyboard": True,
+                "one_time_keyboard": True,
+            },
+        })
+
 
 def make_notifier(settings) -> Notifier:
     if settings.notify_mode == "telegram":
@@ -201,3 +216,56 @@ def cab_text(driver: str, plate: str, eta_min: int, live_url: str, lang: str = "
         f"{driver}, {plate}, arriving in about {eta_min} min. "
         f"Live page: {live_url}"
     )
+
+
+def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    from math import asin, cos, radians, sin, sqrt
+
+    dlat, dlon = radians(lat2 - lat1), radians(lon2 - lon1)
+    a = sin(dlat / 2) ** 2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon / 2) ** 2
+    return 2 * 6371.0 * asin(sqrt(a))
+
+
+def _km_text(km: float, lang: str) -> str:
+    if km < 1:
+        meters = max(50, int(round(km * 1000 / 50.0)) * 50)
+        return f"{meters} मीटर" if lang == "hi" else f"{meters} m"
+    return f"{km:.1f} किमी" if lang == "hi" else f"{km:.1f} km"
+
+
+def nearest_notes(contacts, pin, lang="en", now=None, max_age_s=12 * 3600) -> dict:
+    """One line per linked contact saying how close they are to the wearer.
+
+    Only contacts who shared a location recently count. The nearest is told
+    so; the others are told how far the nearest is and how far they are.
+    """
+    if pin is None:
+        return {}
+    now = now if now is not None else datetime.now(timezone.utc).timestamp()
+    ranked = []
+    for record in contacts:
+        lat, lon, at = record.get("lat"), record.get("lon"), record.get("loc_at")
+        if record.get("chat_id") is None or lat is None or lon is None or at is None:
+            continue
+        if now - at > max_age_s:
+            continue
+        ranked.append((haversine_km(pin[0], pin[1], lat, lon), record["code"]))
+    if not ranked:
+        return {}
+    ranked.sort()
+    nearest_km, nearest_code = ranked[0]
+    notes = {}
+    for km, code in ranked:
+        if code == nearest_code:
+            notes[code] = (
+                f"आप सबसे नज़दीकी संपर्क लगते हैं, लगभग {_km_text(km, lang)} दूर।"
+                if lang == "hi"
+                else f"You appear to be the nearest contact, about {_km_text(km, lang)} away."
+            )
+        else:
+            notes[code] = (
+                f"सबसे नज़दीकी संपर्क लगभग {_km_text(nearest_km, lang)} दूर है; आप लगभग {_km_text(km, lang)} दूर हैं।"
+                if lang == "hi"
+                else f"The nearest contact is about {_km_text(nearest_km, lang)} away; you are about {_km_text(km, lang)} away."
+            )
+    return notes

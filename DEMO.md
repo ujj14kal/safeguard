@@ -20,7 +20,7 @@ One story: **fast checks on the phone, a Meta model for judgment, and a guardian
 4. **SOS** (60 s). Start an SOS (distress word or button). Show: countdown (cancellable), then the live map, nearby police and hospitals, the Telegram alert arriving on the second phone / laptop with the live link.
 5. **Guardian page** (45 s). On the laptop: live video with sound, location trail. Say: "One continuous recording, even if the phone breaks."
 6. **End the SOS** (10 s), then show the finished recording on the guardian page as one video with sound.
-7. **Close** (20 s). "Muse judges the conversation and the scene. Next: Omnilingual ASR for regional languages and an on-device object detector."
+7. **Close** (20 s). "Muse judges the conversation and the scene. Next: Meta glasses as the live camera and microphone, with spoken prompts to the wearer."
 
 ## If something goes wrong
 
@@ -34,5 +34,5 @@ One story: **fast checks on the phone, a Meta model for judgment, and a guardian
 ## What is proven, and what is not (say this honestly if asked)
 
 - **Working on a real iPhone:** accounts, protection, gestures and expressions, SOS, live link, guardian page, continuous recording, Telegram alerts, helplines.
-- **Planned, not built:** weapon detection (the Muse model is asked to describe objects in hand, not separately validated), regional-language speech (Omnilingual ASR), a server-side safe-arrival timer.
+- **Planned, not built:** Meta glasses as the live camera and microphone source, with spoken prompts to the wearer.
 - **Limits:** the safe-arrival timer lives on the phone, so it cannot fire if the app is force-closed or the phone is off. Hindi text has not had a native review.

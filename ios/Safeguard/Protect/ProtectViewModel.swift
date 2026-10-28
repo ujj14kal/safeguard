@@ -375,7 +375,7 @@ final class ProtectViewModel: ObservableObject {
         let key = "\(event):\(kind)"
         guard time - (lastGestureLog[key] ?? -.infinity) >= every else { return }
         lastGestureLog[key] = time
-        AppLog.shared.event(event, ["kind": kind, "score": String(format: "%.2f", score)])
+        AppLog.shared.event(event, ["cue": kind, "score": String(format: "%.2f", score)])
     }
 
     @Published var latencyLine = ""
@@ -426,7 +426,7 @@ final class ProtectViewModel: ObservableObject {
         debugScores = scores
         personCount = tracks.count
         let wasAlert = threatAlert
-        threatAlert = scores.values.contains { $0 >= pipeline.config.alertThreshold }
+        threatAlert = pipeline.config.nextAlert(wasAlert: wasAlert, topScore: scores.values.max() ?? 0)
         if threatAlert != wasAlert {
             AppLog.shared.event("vision_alert", [
                 "on": String(threatAlert), "score": String(format: "%.2f", scores.values.max() ?? 0),

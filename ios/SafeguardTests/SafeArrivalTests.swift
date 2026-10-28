@@ -56,3 +56,20 @@ final class SafeArrivalTests: XCTestCase {
         XCTAssertEqual(SafeArrivalStore.clock(0), "0:00")
     }
 }
+
+final class AlertHysteresisTests: XCTestCase {
+    func testAlertDoesNotFlapAroundTheThreshold() {
+        let config = ThreatConfig()
+        var on = false
+        var changes = 0
+        for score in [0.50, 0.46, 0.54, 0.43, 0.51, 0.44, 0.41] {
+            let next = config.nextAlert(wasAlert: on, topScore: score)
+            if next != on { changes += 1 }
+            on = next
+        }
+        XCTAssertEqual(changes, 1, "once on, scores just under 0.50 keep the alert on")
+        XCTAssertTrue(on)
+        XCTAssertFalse(config.nextAlert(wasAlert: true, topScore: 0.39))
+        XCTAssertFalse(config.nextAlert(wasAlert: false, topScore: 0.49))
+    }
+}

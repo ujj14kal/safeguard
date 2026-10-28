@@ -50,6 +50,9 @@ class ContactStore:
                 "name": str(name)[:60],
                 "code": str(code)[:32],
                 "chat_id": item.get("chat_id"),
+                "lat": item.get("lat"),
+                "lon": item.get("lon"),
+                "loc_at": item.get("loc_at"),
             })
         return kept[:MAX_CONTACTS]
 
@@ -67,7 +70,7 @@ class ContactStore:
             raise ValueError("name is required")
         if len(self.contacts) >= MAX_CONTACTS:
             raise ContactLimitError(f"at most {MAX_CONTACTS} contacts")
-        record = {"name": clean, "code": make_code(), "chat_id": None}
+        record = {"name": clean, "code": make_code(), "chat_id": None, "lat": None, "lon": None, "loc_at": None}
         self.contacts.append(record)
         self._save()
         return dict(record)
@@ -79,6 +82,17 @@ class ContactStore:
                 self._save()
                 return dict(record)
         return None
+
+    def set_location(self, chat_id, lat, lon, at):
+        """Remembers the last location a linked contact shared. True if stored."""
+        for record in self.contacts:
+            if record.get("chat_id") == chat_id:
+                record["lat"] = lat
+                record["lon"] = lon
+                record["loc_at"] = at
+                self._save()
+                return True
+        return False
 
     def get(self, code):
         for record in self.contacts:
@@ -104,6 +118,35 @@ GUARDIAN_START_PREFIX = "g_"
 
 def guardian_invite_link(bot_username, code):
     return f"https://t.me/{bot_username}?start={GUARDIAN_START_PREFIX}{code}"
+
+
+def apply_locations(payload, store, now):
+    """Stores locations that linked contacts share with the bot.
+
+    Returns (chat_id, is_edit) for each stored location; edits are the
+    updates of a live location and need no reply.
+    """
+    stored = []
+    results = payload.get("result") if isinstance(payload, dict) else None
+    if not isinstance(results, list):
+        return stored
+    for update in results:
+        if not isinstance(update, dict):
+            continue
+        is_edit = "edited_message" in update
+        message = update.get("edited_message") or update.get("message") or {}
+        location = message.get("location")
+        chat_id = (message.get("chat") or {}).get("id")
+        if not isinstance(location, dict) or chat_id is None:
+            continue
+        lat, lon = location.get("latitude"), location.get("longitude")
+        if not isinstance(lat, (int, float)) or not isinstance(lon, (int, float)):
+            continue
+        if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+            continue
+        if store.set_location(chat_id, float(lat), float(lon), now):
+            stored.append((chat_id, is_edit))
+    return stored
 
 
 def link_from_updates(payload, store, guardians=None):

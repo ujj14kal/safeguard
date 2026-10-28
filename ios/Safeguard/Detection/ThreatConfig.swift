@@ -72,9 +72,14 @@ public struct ThreatConfig: Sendable {
     public var speechWindowSeconds: TimeInterval = 20
 
     public var alertThreshold: Double = 0.50
+    public var alertHysteresis: Double = 0.10
     public var verifyRearmMargin: Double = 0.10
     public var reasonThreshold: Double = 0.5
 
     public var motionMin: Double = 0.15
     public var staticScoreCap: Double = 0.35
+
+    public func nextAlert(wasAlert: Bool, topScore: Double) -> Bool {
+        topScore >= (wasAlert ? alertThreshold - alertHysteresis : alertThreshold)
+    }
 }

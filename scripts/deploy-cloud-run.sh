@@ -42,6 +42,18 @@ gcloud run deploy "$SERVICE" \
   --cpu 1 --memory 512Mi --concurrency 20 --timeout 900 --no-cpu-boost \
   --env-vars-file "$ENVFILE"
 
+echo "Removing old container images..."
+REPO="$REGION-docker.pkg.dev/$PROJECT/cloud-run-source-deploy/$SERVICE"
+LIVE_DIGEST="$(gcloud run services describe "$SERVICE" --project "$PROJECT" --region "$REGION" \
+  --format='value(spec.template.spec.containers[0].image)' | sed 's/.*@//')"
+if [ -n "$LIVE_DIGEST" ]; then
+  gcloud artifacts docker images list "$REPO" --project "$PROJECT" --format='value(version)' 2>/dev/null |
+    while read -r digest; do
+      [ -n "$digest" ] && [ "$digest" != "$LIVE_DIGEST" ] &&
+        gcloud artifacts docker images delete "$REPO@$digest" --project "$PROJECT" --quiet >/dev/null 2>&1 || true
+    done
+fi
+
 echo
 echo "Cost after this deploy:"
 ./scripts/cost-check.sh "$PROJECT" "$SERVICE" || echo "(cost check unavailable)"

@@ -252,3 +252,72 @@ def test_a_start_with_a_wrong_prefix_never_links_a_guardian(api):
     update = {"update_id": 1, "message": {"text": f"/start {code}", "chat": {"id": 9}}}
     link_from_updates({"result": [update]}, main.get_contact_store(), main.get_guardians())
     assert main.get_guardians().chat_id(code) is None
+
+
+NOW = 1_800_000_000.0
+
+
+def _record(code, lat, lon, age=60, chat=1):
+    return {"code": code, "chat_id": chat, "lat": lat, "lon": lon, "loc_at": NOW - age}
+
+
+def test_nearest_contact_is_told_and_others_hear_the_distance():
+    from app.notify import nearest_notes
+
+    pin = (28.6139, 77.2090)
+    notes = nearest_notes(
+        [_record("a", 28.6200, 77.2100), _record("b", 28.7041, 77.1025)], pin, now=NOW
+    )
+    assert "nearest contact" in notes["a"] and "km" in notes["a"] or " m " in notes["a"]
+    assert "The nearest contact is about" in notes["b"] and "you are about" in notes["b"]
+
+
+def test_nearest_notes_ignore_stale_missing_or_unlinked_locations():
+    from app.notify import nearest_notes
+
+    pin = (28.6139, 77.2090)
+    assert nearest_notes([_record("a", 28.62, 77.21, age=13 * 3600)], pin, now=NOW) == {}
+    assert nearest_notes([{"code": "a", "chat_id": 1}], pin, now=NOW) == {}
+    assert nearest_notes([_record("a", 28.62, 77.21, chat=None)], pin, now=NOW) == {}
+    assert nearest_notes([_record("a", 28.62, 77.21)], None, now=NOW) == {}
+
+
+def test_nearest_notes_in_hindi():
+    from app.notify import nearest_notes
+
+    notes = nearest_notes([_record("a", 28.6140, 77.2091)], (28.6139, 77.2090), lang="hi", now=NOW)
+    assert "सबसे नज़दीकी" in notes["a"]
+
+
+def test_contact_locations_come_from_telegram_updates(tmp_path):
+    from app.contacts import ContactStore, apply_locations
+
+    store = ContactStore(path=str(tmp_path / "c.json"))
+    record = store.invite("Asha")
+    store.link(record["code"], 42)
+    update = {"update_id": 1, "message": {"chat": {"id": 42}, "location": {"latitude": 28.6, "longitude": 77.2}}}
+    assert apply_locations({"result": [update]}, store, NOW) == [(42, False)]
+    saved = store.get(record["code"])
+    assert (saved["lat"], saved["lon"], saved["loc_at"]) == (28.6, 77.2, NOW)
+    live = {"update_id": 2, "edited_message": {"chat": {"id": 42}, "location": {"latitude": 28.61, "longitude": 77.21}}}
+    assert apply_locations({"result": [live]}, store, NOW + 5) == [(42, True)]
+    stranger = {"update_id": 3, "message": {"chat": {"id": 99}, "location": {"latitude": 1.0, "longitude": 1.0}}}
+    assert apply_locations({"result": [stranger]}, store, NOW) == []
+    bad = {"update_id": 4, "message": {"chat": {"id": 42}, "location": {"latitude": 999, "longitude": 1.0}}}
+    assert apply_locations({"result": [bad]}, store, NOW) == []
+
+
+def test_sos_alert_includes_the_nearest_note(api):
+    code_a = api.post("/contacts/invite", json={"name": "Asha"}).json()["code"]
+    code_b = api.post("/contacts/invite", json={"name": "Bela"}).json()["code"]
+    store = main.get_contact_store()
+    store.link(code_a, 1)
+    store.link(code_b, 2)
+    store.set_location(1, 28.6200, 77.2100, time.time())
+    store.set_location(2, 28.7041, 77.1025, time.time())
+    res = start(api, contact_codes=[code_a, code_b])
+    assert [d["status"] for d in res["delivery"]] == ["dry-run", "dry-run"]
+    lines = [__import__("json").loads(l) for l in open(main.SETTINGS.notify_log_path)]
+    texts = {l["chat_id"]: l["text"] for l in lines if l["kind"] == "text"}
+    assert "You appear to be the nearest contact" in texts[1]
+    assert "The nearest contact is about" in texts[2]
