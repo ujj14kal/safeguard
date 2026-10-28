@@ -33,6 +33,17 @@ The camera source and the spoken check-in sit behind narrow interfaces, so the g
 
 Also included: a safe-arrival timer, helplines (112, 1091, 181), nearby police and hospitals, and an offline mode if the server is unreachable.
 
+## Escalation: four parallel tracks
+
+When the countdown ends, four tracks start at the same moment. Each reports its own status on the SOS screen, and one failing never blocks the others.
+
+1. **Contacts.** The backend sends every linked emergency contact a Telegram alert in the wearer's language: who needs help, a live link, a map pin and the exact coordinates. Location keeps updating after the first message, so contacts see movement and not a single point.
+2. **Live stream.** The same alert carries a live link. It opens in any browser, with no app and no sign-in, and shows the live map, the trail and the video with sound as one continuous recording. The link is hosted by the backend on Google Cloud Run, and the guardian page plays the finished recording afterwards.
+3. **Route.** The phone waits for a precise location fix, then finds the nearest police stations and hospitals with MapKit, picks the closest, and draws a walking route with a distance and time. The wearer sees where help is.
+4. **Cab.** Booking a ride directly requires approval for Uber's Rides API, so Safeguard uses an Uber deep link. One tap opens Uber with the pickup already set to the wearer's location and the drop-off set to the nearest safe place. The same prefilled ride link goes to contacts in their alert, so a contact can send a cab to the wearer from their own phone.
+
+The wearer can also place the police call with one tap. Safeguard never dials by itself.
+
 ## How Meta's models are used
 
 Meta's Muse models are the judgment layer. Fast, private checks run on the device; anything that needs understanding goes to Muse through the Meta Model API, called only from the backend so no key ever reaches a device.
@@ -60,6 +71,7 @@ With Meta glasses, the same Muse calls apply unchanged. Frames and audio come fr
 | Camera and audio capture | AVFoundation | Frames, microphone tap |
 | Recording | AVAssetWriter fragmented MP4 (HLS), H.264 and AAC | One continuous recording with sound, uploaded piece by piece as it is written |
 | Maps and nearby help | MapKit, CoreLocation | Accurate location, nearby police and hospitals, walking routes |
+| Ride | Uber deep link | Prefilled pickup and drop-off, no API approval needed |
 | Backend | FastAPI (Python) on Google Cloud Run | Muse calls, alerts, links, recordings, accounts |
 | Accounts | Supabase Auth, relayed through the backend | Sign-up and sign-in; passwords never stored by Safeguard |
 | Device trust | Per-install signed tokens (HMAC), Keychain | Authorises the app to the backend with no shared secret shipped |
