@@ -35,8 +35,19 @@ final class PhoneCameraSource: NSObject, FrameSource {
             throw FrameSourceError.cameraUnavailable
         }
 
+        try configure(with: device)
+        addObservers()
+        let session = session
+        queue.async {
+            if !session.isRunning { session.startRunning() }
+        }
+    }
+
+    private func configure(with device: AVCaptureDevice) throws {
         session.beginConfiguration()
         defer { session.commitConfiguration() }
+        session.inputs.forEach(session.removeInput)
+        session.outputs.forEach(session.removeOutput)
         session.sessionPreset = .hd1280x720
 
         let input: AVCaptureDeviceInput
@@ -65,10 +76,6 @@ final class PhoneCameraSource: NSObject, FrameSource {
         {
             connection.videoRotationAngle = 90
         }
-
-        addObservers()
-        let session = session
-        queue.async { session.startRunning() }
     }
 
     func stop() {
