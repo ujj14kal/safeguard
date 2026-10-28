@@ -460,3 +460,22 @@ def test_ask_prompt_forbids_appearance_and_accusations():
     from app.muse import MuseError
     with _pytest.raises(MuseError):
         parse_answer('{"choices":[{"message":{"content":"  "}}]}')
+
+
+def test_concurrent_starts_share_one_incident():
+    import threading
+    from app.incidents import IncidentStore
+
+    store = IncidentStore()
+    ids = []
+    gate = threading.Barrier(8)
+
+    def go():
+        gate.wait()
+        incident, _ = store.start("sess", "A", [], share_token="tok")
+        ids.append(incident.id)
+
+    threads = [threading.Thread(target=go) for _ in range(8)]
+    [t.start() for t in threads]
+    [t.join() for t in threads]
+    assert len(set(ids)) == 1

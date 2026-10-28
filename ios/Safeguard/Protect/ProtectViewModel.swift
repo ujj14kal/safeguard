@@ -1419,7 +1419,19 @@ final class ProtectViewModel: ObservableObject {
         return String(localized: "failed")
     }
 
+    private var incidentStartTask: Task<Bool, Never>?
+
     private func ensureIncident() async -> Bool {
+        if incidentID != nil { return true }
+        if let pending = incidentStartTask { return await pending.value }
+        let task = Task { await self.startIncidentOnce() }
+        incidentStartTask = task
+        let ok = await task.value
+        incidentStartTask = nil
+        return ok
+    }
+
+    private func startIncidentOnce() async -> Bool {
         if incidentID != nil { return true }
         guard let session = evidenceSessionID else { return false }
         if let live = liveIncidentID {

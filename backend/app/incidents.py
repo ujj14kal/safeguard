@@ -2,6 +2,7 @@
 import json
 import logging
 import secrets
+import threading
 import time
 from collections import deque
 from dataclasses import dataclass, field
@@ -71,6 +72,7 @@ class IncidentStore:
         clock=time.time,
         guardian_ttl_after_end_s=DEFAULT_GUARDIAN_TTL_AFTER_END_S,
     ):
+        self._start_lock = threading.Lock()
         self._by_id = {}
         self._by_session = {}
         self._by_token = {}
@@ -151,6 +153,16 @@ class IncidentStore:
     def start(
         self, session, wearer_name, contact_codes, test=False, dry_run=True, lang="en",
         share_token=None, mode="sos", guardian_code="",
+    ):
+        with self._start_lock:
+            return self._start_locked(
+                session, wearer_name, contact_codes, test, dry_run, lang,
+                share_token, mode, guardian_code,
+            )
+
+    def _start_locked(
+        self, session, wearer_name, contact_codes, test, dry_run, lang,
+        share_token, mode, guardian_code,
     ):
         existing = self._by_session.get(session)
         if existing is not None and existing.status == "active" and not self.expired(existing):
