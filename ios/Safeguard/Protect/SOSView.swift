@@ -2,9 +2,6 @@ import MapKit
 import SwiftUI
 import UIKit
 
-/// The SOS screen. Everything on it runs by itself (contacts alerted, live
-/// page, nearest help, cab, recording); the one thing left to the wearer
-/// is the police call, which never dials on its own.
 struct SOSView: View {
     @ObservedObject var model: ProtectViewModel
     @Environment(\.openURL) private var openURL
@@ -40,8 +37,6 @@ struct SOSView: View {
             withAnimation(DS.Motion.lively) { arrived = true }
         }
     }
-
-    // MARK: Background and header
 
     private var background: some View {
         ZStack {
@@ -102,8 +97,6 @@ struct SOSView: View {
             return String(localized: "Help is on the way")
         }
     }
-
-    // MARK: Automatic steps
 
     private var stepsCard: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.medium) {
@@ -194,8 +187,6 @@ struct SOSView: View {
         let sent = model.deliveryStatus.filter { $0.status == "sent" || $0.status == "dry-run" }.count
         return sent > 0 ? L10n.format("%d contacts alerted", sent) : String(localized: "Contacts alerted")
     }
-
-    // MARK: Map
 
     private var mapCard: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -309,8 +300,6 @@ struct SOSView: View {
             .tint(DS.Colors.accent)
         }
     }
-
-    // MARK: Contacts, link, cab, evidence
 
     @ViewBuilder
     private var contactsCard: some View {
@@ -456,10 +445,6 @@ struct SOSView: View {
         }
     }
 
-    // MARK: Actions
-
-    /// Pinned at the bottom: the police call (manual by design) and the
-    /// deliberate three-second hold to end.
     private var actionBar: some View {
         VStack(spacing: DS.Spacing.small) {
             Button {

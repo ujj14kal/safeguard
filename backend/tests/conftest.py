@@ -1,8 +1,6 @@
 import json as json_lib
 import os
 
-# Test env must be set before the app modules are imported (settings and
-# clients are constructed at import time).
 os.environ["META_MODEL_API_KEY"] = "fake-test-key"
 os.environ["MUSE_MODEL"] = "test-model"
 os.environ["MUSE_TIMEOUT_S"] = "5"
@@ -20,7 +18,6 @@ from app.ratelimit import RateLimiter  # noqa: E402
 
 @pytest.fixture(autouse=True)
 def fresh_state():
-    # Module-level limiter/counter/log are test-visible on purpose.
     main._muse_limiter = RateLimiter(20)
     main._daily_counts.clear()
     if os.path.exists("/tmp/sg-test-verify.jsonl"):

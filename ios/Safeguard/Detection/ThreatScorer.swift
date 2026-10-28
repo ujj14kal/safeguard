@@ -1,7 +1,5 @@
 import Foundation
 
-/// Scored threat for one tracked person: a 0...1 value, an alert flag, and
-/// the features that fired (for logging and the spoken summary later).
 public struct ThreatScore: Sendable, Equatable {
     public var value: Double
     public var alert: Bool
@@ -14,8 +12,6 @@ public struct ThreatScore: Sendable, Equatable {
     }
 }
 
-/// Weighted-sum scorer over normalized behaviour features. Linear and
-/// explainable by design; weights live in ThreatConfig.
 public struct ThreatScorer: Sendable {
     public let config: ThreatConfig
 
@@ -37,18 +33,12 @@ public struct ThreatScorer: Sendable {
         var value = totalWeight > 0
             ? parts.map { $0.value * $0.weight }.reduce(0, +) / totalWeight
             : 0
-        // Presence alone (persistent + facing + isolated + near the path) must
-        // never alert: require somebody closing in, or a track that reappeared.
-        // A strong speech signal bypasses the cap: words can threaten where
-        // bodies stand still.
         let closingIn = max(features.trend, features.speed, features.cornering)
         let strongSpeech = features.speech >= config.reasonThreshold
         let strongHand = features.handReach >= config.reasonThreshold
         if closingIn < config.motionMin, !features.reappearing, !strongSpeech, !strongHand {
             value = min(value, config.staticScoreCap)
         }
-        // Speech is additive (never normalized in): silent speech leaves
-        // every Phase 3 value bit-for-bit identical.
         value = min(1, value + features.speech * config.weightSpeech
             + features.handReach * config.weightHandReach
             + features.shouting * config.weightShouting

@@ -1,8 +1,3 @@
-"""Accounts: Supabase relay, profile rows, validation, auth guards.
-
-A fake `_call` plays Supabase; no network. Passwords and tokens are built
-at runtime so no secret-looking literal sits in the repo.
-"""
 
 import pytest
 from fastapi.testclient import TestClient
@@ -19,12 +14,11 @@ URL = "https://example-project.supabase.test"
 
 
 class FakeSupabase:
-    """Records calls and answers like Supabase would."""
 
     def __init__(self):
         self.calls: list[dict] = []
         self.profiles: dict[str, dict] = {}
-        self.users: dict[str, str] = {}  # email -> password
+        self.users: dict[str, str] = {}
         self.confirm_email = False
         self.down = False
 

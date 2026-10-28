@@ -2,7 +2,6 @@ import AVFoundation
 import CoreMedia
 import XCTest
 
-/// URLProtocol stub: records every upload and answers with a chosen status.
 final class EvidenceStubProtocol: URLProtocol {
     nonisolated(unsafe) static var requests: [URLRequest] = []
     nonisolated(unsafe) static var bodies: [Int] = []
@@ -150,8 +149,6 @@ final class EvidenceUploadTests: XCTestCase {
     }
 }
 
-/// The recorder end to end: real audio and video segments are written,
-/// uploaded through the stub, and deleted after a successful upload.
 final class EvidenceRecorderTests: XCTestCase {
     private var root: URL!
 

@@ -1,4 +1,3 @@
-"""Backend settings. Everything comes from environment variables (see /.env.example)."""
 
 import os
 from dataclasses import dataclass, field
@@ -20,10 +19,6 @@ def _int(name: str, default: int) -> int:
 
 @dataclass(frozen=True)
 class Settings:
-    # Meta Model API (Muse). Docs: https://dev.meta.ai/docs
-    # Base URL + auth header + Chat Completions (documented as the
-    # OpenAI-compatible messages-array endpoint). Model default is the
-    # documented Spark flagship; override with MUSE_MODEL.
     meta_model_base_url: str = field(
         default_factory=lambda: os.environ.get(
             "META_MODEL_API_BASE_URL", "https://api.meta.ai/v1"
@@ -41,18 +36,11 @@ class Settings:
     muse_calls_per_min: int = field(
         default_factory=lambda: _int("VERIFY_RATE_LIMIT_PER_MIN", 20)
     )
-    # SOS evidence (video and audio segments uploaded by the app). The Mac
-    # backend is the "cloud" for the demo; EVIDENCE_DIR can point at a synced
-    # or mounted bucket. If EVIDENCE_TOKEN is set, uploads must send it in
-    # the X-Evidence-Token header.
     evidence_dir: str = field(default_factory=lambda: os.environ.get("EVIDENCE_DIR", "evidence"))
     avatar_dir: str = field(default_factory=lambda: os.environ.get("AVATAR_DIR", "avatars"))
     evidence_token: str = field(default_factory=lambda: os.environ.get("EVIDENCE_TOKEN", ""))
     evidence_max_mb: int = field(default_factory=lambda: _int("EVIDENCE_MAX_MB", 80))
 
-    # Muse reasoning effort (minimal|low|medium|high). Measured on the labelled
-    # speech set: minimal is as accurate as the default at roughly a third of
-    # the latency (median 2.2 s vs ~6 s).
     speech_reasoning_effort: str = field(
         default_factory=lambda: os.environ.get("SPEECH_REASONING_EFFORT", "minimal")
     )
@@ -60,8 +48,6 @@ class Settings:
         default_factory=lambda: os.environ.get("VERIFY_REASONING_EFFORT", "low")
     )
 
-    # Live-link lifetime. An ended incident's link stops working this many
-    # hours after the SOS ended; an active one after the maximum below.
     incident_token_ttl_hours: float = field(
         default_factory=lambda: _float("INCIDENT_TOKEN_TTL_HOURS", 6.0)
     )
@@ -72,8 +58,6 @@ class Settings:
         default_factory=lambda: os.environ.get("INCIDENTS_PATH", "data/incidents.json")
     )
 
-    # Muse Voice Transcribe (realtime speech to text). The key stays here;
-    # the phone streams audio to /asr and this relays it to Meta.
     asr_upstream_url: str = field(
         default_factory=lambda: os.environ.get(
             "ASR_UPSTREAM_URL", "wss://api.meta.ai/v1/asr/realtime"
@@ -83,16 +67,10 @@ class Settings:
         default_factory=lambda: os.environ.get("ASR_MODEL", "muse-voice-transcribe-1.0")
     )
 
-    # Continuous conversation judging sends a text snippet every few seconds,
-    # so it gets its own budget and cannot starve /verify.
     speech_calls_per_min: int = field(
         default_factory=lambda: _int("SPEECH_RATE_LIMIT_PER_MIN", 40)
     )
 
-    # SAM 2 (local, optional). Mode: auto (try, fall back on slow/fail),
-    # sam2 (require; 503 if unavailable), muse-only (never try).
-    # Default is muse-only: the Phase 4 spike timed the tiny checkpoint at
-    # 9.1 s per 8-frame clip on CPU (budget 3 s). Use sam2/auto on GPU hardware.
     sam2_mode: str = field(default_factory=lambda: os.environ.get("SAM2_MODE", "muse-only"))
     sam2_checkpoint_path: str = field(
         default_factory=lambda: os.environ.get("SAM2_CHECKPOINT_PATH", "")
@@ -112,15 +90,12 @@ class Settings:
         default_factory=lambda: _float("VERIFY_CORRIDOR_HALF_WIDTH", 0.18)
     )
 
-    # Logging.
     verify_log_path: str = field(
         default_factory=lambda: os.environ.get(
             "VERIFY_LOG_PATH", "logs/verify.jsonl"
         )
     )
 
-    # Phase 6: SOS escalation. The app token guards every app-to-backend
-    # endpoint when set (local dev may leave it empty, with a warning).
     app_token: str = field(
         default_factory=lambda: os.environ.get("SAFEGUARD_APP_TOKEN", "")
     )
@@ -150,8 +125,6 @@ class Settings:
             "NOTIFY_LOG_PATH", "logs/notifications.jsonl"
         )
     )
-    # Accounts (Supabase). The anon key starts auth calls; the service-role
-    # key (server only, never sent to the app) writes the profile row.
     supabase_url: str = field(
         default_factory=lambda: os.environ.get("SUPABASE_URL", "").rstrip("/")
     )
@@ -161,8 +134,6 @@ class Settings:
     supabase_service_role_key: str = field(
         default_factory=lambda: os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
     )
-    # "local" (files, development) or "supabase" (state and recordings live
-    # in the Supabase project, for hosts whose disk does not last).
     storage_backend: str = field(
         default_factory=lambda: os.environ.get("STORAGE_BACKEND", "local").lower()
     )
@@ -172,8 +143,6 @@ class Settings:
     evidence_bucket: str = field(
         default_factory=lambda: os.environ.get("EVIDENCE_BUCKET", "safeguard-evidence")
     )
-    # Telegram by webhook instead of a polling loop (needed when the host
-    # scales to zero). Defaults on in Supabase mode.
     telegram_webhook: bool = field(
         default_factory=lambda: os.environ.get(
             "TELEGRAM_WEBHOOK",
@@ -186,7 +155,6 @@ class Settings:
     channels_path: str = field(
         default_factory=lambda: os.environ.get("CHANNELS_PATH", "data/channels.json")
     )
-    # Days a finished incident stays reviewable by its guardian.
     guardian_retention_days: int = field(
         default_factory=lambda: int(os.environ.get("GUARDIAN_RETENTION_DAYS", "30"))
     )

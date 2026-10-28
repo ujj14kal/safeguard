@@ -1,7 +1,5 @@
 import SwiftUI
 
-/// Emergency contacts tab: up to 5 contacts, invited over Telegram.
-/// A contact gets SOS alerts only after pressing Start on their link.
 struct ContactsView: View {
     @StateObject private var model = ProtectViewModel.shared
     @State private var newName = ""
@@ -58,7 +56,6 @@ struct ContactsView: View {
             .navigationTitle("Contacts")
             .onAppear { model.refreshContacts() }
             .onReceive(refreshTick) { _ in
-                // Poll while anyone is still unlinked; linked state sticks.
                 if model.sosContacts.contacts.contains(where: { !$0.linked }) {
                     model.refreshContacts()
                 }
@@ -153,7 +150,6 @@ struct ContactsView: View {
     }
 }
 
-/// Share sheet shown right after an invite is created.
 private struct ShareInviteView: View {
     let link: URL
     let done: () -> Void

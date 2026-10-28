@@ -1,8 +1,5 @@
 import AVFoundation
 
-/// Replay mode: feeds a recorded video file through the same pipeline as the
-/// camera. Used for development and demos (the Simulator has no camera).
-/// Loops by default. Frames are paced at the clip's nominal frame rate.
 final class VideoFileSource: NSObject, FrameSource {
     weak var delegate: (any FrameSourceDelegate)?
     let displayName = "Replay"
@@ -59,9 +56,6 @@ final class VideoFileSource: NSObject, FrameSource {
         let nominalRate = (try? await track.load(.nominalFrameRate)) ?? 0
         let fps = nominalRate > 0 ? Double(nominalRate) : 30
 
-        // iPhone clips are stored landscape with a rotation flag. A plain track
-        // output ignores it, so portrait clips would replay (and be detected)
-        // sideways. A video-composition output applies the preferred transform.
         let composition: AVMutableVideoComposition
         do {
             composition = try await AVMutableVideoComposition.videoComposition(withPropertiesOf: asset)
@@ -75,7 +69,6 @@ final class VideoFileSource: NSObject, FrameSource {
                 let frames = try await playOnce(
                     asset: asset, track: track, composition: composition, fps: fps
                 )
-                // A pass that yields nothing would otherwise loop hot forever.
                 if frames == 0 && !stopped {
                     fail(.readerFailed("The video contains no frames."))
                     return
@@ -88,7 +81,6 @@ final class VideoFileSource: NSObject, FrameSource {
         stateLock.withLock { _isRunning = false }
     }
 
-    /// Plays the clip once; returns how many frames were delivered.
     private func playOnce(
         asset: AVAsset, track: AVAssetTrack, composition: AVVideoComposition, fps: Double
     ) async throws -> Int {

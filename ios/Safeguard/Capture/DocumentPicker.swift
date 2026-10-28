@@ -1,8 +1,6 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// System video picker for Replay mode. The file is copied into the sandbox,
-/// so no security-scoped handling is needed.
 struct DocumentPicker: UIViewControllerRepresentable {
     var onPick: (URL) -> Void
 

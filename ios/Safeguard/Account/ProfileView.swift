@@ -1,8 +1,6 @@
 import PhotosUI
 import SwiftUI
 
-/// A photo chooser (optional everywhere it appears): picks from the photo
-/// library without any permission prompt, hands back a UIImage.
 struct PhotoChooser: View {
     @Binding var image: UIImage?
     var title: LocalizedStringKey = "Choose a photo"
@@ -26,7 +24,6 @@ struct PhotoChooser: View {
     }
 }
 
-/// The signed-in person's profile: photo (optional), name, phone, email.
 struct ProfileView: View {
     @StateObject private var store = AccountStore.shared
     @State private var name = ""

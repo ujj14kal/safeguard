@@ -17,11 +17,6 @@ enum CloudEarState: Equatable {
     }
 }
 
-/// Streams the microphone to Meta's Muse Voice Transcribe through the
-/// backend's `/asr` relay and hands back live text: a growing partial while
-/// someone talks, and a finished turn when they pause. It reconnects by
-/// itself, and the listener keeps Apple's recogniser running underneath, so a
-/// dropped connection never leaves the app deaf.
 final class CloudEar: @unchecked Sendable {
     typealias TextHandler = @Sendable (_ text: String, _ isFinal: Bool) -> Void
 
@@ -133,8 +128,6 @@ final class CloudEar: @unchecked Sendable {
         }
     }
 
-    /// The connection ended or failed: try again after a growing delay while
-    /// the ear is still wanted.
     private func lost(_ reason: String, generation gen: Int) {
         let delay: TimeInterval? = lock.withLock {
             guard generation == gen, wanted else { return nil }
@@ -152,9 +145,6 @@ final class CloudEar: @unchecked Sendable {
         }
     }
 
-    /// One microphone buffer. Frames are sent only while the relay is ready,
-    /// and dropped (never queued up) if the network falls behind: the
-    /// service rejects audio that arrives slower than real time.
     func feed(_ buffer: AVAudioPCMBuffer) {
         guard lock.withLock({ wanted && ready }), let samples = resampler.convert(buffer) else { return }
         let (frames, task): ([Data], URLSessionWebSocketTask?) = lock.withLock {

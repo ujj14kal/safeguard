@@ -1,7 +1,5 @@
 import SwiftUI
 
-/// Activity tab: local SOS history, newest first. The store never leaves
-/// the phone; rows read as one VoiceOver sentence each.
 struct ActivityView: View {
     @StateObject private var model = ProtectViewModel.shared
     @State private var showingDeleteAll = false
@@ -144,7 +142,6 @@ struct ActivityDetailView: View {
     }
 }
 
-/// Display text for history entries (one place, so the catalog keys match).
 enum ActivityText {
     static func causeTitle(_ cause: String) -> String {
         switch cause {
@@ -169,7 +166,6 @@ enum ActivityText {
         )
     }
 
-    /// One VoiceOver sentence per row.
     static func voiceOver(_ entry: IncidentHistoryEntry) -> String {
         String(format: String(localized: "SOS on %@: %@, %@. Contacts alerted: %d."),
             entry.startedAt.formatted(date: .abbreviated, time: .shortened) as NSString,

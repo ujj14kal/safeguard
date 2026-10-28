@@ -1,8 +1,6 @@
 import CoreGraphics
 import XCTest
 
-/// Feature math on synthetic histories. Times are explicit seconds at a
-/// simulated 5 Hz; boxes are normalized Vision coordinates.
 final class FeatureExtractorTests: XCTestCase {
     private func box(cx: Double, cy: Double = 0.5, w: Double = 0.15, h: Double) -> CGRect {
         CGRect(x: cx - w / 2, y: cy - h / 2, width: w, height: h)
@@ -27,8 +25,6 @@ final class FeatureExtractorTests: XCTestCase {
         )
     }
 
-    /// Feed one track's samples (plus `others` background tracks); returns
-    /// the track's features at the last sample time.
     @discardableResult
     private func feed(
         _ extractor: FeatureExtractor,
@@ -64,8 +60,6 @@ final class FeatureExtractorTests: XCTestCase {
         }
     }
 
-    // MARK: - Distance trend / approach speed
-
     func testTrendGrowing() {
         let extractor = FeatureExtractor()
         let features = feed(extractor, id: 1, samples: ramp(from: 0.20, to: 0.38, over: 3))
@@ -97,8 +91,6 @@ final class FeatureExtractorTests: XCTestCase {
         XCTAssertLessThan(features?.speed ?? 1, 0.2)
     }
 
-    // MARK: - Persistence
-
     func testPersistenceFull() {
         let extractor = FeatureExtractor()
         let samples = (0..<30).map { (Double($0) * 0.2, box(cx: 0.5, h: 0.25)) }
@@ -129,8 +121,6 @@ final class FeatureExtractorTests: XCTestCase {
         XCTAssertEqual(features?.reappearing, false)
     }
 
-    // MARK: - Facing
-
     func testFacingFrontal() {
         let extractor = FeatureExtractor()
         let samples = (0..<5).map { (Double($0) * 0.2, box(cx: 0.5, h: 0.25)) }
@@ -153,15 +143,12 @@ final class FeatureExtractorTests: XCTestCase {
     }
 
     func testFacingBackOfHead() {
-        // No face keypoints at all, wide shoulders: must not count as facing.
         let pose = BodyPose(
             leftShoulder: .init(point: CGPoint(x: 0.44, y: 0.55), confidence: 0.9),
             rightShoulder: .init(point: CGPoint(x: 0.56, y: 0.55), confidence: 0.9)
         )
         XCTAssertEqual(pose.facingScore(using: ThreatConfig()), 0)
     }
-
-    // MARK: - Isolation
 
     func testIsolationAlone() {
         let extractor = FeatureExtractor()
@@ -183,8 +170,6 @@ final class FeatureExtractorTests: XCTestCase {
         let features = feed(extractor, id: 1, samples: samples, others: 1)
         XCTAssertEqual(features?.isolation ?? -1, 0.75, accuracy: 1e-9)
     }
-
-    // MARK: - Blocking / cornering
 
     func testBlockingInCorridor() {
         let extractor = FeatureExtractor()
@@ -214,7 +199,6 @@ final class FeatureExtractorTests: XCTestCase {
     }
 
     func testCorneringCrossing() {
-        // Approaching fast but moving sideways: bearing not stable, no intercept.
         let extractor = FeatureExtractor()
         let samples = (0..<16).map { step -> (Double, CGRect) in
             let t = Double(step) * 0.2
@@ -226,11 +210,7 @@ final class FeatureExtractorTests: XCTestCase {
         XCTAssertEqual(features?.cornering ?? -1, 0)
     }
 
-    // MARK: - Minimum history (new tracks must not read box jitter as approach)
-
     func testNewTrackWithTwoSamplesHasNoTrendOrSpeed() {
-        // Probe case: two samples, height 0.30 -> 0.32. Used to give trend 1.0
-        // and speed 0.83, i.e. an alert half a second after someone appears.
         let extractor = FeatureExtractor()
         let features = feed(extractor, id: 1, samples: [
             (0.0, box(cx: 0.5, h: 0.30)), (0.2, box(cx: 0.5, h: 0.32)),
@@ -242,13 +222,11 @@ final class FeatureExtractorTests: XCTestCase {
 
     func testTrendNeedsMinimumSamplesAndSpan() {
         let config = ThreatConfig()
-        // 5 samples spanning 0.8 s: below both minimums, even though steep.
         let tooShort = feed(
             FeatureExtractor(), id: 1, samples: ramp(from: 0.20, to: 0.30, over: 0.8)
         )
         XCTAssertLessThan(0.8, config.minTrendSpan)
         XCTAssertEqual(tooShort?.trend ?? -1, 0)
-        // 6 samples spanning exactly 1.0 s: enough, and the growth counts.
         let enough = feed(
             FeatureExtractor(), id: 1, samples: ramp(from: 0.20, to: 0.35, over: 1.0)
         )
@@ -256,11 +234,7 @@ final class FeatureExtractorTests: XCTestCase {
         XCTAssertGreaterThan(enough?.speed ?? 0, 0.9)
     }
 
-    // MARK: - Persistence from timestamps, not sample count
-
     func testPersistenceIsIndependentOfDetectionRate() {
-        // Same 3.6 s of presence, sampled at 2.5 Hz and at 5 Hz. Counting
-        // samples x 0.2 s used to make the slower device look half as persistent.
         let slow = feed(
             FeatureExtractor(), id: 1,
             samples: (0..<10).map { (Double($0) * 0.4, box(cx: 0.5, h: 0.25)) }
@@ -276,8 +250,6 @@ final class FeatureExtractorTests: XCTestCase {
     }
 
     func testLongGapIsNotCountedAsPresence() {
-        // Two 1 s runs separated by 5 s of absence: only the matched time
-        // counts (plus the reappearing bonus), not the empty gap between.
         let extractor = FeatureExtractor()
         var samples = (0..<6).map { (Double($0) * 0.2, box(cx: 0.5, h: 0.25)) }
         samples += (0..<6).map { (6.0 + Double($0) * 0.2, box(cx: 0.5, h: 0.25)) }
@@ -290,8 +262,6 @@ final class FeatureExtractorTests: XCTestCase {
         )
     }
 
-    // MARK: - Housekeeping
-
     func testNoSamplesReturnsNil() {
         XCTAssertNil(FeatureExtractor().features(for: 999, at: 10))
     }
@@ -302,8 +272,6 @@ final class FeatureExtractorTests: XCTestCase {
         extractor.reset()
         XCTAssertNil(extractor.features(for: 1, at: 0))
     }
-
-    // MARK: - Speech stamping (global signal, fresh only)
 
     func testSpeechStampsWhileFresh() {
         let extractor = FeatureExtractor()
@@ -333,7 +301,6 @@ final class FeatureExtractorTests: XCTestCase {
     }
 }
 
-/// Hands, expression and the close-person sweep.
 final class GestureFeatureTests: XCTestCase {
     private let config = ThreatConfig()
 
@@ -437,7 +404,6 @@ final class GestureFeatureTests: XCTestCase {
     }
 }
 
-/// The listener must restart after every final result or quiet task end.
 final class ListeningRestartTests: XCTestCase {
     func testTaskEndBumpsGenerationAndRestarts() {
         var session = ListeningSession()

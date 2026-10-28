@@ -1,7 +1,5 @@
 import Foundation
 
-/// The signed-in person's profile, as the backend returns it. Email and
-/// phone live on this phone only as a cached copy for the Settings screen.
 public struct AccountProfile: Codable, Equatable, Sendable {
     public var id: String
     public var email: String
@@ -9,7 +7,6 @@ public struct AccountProfile: Codable, Equatable, Sendable {
     public var phone: String?
     public var language: String
 
-    /// Id of the on-phone-only profile used when the server cannot be reached.
     public static let offlineID = "offline"
     public var isOffline: Bool { id == Self.offlineID }
 
@@ -33,21 +30,17 @@ public struct AccountSession: Codable, Equatable, Sendable {
         self.expiresAt = expiresAt
     }
 
-    /// Refresh a little early so a call never races the expiry.
     public func isExpired(now: Date = Date(), margin: TimeInterval = 60) -> Bool {
         now.addingTimeInterval(margin) >= expiresAt
     }
 }
 
-/// What sign-up / sign-in produced. `session` is nil when the project
-/// requires the email link to be opened first.
 public struct AccountAuthResult: Equatable, Sendable {
     public var profile: AccountProfile
     public var session: AccountSession?
     public var needsConfirmation: Bool
 }
 
-/// A failure with text the person can read.
 public struct AccountError: Error, Equatable, LocalizedError, Sendable {
     public var message: String
     public var status: Int?
@@ -60,8 +53,6 @@ public struct AccountError: Error, Equatable, LocalizedError, Sendable {
     public var errorDescription: String? { message }
 }
 
-/// Client-side checks, mirroring the server so mistakes show before a
-/// network call. The server stays the authority.
 public enum AccountValidation {
     public static let minPasswordLength = 8
     public static let maxPasswordLength = 72
@@ -76,7 +67,6 @@ public enum AccountValidation {
         return domain.distance(from: dot, to: domain.endIndex) > 2
     }
 
-    /// Empty is fine (optional); otherwise 7-19 digits/spaces/dashes.
     public static func phoneValid(_ raw: String) -> Bool {
         let text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         if text.isEmpty { return true }
@@ -98,7 +88,6 @@ public enum AccountValidation {
         return nil
     }
 
-    /// First thing wrong with a sign-up form, or nil when it can be sent.
     public static func signupProblem(
         name: String, email: String, password: String, phone: String, consent: Bool
     ) -> String? {

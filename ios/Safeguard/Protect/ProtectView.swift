@@ -28,20 +28,15 @@ struct ProtectView: View {
         .task { await autoStartIfWanted() }
     }
 
-    /// "Everything automatic": protection starts when the app opens, once
-    /// setup is done and the camera is already allowed (never a surprise
-    /// permission prompt). Off in Settings if unwanted.
     private func autoStartIfWanted() async {
         guard autoStart, setupComplete, !autoStartTried, !model.isProtecting,
               SetupPermissions.status(of: .camera) == .granted
         else { return }
         autoStartTried = true
-        try? await Task.sleep(for: .milliseconds(3900)) // after the splash
+        try? await Task.sleep(for: .milliseconds(3900))
         guard !model.isProtecting else { return }
         await model.startCamera()
     }
-
-    // MARK: - HUD (protecting): full-screen camera plus light chrome
 
     private var hudView: some View {
         ZStack {
@@ -113,9 +108,6 @@ struct ProtectView: View {
         .onTapGesture(count: 2) { model.tapCheckIn() }
     }
 
-    /// Near-black battery saver: the camera keeps running underneath.
-    /// Anything needing the wearer's eyes lifts it automatically; tapping
-    /// anywhere or the brighten button lifts it by hand.
     private var dimOverlay: some View {
         ZStack {
             Color.black.opacity(0.93)
@@ -149,7 +141,6 @@ struct ProtectView: View {
         }
     }
 
-    /// Brief on-screen feedback for voice actions (HUD and idle alike).
     private func toastBubble(_ text: String) -> some View {
         Text(text)
             .font(.footnote)
@@ -198,8 +189,6 @@ struct ProtectView: View {
     private var hudBottomBar: some View {
         VStack(spacing: DS.Spacing.small) {
             if debugOverlay {
-                // Debug only: what the recogniser just heard, so you can see
-                // whether Hindi/English is being picked up at all.
                 (Text(verbatim: heardLine + "\n\(model.judgeStatus)\n\(model.latencyLine)\nCues: \(model.cueLine.isEmpty ? "none" : model.cueLine) • rude gestures: \(model.unwantedGestureCount)/5\n")
                     + Text(format: "Apple ear on • %@", model.cloudStatus))
                     .font(.footnote.monospaced())
@@ -230,7 +219,6 @@ struct ProtectView: View {
         .padding()
     }
 
-    /// Auto-SOS countdown after a distress word: big number, one big button.
     private var countdownCard: some View {
         VStack(spacing: DS.Spacing.medium) {
             Label("Auto-SOS starting", systemImage: "timer")
@@ -266,15 +254,11 @@ struct ProtectView: View {
         .accessibilityElement(children: .contain)
     }
 
-    /// Announces each countdown second (VoiceOver reads the bare number);
-    /// zero is silent because the SOS screen announces itself next.
     private func announceCountdown(_ secs: Int) {
         guard secs > 0 else { return }
         UIAccessibility.post(notification: .announcement, argument: "\(secs)")
     }
 
-    /// Red banner for concerning talk: stays a few seconds, offers the
-    /// safety measures (the same path as saying the unsafe phrase).
     private func flagCard(_ flag: ConversationFlag) -> some View {
         VStack(spacing: DS.Spacing.small) {
             Label(flag.label, systemImage: "exclamationmark.triangle.fill")
@@ -298,8 +282,6 @@ struct ProtectView: View {
         .accessibilityLabel(Text(format: "%@. Start the safety measures?", flag.label))
     }
 
-    /// The spoken question's on-screen equivalent on the HUD: buttons, code
-    /// phrase, or double tap.
     private var checkInCard: some View {
         VStack(spacing: DS.Spacing.medium) {
             Text("No reply in 10 seconds starts the SOS.")
@@ -317,7 +299,6 @@ struct ProtectView: View {
         .accessibilityLabel("Are you safe?")
     }
 
-    /// Calm stay-quiet cue on the HUD (large text, announced once).
     private func hudCue(_ text: String) -> some View {
         Text(text)
             .font(.system(.title3, design: .rounded, weight: .semibold))
@@ -330,8 +311,6 @@ struct ProtectView: View {
             }
             .accessibilityAddTraits(.isHeader)
     }
-
-    // MARK: - Idle
 
     private var idleView: some View {
         NavigationStack {
@@ -392,7 +371,6 @@ struct ProtectView: View {
         }
     }
 
-    /// Big calm shield with a soft glow that breathes.
     private var hero: some View {
         VStack(spacing: DS.Spacing.medium) {
             ZStack {
@@ -440,7 +418,6 @@ struct ProtectView: View {
         }
     }
 
-    /// One line on readiness, linking to the Dashboard for details.
     private var readinessPill: some View {
         let items = Readiness.items(ReadinessInput(
             camera: SetupPermissions.status(of: .camera),
@@ -476,7 +453,6 @@ struct ProtectView: View {
         .onAppear { model.checkBackend() }
     }
 
-    /// Short voice-command list. Keep in sync with VoiceCommandParser.
     private var voiceCommandsCard: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.small) {
             HStack {

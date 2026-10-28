@@ -1,8 +1,5 @@
 import SwiftUI
 
-/// Create an account or sign in. Used as a setup step and from Settings.
-/// The app works without an account; this adds a profile that is backed
-/// up on the Safeguard server (name, email, optional phone, language).
 struct AccountFlowView: View {
     enum Mode: String, CaseIterable, Identifiable {
         case create, signIn
@@ -24,7 +21,6 @@ struct AccountFlowView: View {
 
     private enum Field { case name, email, password, phone, guardian }
 
-    /// Called when an account is ready (signed in) or the person skips.
     var onFinished: (() -> Void)?
     var allowSkip = false
 
@@ -84,8 +80,6 @@ struct AccountFlowView: View {
         .onAppear { if name.isEmpty { name = wearerName } }
     }
 
-    /// Shown only when the server did not answer: use the app now, back it
-    /// up later from Settings.
     private var offlineOffer: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Can't reach the Safeguard server. You can still use the app on this phone and sign in later in Settings.")
@@ -271,7 +265,6 @@ struct AccountFlowView: View {
     }
 }
 
-/// Setup step 2: the account (required).
 struct SetupAccountStep: View {
     var onFinished: () -> Void
 

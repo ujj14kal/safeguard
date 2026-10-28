@@ -1,7 +1,5 @@
 import Foundation
 
-/// What the on-device speech matcher heard. A small, visible category set —
-/// whitebox, no hidden logic. Categories cross to /verify-speech unchanged.
 public enum SpeechCategory: String, Sendable, Equatable, CaseIterable, Codable {
     case threat
     case coercion
@@ -9,15 +7,9 @@ public enum SpeechCategory: String, Sendable, Equatable, CaseIterable, Codable {
     case proposition
     case abuse
     case distress
-    /// Cuss words and angry shouting aimed at the wearer. Tracked always;
-    /// one word is only a nudge, repetition is what escalates.
     case anger
 }
 
-/// One tokeniser for every speech consumer (matcher, code phrases, voice
-/// commands). Hindi recognisers vary in spelling the same word: nukta,
-/// chandrabindu and zero-width joiners are normalised away on BOTH the
-/// patterns and the transcript, so "ज़ोर" and "जोर" match each other.
 public enum SpeechText {
     public static func words(in text: String) -> [String] {
         normalised(text)
@@ -25,10 +17,6 @@ public enum SpeechText {
             .filter { !$0.isEmpty }
     }
 
-    /// Spelling-tolerant key for Latin words. Hinglish has no fixed spelling
-    /// (chutiya / chutia / chootiya), so repeated letters, long vowels and
-    /// trailing vowels are folded away on both sides before comparing.
-    /// Non-Latin words are returned unchanged.
     public static func fuzzyKey(_ word: String) -> String {
         guard word.unicodeScalars.allSatisfy({ $0.isASCII }) else { return word }
         var s = word
@@ -41,21 +29,16 @@ public enum SpeechText {
         }
         var folded = ""
         for ch in s where folded.last != ch { folded.append(ch) }
-        // Drop trailing vowels on longer words: saala / saale / sala, chutiya / chutia.
         while folded.count > 4, let last = folded.last, "aeiouh".contains(last) {
             folded.removeLast()
         }
         return folded
     }
 
-    /// Words match when their fuzzy keys are equal, or within one edit for
-    /// keys of six or more letters (bhosdike / bhosadike).
     public static func wordsEqual(_ a: String, _ b: String) -> Bool {
         a == b || keysEqual(fuzzyKey(a), fuzzyKey(b))
     }
 
-    /// Same comparison on keys already computed by `fuzzyKey` (the matcher
-    /// computes each key once instead of per comparison).
     public static func keysEqual(_ ka: String, _ kb: String) -> Bool {
         if ka == kb { return true }
         guard ka.count >= 6, kb.count >= 6, abs(ka.count - kb.count) <= 1,
@@ -80,8 +63,8 @@ public enum SpeechText {
         var scalars = String.UnicodeScalarView()
         for scalar in text.lowercased().decomposedStringWithCanonicalMapping.unicodeScalars {
             switch scalar.value {
-            case 0x093C, 0x200C, 0x200D: continue // nukta, ZWNJ, ZWJ
-            case 0x0901: scalars.append(Unicode.Scalar(0x0902)!) // chandrabindu -> anusvara
+            case 0x093C, 0x200C, 0x200D: continue
+            case 0x0901: scalars.append(Unicode.Scalar(0x0902)!)
             default: scalars.append(scalar)
             }
         }
@@ -89,14 +72,10 @@ public enum SpeechText {
     }
 }
 
-/// Languages the listener can transcribe. One recognizer runs at a time;
-/// Hindi (hi-IN) writes English words in Latin, so Hinglish still works, and
-/// the pattern list covers Devanagari AND romanised Hindi.
 public enum SpeechLocale {
     public static let english = "en-IN"
     public static let hindi = "hi-IN"
 
-    /// "auto" follows the iPhone's first language (Hindi -> hi-IN, else en-IN).
     public static func resolve(
         setting: String, preferredLanguages: [String], region: String? = nil
     ) -> String {
@@ -104,16 +83,12 @@ public enum SpeechLocale {
         case "hi", hindi: return hindi
         case "en", english: return english
         default:
-            // Automatic: Hindi when the iPhone speaks Hindi OR is set to
-            // India, because speech there is routinely mixed Hindi-English.
             if preferredLanguages.first?.lowercased().hasPrefix("hi") == true { return hindi }
             return region?.uppercased() == "IN" ? hindi : english
         }
     }
 }
 
-/// One matchable phrase: lowercase words, matched whole-word and
-/// case-insensitively. Severity is pre-guard (quotation/negation discount it).
 public struct SpeechPattern: Sendable, Equatable {
     public var phrase: String
     public var category: SpeechCategory
@@ -126,40 +101,17 @@ public struct SpeechPattern: Sendable, Equatable {
     }
 }
 
-/// Every knob for the conversation listener. ThreatConfig-style: tune here,
-/// never at call sites. The pattern list is a starter set — real-world
-/// tuning (accents, phrasing, languages) is unverified until device testing.
 public struct SpeechConfig: Sendable {
     public init() {}
 
-    // MARK: - Window and snippet
-
-    /// Seconds of transcript kept in the in-memory rolling window.
     public var windowSeconds: TimeInterval = 20
-    /// Max snippet characters sent to /verify-speech on a trigger.
     public var snippetMaxChars: Int = 400
 
-    // MARK: - Recognition restarts
-
-    /// The system ends a recognition request after ~60 s; restart before
-    /// that with no gap (each audio buffer reaches exactly one request).
     public var restartIntervalSeconds: TimeInterval = 50
 
-    // MARK: - Backend calls
-
-    /// Minimum seconds between /verify-speech calls: a continuous rant
-    /// sends one snippet, then refires only with fresh speech.
     public var speechVerifyMinInterval: TimeInterval = 30
 
-    // MARK: - Guards
-
-    /// Severity multiplier when the match sits inside double quotes
-    /// (reported speech: she said "come with me").
     public var quotationFactor: Double = 0.3
-    /// Severity multiplier when a negation phrase stands within
-    /// `negationDistance` words before a non-distress match
-    /// ("I would never hurt you"). Distress is NEVER discounted:
-    /// "don't touch me" from the wearer is danger, not safety.
     public var negationFactor: Double = 0.3
     public var negationDistance: Int = 2
     public var negationPhrases: [String] = [
@@ -167,22 +119,14 @@ public struct SpeechConfig: Sendable {
         "nahi", "nahin", "kabhi nahi", "नहीं", "कभी नहीं",
     ]
 
-    /// This many abuse/anger matches inside the window count as sustained
-    /// hostility: severity is raised to `repeatedAngerSeverity` (a single
-    /// cuss word stays a nudge, because ordinary swearing is common).
     public var repeatedAngerCount: Int = 3
     public var repeatedAngerSeverity: Double = 0.75
 
-    /// Benign frames that CANCEL a match they contain ("killing time"
-    /// contains "kill" talk but is not a threat; the film quote is the
-    /// classic false positive).
     public var benignPhrases: [String] = [
         "kill time", "killing time", "hurt feelings", "dying of laughter",
         "dead tired", "dead battery", "follow me on instagram",
         "come with me if you want to live", "time pass",
     ]
-
-    // MARK: - Patterns (starter set; tune on real transcripts)
 
     public var patterns: [SpeechPattern] = SpeechConfig.defaultPatterns()
 
@@ -192,8 +136,6 @@ public struct SpeechConfig: Sendable {
 
     static var englishPatterns: [SpeechPattern] {
         [
-            // Explicit threats, second person (first-person versions like
-            // "don't hurt me" live under distress instead).
             SpeechPattern(phrase: "kill you", category: .threat, severity: 1.0),
             SpeechPattern(phrase: "hurt you", category: .threat, severity: 1.0),
             SpeechPattern(phrase: "i will kill you", category: .threat, severity: 1.0),
@@ -206,7 +148,6 @@ public struct SpeechConfig: Sendable {
                 phrase: "i know where you live", category: .threat, severity: 1.0
             ),
             SpeechPattern(phrase: "you will pay", category: .threat, severity: 0.9),
-            // Coercion: orders to follow, come along, or stay silent.
             SpeechPattern(phrase: "come with me", category: .coercion, severity: 0.9),
             SpeechPattern(phrase: "come with us", category: .coercion, severity: 0.9),
             SpeechPattern(phrase: "get in the car", category: .coercion, severity: 0.9),
@@ -216,7 +157,6 @@ public struct SpeechConfig: Sendable {
             SpeechPattern(phrase: "don't scream", category: .coercion, severity: 0.9),
             SpeechPattern(phrase: "do not scream", category: .coercion, severity: 0.9),
             SpeechPattern(phrase: "don't shout", category: .coercion, severity: 0.85),
-            // Pursuit: following, or blocking the wearer's leaving.
             SpeechPattern(phrase: "follow you", category: .pursuit, severity: 0.85),
             SpeechPattern(phrase: "following you", category: .pursuit, severity: 0.85),
             SpeechPattern(phrase: "don't run", category: .pursuit, severity: 0.85),
@@ -227,7 +167,6 @@ public struct SpeechConfig: Sendable {
             SpeechPattern(
                 phrase: "where are you going", category: .pursuit, severity: 0.75
             ),
-            // Persistent unwanted propositions.
             SpeechPattern(
                 phrase: "give me your number", category: .proposition, severity: 0.7
             ),
@@ -238,7 +177,6 @@ public struct SpeechConfig: Sendable {
             SpeechPattern(phrase: "don't ignore me", category: .proposition, severity: 0.65),
             SpeechPattern(phrase: "do not ignore me", category: .proposition, severity: 0.65),
             SpeechPattern(phrase: "talk to me", category: .proposition, severity: 0.6),
-            // Abuse directed at the wearer.
             SpeechPattern(phrase: "shut up", category: .abuse, severity: 0.6),
             SpeechPattern(
                 phrase: "nobody will help you", category: .abuse, severity: 0.85
@@ -255,8 +193,6 @@ public struct SpeechConfig: Sendable {
             SpeechPattern(
                 phrase: "scream all you want", category: .abuse, severity: 0.8
             ),
-            // Distress: the WEARER's own cries for help. High severity,
-            // never negation-discounted.
             SpeechPattern(phrase: "help me", category: .distress, severity: 0.95),
             SpeechPattern(phrase: "somebody help", category: .distress, severity: 0.9),
             SpeechPattern(phrase: "please help", category: .distress, severity: 0.85),
@@ -273,15 +209,11 @@ public struct SpeechConfig: Sendable {
         ]
     }
 
-    /// Hindi in Devanagari and romanised (Hinglish) spellings, because the
-    /// recogniser may return either. Starter set: spellings vary widely, so
-    /// real-world tuning on recorded speech is still needed.
     static var hindiPatterns: [SpeechPattern] {
         func p(_ phrase: String, _ category: SpeechCategory, _ severity: Double) -> SpeechPattern {
             SpeechPattern(phrase: phrase, category: category, severity: severity)
         }
         return [
-            // Threats
             p("maar dunga", .threat, 1.0), p("maar dalunga", .threat, 1.0),
             p("jaan se maar dunga", .threat, 1.0), p("jaan se maar dalunga", .threat, 1.0),
             p("kaat dunga", .threat, 1.0), p("dekh lunga tujhe", .threat, 0.9),
@@ -290,26 +222,22 @@ public struct SpeechConfig: Sendable {
             p("जान से मार दूंगा", .threat, 1.0), p("काट दूंगा", .threat, 1.0),
             p("देख लूंगा तुझे", .threat, 0.9), p("तुझे छोड़ूंगा नहीं", .threat, 0.95),
             p("उठा लूंगा", .threat, 0.95), p("जान से मार दूँगा", .threat, 1.0),
-            // Coercion
             p("chal mere saath", .coercion, 0.9), p("gaadi mein baith", .coercion, 0.9),
             p("chup raho", .coercion, 0.85), p("chup kar", .coercion, 0.8),
             p("chillana mat", .coercion, 0.9), p("awaaz mat karna", .coercion, 0.9),
             p("चल मेरे साथ", .coercion, 0.9), p("गाड़ी में बैठ", .coercion, 0.9),
             p("चुप रहो", .coercion, 0.85), p("चुप कर", .coercion, 0.8),
             p("चिल्लाना मत", .coercion, 0.9), p("आवाज़ मत करना", .coercion, 0.9),
-            // Pursuit
             p("peecha kar raha", .pursuit, 0.85), p("peechha mat karo", .pursuit, 0.85),
             p("ruk ja", .pursuit, 0.8), p("bhaagna mat", .pursuit, 0.85),
             p("kahan ja rahi hai", .pursuit, 0.75), p("kahan ja rahi ho", .pursuit, 0.75),
             p("पीछा कर रहा", .pursuit, 0.85), p("रुक जा", .pursuit, 0.8),
             p("भागना मत", .pursuit, 0.85), p("कहाँ जा रही है", .pursuit, 0.75),
             p("कहाँ जा रही हो", .pursuit, 0.75),
-            // Unwanted propositions
             p("number de do", .proposition, 0.7), p("apna number do", .proposition, 0.7),
             p("mere saath chalo", .proposition, 0.75), p("ek baar baat kar", .proposition, 0.65),
             p("नंबर दे दो", .proposition, 0.7), p("अपना नंबर दो", .proposition, 0.7),
             p("मेरे साथ चलो", .proposition, 0.75), p("एक बार बात कर", .proposition, 0.65),
-            // Distress (the wearer)
             p("bachao", .distress, 0.95), p("madad karo", .distress, 0.95),
             p("mujhe chhod do", .distress, 0.95), p("chhodo mujhe", .distress, 0.95),
             p("haath mat lagao", .distress, 0.95), p("door hato", .distress, 0.9),
@@ -321,9 +249,6 @@ public struct SpeechConfig: Sendable {
         ]
     }
 
-    /// Cuss words and anger, English and Hindi/Hinglish. Mild ones sit below
-    /// the check-in threshold on their own; the matcher escalates on
-    /// repetition (`repeatedAngerCount`).
     static var angerPatterns: [SpeechPattern] {
         func p(_ phrase: String, _ severity: Double) -> SpeechPattern {
             SpeechPattern(phrase: phrase, category: .anger, severity: severity)
@@ -333,7 +258,6 @@ public struct SpeechConfig: Sendable {
             p("bastard", 0.6), p("asshole", 0.6), p("slut", 0.65), p("whore", 0.65),
             p("cunt", 0.65), p("motherfucker", 0.65), p("shit", 0.4), p("idiot", 0.4),
             p("i hate you", 0.5), p("get lost", 0.5), p("piss off", 0.5),
-            // Hinglish gaali
             p("madarchod", 0.65), p("behenchod", 0.65), p("bhenchod", 0.65),
             p("bhosdike", 0.65), p("bhosdi", 0.6), p("chutiya", 0.6), p("chutiye", 0.6),
             p("gandu", 0.6), p("harami", 0.55), p("haramzada", 0.6), p("haramzade", 0.6),
@@ -341,23 +265,17 @@ public struct SpeechConfig: Sendable {
             p("kutti", 0.55), p("randi", 0.65), p("raand", 0.65), p("saali", 0.45),
             p("saala", 0.4), p("lodu", 0.55), p("lund", 0.55), p("chodu", 0.55),
             p("bakchod", 0.45), p("tatti", 0.4), p("saale", 0.4),
-            // Devanagari gaali
             p("मादरचोद", 0.65), p("बहनचोद", 0.65), p("भोसड़ीके", 0.65),
             p("चूतिया", 0.6), p("चुतिया", 0.6), p("गांडू", 0.6), p("हरामी", 0.55),
             p("हरामज़ादा", 0.6), p("कमीना", 0.5), p("कमीने", 0.5), p("कुत्ते", 0.5),
             p("कुत्ता", 0.5), p("कुतिया", 0.55), p("रंडी", 0.65), p("साली", 0.45),
             p("साला", 0.4), p("साले", 0.4), p("कमीनी", 0.5), p("हरामखोर", 0.55), p("haramkhor", 0.55), p("लौडू", 0.55), p("लंड", 0.55), p("बकचोद", 0.45),
             p("चोदू", 0.55), p("भाड़ में जा", 0.5), p("चुप कर साली", 0.6),
-            // Anger directed at the wearer
             p("tujhe chhodunga nahi", 0.8), p("teri aukaat", 0.55), p("aukaat mein reh", 0.6),
             p("तेरी औकात", 0.55), p("औकात में रह", 0.6),
         ]
     }
 
-    /// Large second vocabulary: Hinglish (Latin) spellings first, because the
-    /// speech model writes Hinglish in Latin letters, then Devanagari. Spelling
-    /// variants are absorbed by the matcher's fuzzy key, so one spelling of a
-    /// word covers chutiya / chutia / chootiya.
     static var extraVocabulary: [SpeechPattern] {
         func a(_ phrase: String, _ severity: Double = 0.55) -> SpeechPattern {
             SpeechPattern(phrase: phrase, category: .anger, severity: severity)
@@ -375,7 +293,6 @@ public struct SpeechConfig: Sendable {
             SpeechPattern(phrase: phrase, category: .pursuit, severity: severity)
         }
         return [
-            // ---- Unwanted propositions / harassment (Hinglish)
             q("free ho kya"), q("free ho aap"), q("free hai kya"), q("aaj raat ko free"),
             q("raat ko free"), q("aaj raat free"), q("aaj raat kya kar rahi ho"),
             q("raat ko milte hain"), q("raat ko milo"), q("aaj raat milo"),
@@ -400,7 +317,6 @@ public struct SpeechConfig: Sendable {
             q("come with me tonight"), q("let's go to a hotel"), q("want to have fun"),
             q("you look sexy"), q("nice figure"), q("nice body"), q("send me pics"),
             q("send nudes"), q("show me your"), q("sleep with me"), q("sleep with me tonight"),
-            // ---- Unwanted propositions (Devanagari)
             q("फ्री हो क्या"), q("फ्री हो आप"), q("फ्री है क्या"), q("आज रात को फ्री"),
             q("रात को फ्री"), q("आज रात फ्री"), q("आज रात क्या कर रही हो"),
             q("रात को मिलते हैं"), q("रात को मिलो"), q("कितना लोगी"), q("कितने पैसे लोगी"),
@@ -413,7 +329,6 @@ public struct SpeechConfig: Sendable {
             q("किस दो"), q("गले लग जाओ"), q("पास आओ", 0.75), q("मेरे पास आओ", 0.8),
             q("बात तो करो"), q("बात करो ना"), q("इग्नोर मत करो"), q("इतना एटीट्यूड"),
             q("हेलो मैडम", 0.55), q("हेलो बेबी", 0.7),
-            // ---- Threats / coercion / pursuit (more)
             t("tujhe utha lunga"), t("utha ke le jaunga"), t("utha ke le jayenge"),
             t("jaan se khatam kar dunga"), t("khatam kar dunga"), t("khatam kar denge"),
             t("tujhe maar dalunga"), t("tera khoon pi jaunga"), t("tujhe chhodunga nahi"),
@@ -439,7 +354,6 @@ public struct SpeechConfig: Sendable {
             p("ghar tak chhod dunga"), p("ghar tak aaunga"), p("tere ghar tak"),
             p("रुक जाओ ज़रा", 0.75), p("रुको ज़रा", 0.75), p("कहाँ भाग रही"), p("भाग मत"),
             p("पीछे आ रहा"), p("पीछे पीछे"), p("तेरा पीछा"), p("घर तक छोड़ दूंगा"),
-            // ---- Cuss words and abuse (Hinglish; fuzzy key absorbs spelling)
             a("madarchod", 0.65), a("maderchod", 0.65), a("mc", 0.45), a("bc", 0.45),
             a("behnchod", 0.65), a("bhosdiwale", 0.65), a("bhosadi", 0.6), a("bhosada", 0.6),
             a("bhosdika", 0.65), a("bhosri", 0.6), a("chutiyapa", 0.5), a("chutmarike", 0.65),
@@ -480,7 +394,6 @@ public struct SpeechConfig: Sendable {
             a("moron", 0.4), a("stupid", 0.35), a("ugly", 0.4), a("fat", 0.3), a("trash", 0.4),
             a("wanker", 0.5), a("twat", 0.55), a("slag", 0.55), a("tramp", 0.5), a("skank", 0.55),
             a("hoe", 0.55), a("bloody hell", 0.35), a("damn you", 0.4), a("piece of shit", 0.6),
-            // ---- Cuss words (Devanagari)
             a("मादरचोद", 0.65), a("मादर चोद", 0.65), a("बहन चोद", 0.65), a("बहनचोद", 0.65),
             a("भोसड़ी", 0.6), a("भोसड़ीके", 0.65), a("भोसड़ीवाले", 0.65), a("भोंसड़ी", 0.6),
             a("चूतिया", 0.6), a("चूतियापा", 0.5), a("चुतमारिके", 0.65), a("गांडू", 0.6),
@@ -503,15 +416,11 @@ public struct SpeechConfig: Sendable {
         ]
     }
 
-    /// English cuss words, slurs for women, sexual insults and angry
-    /// phrases. Mild words score low on purpose: one is a nudge, a run of
-    /// them (or one with a threat) is what triggers a check-in.
     static var englishCussWords: [SpeechPattern] {
         func a(_ phrase: String, _ severity: Double) -> SpeechPattern {
             SpeechPattern(phrase: phrase, category: .anger, severity: severity)
         }
         return [
-            // Strong
             a("fuck", 0.55), a("fucked", 0.55), a("fucker", 0.6), a("fuckers", 0.6),
             a("fucking", 0.55), a("fuckin", 0.55), a("fuck off", 0.65), a("fuck you", 0.7),
             a("fuck yourself", 0.7), a("fuck her", 0.7), a("fuck me", 0.6), a("fucktard", 0.6),
@@ -529,7 +438,6 @@ public struct SpeechConfig: Sendable {
             a("rape", 0.7), a("raped", 0.7), a("rapist", 0.65), a("molest", 0.7),
             a("nigger", 0.7), a("nigga", 0.55), a("faggot", 0.65), a("fag", 0.55),
             a("retard", 0.5), a("retarded", 0.5), a("spastic", 0.5), a("tranny", 0.6),
-            // Medium
             a("asshole", 0.6), a("assholes", 0.6), a("arsehole", 0.6), a("ass", 0.4),
             a("asshat", 0.5), a("bastard", 0.6), a("bastards", 0.6), a("bollocks", 0.45),
             a("bugger", 0.35), a("shit", 0.4), a("shitty", 0.4), a("bullshit", 0.45),
@@ -549,7 +457,6 @@ public struct SpeechConfig: Sendable {
             a("shut the fuck up", 0.75), a("stfu", 0.55), a("gtfo", 0.55), a("wtf", 0.35),
             a("drop dead", 0.65), a("die", 0.35), a("go die", 0.65), a("kill yourself", 0.7),
             a("kys", 0.65), a("i hate you", 0.5), a("hate you", 0.5), a("you disgust me", 0.5),
-            // Insults and contempt
             a("idiot", 0.4), a("idiots", 0.4), a("moron", 0.4), a("morons", 0.4),
             a("imbecile", 0.4), a("dumb", 0.3), a("dumbo", 0.3), a("stupid", 0.35),
             a("stupid bitch", 0.7), a("dumb bitch", 0.7), a("fat bitch", 0.7), a("ugly bitch", 0.7),
@@ -561,7 +468,6 @@ public struct SpeechConfig: Sendable {
             a("you bastard", 0.65), a("you asshole", 0.65), a("you idiot", 0.5),
             a("you stupid", 0.5), a("you dirty", 0.5), a("dirty whore", 0.75),
             a("dirty slut", 0.75), a("filthy", 0.4), a("nasty bitch", 0.7),
-            // Sexual harassment phrases
             a("suck my", 0.7), a("suck it", 0.6), a("suck me", 0.7), a("lick my", 0.7),
             a("show me your", 0.6), a("take it off", 0.55), a("take off your", 0.6),
             a("get naked", 0.65), a("strip for me", 0.65), a("want to fuck", 0.75),
@@ -570,7 +476,6 @@ public struct SpeechConfig: Sendable {
             a("smash your face", 0.8), a("shut it", 0.45), a("you owe me", 0.4),
             a("you asked for it", 0.65), a("you deserve it", 0.55), a("you will regret", 0.65),
             a("you'll regret", 0.65), a("you'll pay", 0.7), a("you will pay for", 0.7),
-            // Angry shouting phrases
             a("what the fuck", 0.5), a("what the hell", 0.3), a("who the fuck", 0.55),
             a("how dare you", 0.4), a("watch your mouth", 0.55), a("watch it", 0.4),
             a("back off", 0.4), a("get away", 0.35), a("get off me", 0.5), a("piss me off", 0.4),

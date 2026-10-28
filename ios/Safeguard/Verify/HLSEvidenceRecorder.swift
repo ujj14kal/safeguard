@@ -3,24 +3,8 @@ import CoreMedia
 import Foundation
 import UniformTypeIdentifiers
 
-/// Records ONE continuous stream, video and sound together, and uploads it as
-/// it is written. AVAssetWriter in its HLS mode hands back an initialisation
-/// piece once and then a short media piece every couple of seconds; each is
-/// uploaded at once, and the backend stitches whatever has arrived into one
-/// playlist. A guardian can watch it live, and afterwards it plays as a single
-/// recording with the sound in sync. If the phone dies, everything uploaded
-/// so far still plays; at most the last couple of seconds are lost.
-///
-/// Video comes from the camera frames the app already receives (the camera's
-/// clock is the system clock); sound from the one microphone tap, stamped
-/// with the same clock so the two line up. Nothing records unless `start`
-/// was called.
 public final class HLSEvidenceRecorder: NSObject, AVAssetWriterDelegate, @unchecked Sendable {
-    /// Length of each media piece. Short pieces mean a guardian sees live
-    /// footage sooner; every piece is also playable on its own.
     public static let pieceSeconds: Double = 2
-    /// Waits this many video frames for the microphone's format before
-    /// starting without sound (microphone denied).
     private static let framesToWaitForAudio = 45
 
     private let queue = DispatchQueue(label: "app.safeguard.evidence.hls")
@@ -30,7 +14,6 @@ public final class HLSEvidenceRecorder: NSObject, AVAssetWriterDelegate, @unchec
     private let activeLock = NSLock()
     private var active = false
 
-    // Queue-confined.
     private var sessionID: String?
     private var progress = EvidenceProgress()
     private var onProgress: (@Sendable (EvidenceProgress) -> Void)?
@@ -55,8 +38,6 @@ public final class HLSEvidenceRecorder: NSObject, AVAssetWriterDelegate, @unchec
 
     public var isRecording: Bool { activeLock.withLock { active } }
 
-    /// `onFailure` fires once if the writer breaks, so the caller can switch
-    /// to the simple separate-parts recorder for the rest of the session.
     public func start(
         sessionID: String,
         onProgress: @escaping @Sendable (EvidenceProgress) -> Void,
@@ -89,7 +70,6 @@ public final class HLSEvidenceRecorder: NSObject, AVAssetWriterDelegate, @unchec
         }
     }
 
-    /// Finishes the stream (the last piece is flushed and uploaded).
     public func stop() {
         activeLock.withLock { active = false }
         queue.async {
@@ -100,28 +80,22 @@ public final class HLSEvidenceRecorder: NSObject, AVAssetWriterDelegate, @unchec
             self.videoInput?.markAsFinished()
             self.audioInput?.markAsFinished()
             writer.finishWriting {
-                // The delegate has received the final piece by now.
                 self.queue.async { self.sessionID = nil }
             }
             self.writer = nil
         }
     }
 
-    // MARK: - Input
-
     public func appendVideo(_ pixelBuffer: CVPixelBuffer, at time: CMTime) {
         guard isRecording else { return }
         queue.async {
             guard self.sessionID != nil, !self.failed else { return }
-            // Thin the camera's 30 fps to 15: half the data, half the work.
             if let last = self.lastVideoTime,
                CMTimeGetSeconds(CMTimeSubtract(time, last)) < EvidenceRecorder.frameInterval * 0.9
             {
                 return
             }
             if self.writer == nil {
-                // Start once the microphone's format is known, so sound and
-                // video share one writer from the first frame.
                 if self.audioFormat == nil, self.framesWaitingForAudio < Self.framesToWaitForAudio {
                     self.framesWaitingForAudio += 1
                     return
@@ -139,8 +113,6 @@ public final class HLSEvidenceRecorder: NSObject, AVAssetWriterDelegate, @unchec
         }
     }
 
-    /// `hostTime` is the tap's AVAudioTime host time (the same clock the
-    /// camera stamps its frames with).
     public func appendAudio(_ buffer: AVAudioPCMBuffer, at audioTime: AVAudioTime) {
         guard isRecording, let copy = Self.copy(buffer) else { return }
         let hostTime = audioTime.hostTime
@@ -153,15 +125,12 @@ public final class HLSEvidenceRecorder: NSObject, AVAssetWriterDelegate, @unchec
             let seconds = AVAudioTime.seconds(forHostTime: hostTime)
             let pts = CMTime(seconds: seconds, preferredTimescale: 1_000_000_000)
             let length = CMTime(seconds: Double(copy.frameLength) / copy.format.sampleRate, preferredTimescale: 1_000_000_000)
-            // Sound from before the first video frame cannot be written.
             guard CMTimeAdd(pts, length) > start else { return }
             if let sample = Self.sampleBuffer(from: copy, at: pts) {
                 input.append(sample)
             }
         }
     }
-
-    // MARK: - Writer
 
     private func folder(for session: String) -> URL {
         root.appendingPathComponent(session, isDirectory: true)
@@ -187,7 +156,6 @@ public final class HLSEvidenceRecorder: NSObject, AVAssetWriterDelegate, @unchec
                 AVVideoAverageBitRateKey: EvidenceRecorder.videoBitRate,
                 AVVideoProfileLevelKey: AVVideoProfileLevelH264MainAutoLevel,
                 AVVideoAllowFrameReorderingKey: false,
-                // A keyframe at least every piece, so each piece starts clean.
                 AVVideoMaxKeyFrameIntervalDurationKey: Self.pieceSeconds,
                 AVVideoExpectedSourceFrameRateKey: 15,
             ],
@@ -239,8 +207,6 @@ public final class HLSEvidenceRecorder: NSObject, AVAssetWriterDelegate, @unchec
         let callback = onFailure
         DispatchQueue.main.async { callback?() }
     }
-
-    // MARK: - AVAssetWriterDelegate
 
     public func assetWriter(
         _ writer: AVAssetWriter, didOutputSegmentData segmentData: Data,
@@ -301,9 +267,6 @@ public final class HLSEvidenceRecorder: NSObject, AVAssetWriterDelegate, @unchec
         }
     }
 
-    // MARK: - Leftovers
-
-    /// Uploads pieces a previous recording could not send.
     public func retryPending() {
         queue.async {
             let fm = FileManager.default
@@ -311,7 +274,6 @@ public final class HLSEvidenceRecorder: NSObject, AVAssetWriterDelegate, @unchec
             for folder in sessions where folder.lastPathComponent != self.sessionID {
                 let files = (try? fm.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
                 for file in files {
-                    // Separate-parts leftovers belong to the older recorder.
                     guard let parsed = EvidenceSegmentName.parseAny(file.lastPathComponent),
                           parsed.kind == .initSegment || parsed.kind == .mediaSegment
                     else { continue }
@@ -330,8 +292,6 @@ public final class HLSEvidenceRecorder: NSObject, AVAssetWriterDelegate, @unchec
         }
     }
 
-    // MARK: - Audio plumbing
-
     private static func copy(_ buffer: AVAudioPCMBuffer) -> AVAudioPCMBuffer? {
         guard let copy = AVAudioPCMBuffer(pcmFormat: buffer.format, frameCapacity: buffer.frameLength),
               let source = buffer.floatChannelData, let target = copy.floatChannelData
@@ -343,8 +303,6 @@ public final class HLSEvidenceRecorder: NSObject, AVAssetWriterDelegate, @unchec
         return copy
     }
 
-    /// PCM from the microphone tap as a timed sample buffer the writer's AAC
-    /// encoder can take.
     static func sampleBuffer(from buffer: AVAudioPCMBuffer, at pts: CMTime) -> CMSampleBuffer? {
         var description = buffer.format.streamDescription.pointee
         var format: CMAudioFormatDescription?

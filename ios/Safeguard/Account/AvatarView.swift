@@ -1,7 +1,6 @@
 import SwiftUI
 import UIKit
 
-/// The round profile picture, or the person's initials when there is none.
 struct AvatarView: View {
     var data: Data?
     var name: String

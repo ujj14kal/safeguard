@@ -1,8 +1,6 @@
 import SwiftUI
 import UIKit
 
-// MARK: - View
-
 struct DashboardView: View {
     @StateObject private var model = ProtectViewModel.shared
     @Environment(\.openURL) private var openURL
@@ -85,12 +83,8 @@ struct DashboardView: View {
         }
         model.refreshContacts()
         model.checkBackend()
-        // Give the health check a beat so the pull-to-refresh spinner reads
-        // as work, not a flicker.
         try? await Task.sleep(for: .milliseconds(450))
     }
-
-    // MARK: Loading skeleton
 
     private var skeleton: some View {
         VStack(spacing: DS.Spacing.large) {
@@ -111,8 +105,6 @@ struct DashboardView: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Loading your dashboard")
     }
-
-    // MARK: Hero
 
     private var heroCard: some View {
         VStack(spacing: DS.Spacing.medium) {
@@ -172,8 +164,6 @@ struct DashboardView: View {
         }
         return String(localized: "Everything is ready. Tap start when you head out.")
     }
-
-    // MARK: Readiness
 
     private var readinessCard: some View {
         let list = items
@@ -243,8 +233,6 @@ struct DashboardView: View {
         }
     }
 
-    // MARK: Stats
-
     private var statsGrid: some View {
         let s = stats
         return VStack(alignment: .leading, spacing: DS.Spacing.small) {
@@ -282,8 +270,6 @@ struct DashboardView: View {
         .accessibilityElement(children: .combine)
     }
 
-    // MARK: Recent
-
     private var recentCard: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.medium) {
             DSSectionHeader(title: String(localized: "Recent SOS"))
@@ -317,8 +303,6 @@ struct DashboardView: View {
         }
         .dsCard()
     }
-
-    // MARK: Emergency
 
     private var emergencyCard: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.small) {

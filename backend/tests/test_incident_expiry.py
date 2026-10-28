@@ -1,4 +1,3 @@
-"""Share links expire, incidents survive a restart, /health and /asr are locked down."""
 
 import json
 
@@ -60,7 +59,7 @@ def test_incident_survives_a_restart_with_its_trail(tmp_path):
     incident, _ = store.start("sos-dddddddd", "Asha", ["code1"])
     store.add_point(incident.id, 28.61, 77.2, 10, ts=1)
     store.add_point(incident.id, 28.62, 77.21, 10, ts=2)
-    clock.now += 10  # past the throttle so the points are written
+    clock.now += 10
     store.add_point(incident.id, 28.63, 77.22, 10, ts=3)
     store.end(incident.id)
 
@@ -68,7 +67,7 @@ def test_incident_survives_a_restart_with_its_trail(tmp_path):
     again = reloaded.get_by_token(incident.share_token)
     assert again is not None and again.wearer_name == "Asha" and again.status == "ended"
     assert len(again.points) == 3
-    assert reloaded.start("sos-dddddddd", "Asha", [])[1] is True  # ended -> a new SOS may start
+    assert reloaded.start("sos-dddddddd", "Asha", [])[1] is True
 
 
 def test_expired_incidents_are_not_reloaded_or_kept_on_disk(tmp_path):

@@ -1,9 +1,5 @@
 import SwiftUI
 
-/// HUD person overlay: corner brackets + a short label per tracked person,
-/// always visible while protecting. Scores and ids join the label only with
-/// Settings > Debug > Detection overlay on. Lightweight shapes, no per-frame
-/// allocations beyond the view tree itself.
 struct PersonBoxOverlay: View {
     let tracks: [Track]
     let frameSize: CGSize
@@ -44,9 +40,6 @@ struct PersonBoxOverlay: View {
         .accessibilityHidden(true)
     }
 
-    /// A hostile hand gesture is always shown (it is what the wearer needs
-    /// to see); gestures and expressions in general only with the debug
-    /// overlay on.
     private func cueText(_ track: Track) -> String? {
         guard let cues = track.cues else { return nil }
         var parts: [String] = []
@@ -84,7 +77,6 @@ struct PersonBoxOverlay: View {
     }
 }
 
-/// Corner brackets (not a full rectangle): four L-corners with short arms.
 struct BracketShape: Shape {
     var armFraction: CGFloat = 0.25
 
@@ -92,24 +84,19 @@ struct BracketShape: Shape {
         var path = Path()
         let armX = min(rect.width * armFraction, 28)
         let armY = min(rect.height * armFraction, 28)
-        // Shape space is top-left (y grows downward).
         let left = rect.minX
         let right = rect.maxX
         let top = rect.minY
         let bottom = rect.maxY
-        // Top-left.
         path.move(to: CGPoint(x: left, y: top + armY))
         path.addLine(to: CGPoint(x: left, y: top))
         path.addLine(to: CGPoint(x: left + armX, y: top))
-        // Top-right.
         path.move(to: CGPoint(x: right - armX, y: top))
         path.addLine(to: CGPoint(x: right, y: top))
         path.addLine(to: CGPoint(x: right, y: top + armY))
-        // Bottom-right.
         path.move(to: CGPoint(x: right, y: bottom - armY))
         path.addLine(to: CGPoint(x: right, y: bottom))
         path.addLine(to: CGPoint(x: right - armX, y: bottom))
-        // Bottom-left.
         path.move(to: CGPoint(x: left + armX, y: bottom))
         path.addLine(to: CGPoint(x: left, y: bottom))
         path.addLine(to: CGPoint(x: left, y: bottom - armY))
@@ -117,8 +104,6 @@ struct BracketShape: Shape {
     }
 }
 
-/// Soft red glow along the screen edges while any box is red: obvious in
-/// the corner of the eye, no hard flashing, static when Reduce Motion is on.
 struct RedVignette: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var bright = false

@@ -1,8 +1,5 @@
 import SwiftUI
 
-/// Settings: the standing live link (created on approval, shared by hand,
-/// sent to emergency contacts automatically in an SOS) and the guardian
-/// code (who may review the recordings).
 struct LiveSettingsSection: View {
     @StateObject private var links = LiveLinkStore.shared
     @StateObject private var model = ProtectViewModel.shared

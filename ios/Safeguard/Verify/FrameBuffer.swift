@@ -5,9 +5,6 @@ import Foundation
 import ImageIO
 import UniformTypeIdentifiers
 
-/// In-memory ring of recent downscaled JPEG frames for backend /verify.
-/// Frames live here only and are discarded after use; never written to disk.
-/// Thread-safe; typically fed at detection rate (~5 Hz).
 public final class FrameBuffer: @unchecked Sendable {
     public let maxFrames: Int
     public let maxPixelSize: Int
@@ -16,8 +13,6 @@ public final class FrameBuffer: @unchecked Sendable {
     private static let context = CIContext()
 
     private let lock = NSLock()
-    /// Each frame keeps the normalized (Vision, lower-left origin) boxes of the
-    /// people tracked on THAT frame, so SAM 2 prompts match the clip's first frame.
     private var frames: [(time: TimeInterval, jpeg: Data, boxes: [CGRect])] = []
     private var latestSize: CGSize = .zero
 
@@ -27,7 +22,6 @@ public final class FrameBuffer: @unchecked Sendable {
         self.jpegQuality = jpegQuality
     }
 
-    /// Downscale + JPEG-encode a frame and append it, dropping the oldest.
     public func append(
         pixelBuffer: CVPixelBuffer, at time: TimeInterval, boxes: [CGRect] = []
     ) {
@@ -45,15 +39,10 @@ public final class FrameBuffer: @unchecked Sendable {
         }
     }
 
-    /// Oldest-first JPEGs plus their pixel size (for box scaling).
     public func snapshot() -> (frames: [Data], size: CGSize) {
         lock.withLock { (frames.map(\.jpeg), latestSize) }
     }
 
-    /// The clip to send to /verify. SAM 2 is prompted with boxes on the clip's
-    /// FIRST frame, so the clip starts at the oldest buffered frame that has
-    /// tracked people, and `boxes` are the boxes seen on that exact frame.
-    /// If nobody was tracked on any frame, all frames come back with no boxes.
     public func clip() -> (frames: [Data], size: CGSize, boxes: [CGRect]) {
         lock.withLock {
             guard let start = frames.firstIndex(where: { !$0.boxes.isEmpty }) else {
@@ -71,7 +60,6 @@ public final class FrameBuffer: @unchecked Sendable {
         }
     }
 
-    /// Downscale the long edge to `maxPixelSize` and JPEG-encode.
     public static func encode(
         pixelBuffer: CVPixelBuffer, maxPixelSize: Int, quality: Double
     ) -> (Data, CGSize)? {

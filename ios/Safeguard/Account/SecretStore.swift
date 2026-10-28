@@ -1,8 +1,6 @@
 import Foundation
 import Security
 
-/// Where the session tokens live. The real one is the iOS Keychain; tests
-/// use the in-memory one.
 public protocol SecretStore: AnyObject, Sendable {
     func read(_ key: String) -> Data?
     func write(_ data: Data, for key: String)
@@ -37,7 +35,6 @@ public final class KeychainSecretStore: SecretStore, @unchecked Sendable {
         remove(key)
         var item = query(key)
         item[kSecValueData as String] = data
-        // Readable only while the phone is unlocked, never synced or backed up.
         item[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
         SecItemAdd(item as CFDictionary, nil)
     }

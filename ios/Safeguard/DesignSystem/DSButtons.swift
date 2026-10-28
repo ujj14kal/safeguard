@@ -1,9 +1,5 @@
 import SwiftUI
 
-/// Primary: filled buttonFill, 56 pt, rounded 20, subtle gradient, spring
-/// press scale 0.97 + light haptic. All styles honour disabled/pressed
-/// states, Dynamic Type, VoiceOver traits and Reduce Motion, and keep at
-/// least 44 pt touch targets.
 struct PrimaryButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -32,7 +28,6 @@ struct PrimaryButtonStyle: ButtonStyle {
     }
 }
 
-/// Secondary: glass/outlined, accent text, same size and press treatment.
 struct SecondaryButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -55,7 +50,6 @@ struct SecondaryButtonStyle: ButtonStyle {
     }
 }
 
-/// Destructive: red filled (e.g. Stop), white text, medium haptic.
 struct DestructiveButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -80,15 +74,12 @@ struct DestructiveButtonStyle: ButtonStyle {
     }
 }
 
-/// Guarantees the 44 pt minimum touch target for small system-styled
-/// buttons, links and icon buttons (the DS styles already exceed it).
 extension View {
     func minTouchTarget() -> some View {
         frame(minWidth: 44, minHeight: 44)
     }
 }
 
-/// Circular 56 pt glass icon button.
 struct IconButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
     @Environment(\.accessibilityReduceMotion) private var reduceMotion

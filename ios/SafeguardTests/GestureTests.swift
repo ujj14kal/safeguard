@@ -1,34 +1,29 @@
 import CoreGraphics
 import XCTest
 
-/// Hand gesture and expression classifiers on synthetic landmarks and
-/// blendshapes (no camera, no model).
 final class GestureTests: XCTestCase {
     private let box = CGRect(x: 0.4, y: 0.4, width: 0.1, height: 0.1)
 
-    /// 21 hand points: wrist at the origin, four fingers up the y axis.
-    /// `extended` flags are thumb, index, middle, ring, pinky.
     private func hand(
         thumb: Bool = false, index: Bool = false, middle: Bool = false,
         ring: Bool = false, pinky: Bool = false, middleLength: CGFloat = 2.3
     ) -> [CGPoint] {
         var points = [CGPoint](repeating: .zero, count: 21)
         func finger(_ firstIndex: Int, x: CGFloat, extended: Bool, length: CGFloat = 2.3) {
-            points[firstIndex] = CGPoint(x: x, y: 1.0)           // mcp
-            points[firstIndex + 1] = CGPoint(x: x, y: 1.6)       // pip
+            points[firstIndex] = CGPoint(x: x, y: 1.0)
+            points[firstIndex + 1] = CGPoint(x: x, y: 1.6)
             if extended {
-                points[firstIndex + 2] = CGPoint(x: x, y: 2.0)   // dip
-                points[firstIndex + 3] = CGPoint(x: x, y: length) // tip
+                points[firstIndex + 2] = CGPoint(x: x, y: 2.0)
+                points[firstIndex + 3] = CGPoint(x: x, y: length)
             } else {
                 points[firstIndex + 2] = CGPoint(x: x, y: 1.3)
-                points[firstIndex + 3] = CGPoint(x: x, y: 0.9)   // curled back
+                points[firstIndex + 3] = CGPoint(x: x, y: 0.9)
             }
         }
         finger(5, x: -0.5, extended: index)
         finger(9, x: 0, extended: middle, length: middleLength)
         finger(13, x: 0.5, extended: ring)
         finger(17, x: 1.0, extended: pinky)
-        // Thumb off to the left of the index base.
         points[1] = CGPoint(x: -0.8, y: 0.3)
         points[2] = CGPoint(x: -1.0, y: 0.6)
         points[3] = thumb ? CGPoint(x: -1.5, y: 0.9) : CGPoint(x: -0.6, y: 0.8)
@@ -93,8 +88,6 @@ final class GestureTests: XCTestCase {
         ))
     }
 
-    // MARK: Expressions
-
     func testHappy() {
         let cue = ExpressionClassifier.classify(blendshapes: [
             "mouthSmileLeft": 0.8, "mouthSmileRight": 0.8, "cheekSquintLeft": 0.4, "cheekSquintRight": 0.4,
@@ -137,8 +130,6 @@ final class GestureTests: XCTestCase {
     }
 }
 
-/// The cues reach the score: a sustained middle finger adds, one frame does
-/// not, and an angry face alone never alerts.
 final class GestureScoringTests: XCTestCase {
     private let config = ThreatConfig()
 
@@ -203,13 +194,11 @@ final class LatencyMeterTests: XCTestCase {
 }
 
 final class UnwantedGestureCounterTests: XCTestCase {
-    /// Feeds `frames` hostile frames at 10 per second starting at `start`.
     private func episode(_ c: inout UnwantedGestureCounter, start: TimeInterval, frames: Int = 5) -> [UnwantedGestureCounter.Event] {
         var events: [UnwantedGestureCounter.Event] = []
         for i in 0..<frames {
             if let e = c.feed(hostile: true, at: start + Double(i) * 0.1) { events.append(e) }
         }
-        // Then a clean stretch so the next episode is separate.
         for i in 0..<12 { _ = c.feed(hostile: false, at: start + Double(frames) * 0.1 + Double(i) * 0.1) }
         return events
     }
@@ -251,7 +240,6 @@ final class UnwantedGestureCounterTests: XCTestCase {
     func testOldEpisodesDropOutOfTheWindow() {
         var c = UnwantedGestureCounter()
         for i in 0..<5 { _ = episode(&c, start: Double(i) * 5) }
-        // Much later, one more: the old five have expired.
         XCTAssertEqual(episode(&c, start: 1000), [.counted(total: 1)])
     }
 
@@ -259,7 +247,7 @@ final class UnwantedGestureCounterTests: XCTestCase {
         var c = UnwantedGestureCounter()
         var events: [UnwantedGestureCounter.Event] = []
         for t in stride(from: 0.0, to: 1.0, by: 0.1) {
-            let hostile = !(0.4...0.5).contains(t) // two missed frames
+            let hostile = !(0.4...0.5).contains(t)
             if let e = c.feed(hostile: hostile, at: t) { events.append(e) }
         }
         XCTAssertEqual(events, [.counted(total: 1)])

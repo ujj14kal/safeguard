@@ -1,7 +1,6 @@
 import CoreGraphics
 import XCTest
 
-/// Tracker behaviour on synthetic boxes. Runs under `xcodebuild test`.
 final class TrackerTests: XCTestCase {
     private func person(
         _ x: CGFloat, _ y: CGFloat, _ w: CGFloat, _ h: CGFloat, _ c: Float = 0.9
@@ -96,9 +95,6 @@ final class TrackerTests: XCTestCase {
     }
 
     func testPassingWithClearanceKeepsIDs() {
-        // A travels left-to-right along the top, B right-to-left along the
-        // bottom; rows never overlap, so IDs must stay put. Steps overlap
-        // frame-to-frame (IoU 0.5), matching how real detections move.
         let tracker = IoUTracker()
         for step in 0..<15 {
             let t = CGFloat(step) * 0.05

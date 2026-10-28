@@ -1,4 +1,3 @@
-"""Phase 7: contact alerts in the wearer's language + preview text."""
 
 import pytest
 from fastapi.testclient import TestClient

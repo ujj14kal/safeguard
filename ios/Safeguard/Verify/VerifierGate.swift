@@ -1,9 +1,5 @@
 import Foundation
 
-/// Edge-triggered backend verification gate. Fires once when the max
-/// on-device score crosses the threshold, then re-arms only after the score
-/// falls back below threshold minus margin. This is what makes /verify
-/// "only above threshold, never per frame". Proximity never reaches here.
 public struct VerifierGate: Sendable {
     public private(set) var armed = true
 
@@ -15,7 +11,6 @@ public struct VerifierGate: Sendable {
         self.rearmMargin = config.verifyRearmMargin
     }
 
-    /// Returns true exactly on rising crossings.
     public mutating func consume(maxScore: Double) -> Bool {
         if armed, maxScore >= threshold {
             armed = false
@@ -32,10 +27,6 @@ public struct VerifierGate: Sendable {
     }
 }
 
-/// Backend behaviour check for a person who stays close, even with no
-/// movement alert: held objects, gestures and expression are judged by the
-/// backend model, not by the on-device scorer. Fires once the person has
-/// been near for `nearSeconds`, then at most every `interval` seconds.
 public struct NearSweepGate: Sendable {
     private let nearSeconds: TimeInterval
     private let interval: TimeInterval
@@ -60,7 +51,6 @@ public struct NearSweepGate: Sendable {
         return true
     }
 
-    /// Another trigger just sent a clip: do not send a second one at once.
     public mutating func noteSent(at time: TimeInterval) {
         lastFire = time
     }

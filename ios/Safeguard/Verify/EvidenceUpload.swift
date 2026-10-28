@@ -1,11 +1,8 @@
 import Foundation
 
-/// What an SOS recording segment contains.
 public enum EvidenceKind: String, Sendable, CaseIterable {
     case video
     case audio
-    /// The continuous stream: one initialisation piece, then short media
-    /// pieces carrying video and sound together (fragmented MP4 / HLS).
     case initSegment = "init"
     case mediaSegment = "seg"
 
@@ -20,21 +17,16 @@ public enum EvidenceKind: String, Sendable, CaseIterable {
 }
 
 public enum EvidenceSessionID {
-    /// "sos-" plus 12 random hex digits: the backend accepts 8-64 letters,
-    /// digits, "_" and "-", and uses it as a folder name.
     public static func make() -> String {
         "sos-" + UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased().prefix(12)
     }
 }
 
-/// Segment file names are `<kind>-<5-digit sequence>.<ext>` on the phone and
-/// on the backend, so a half-uploaded session can be resumed from names alone.
 public enum EvidenceSegmentName {
     public static func filename(kind: EvidenceKind, seq: Int) -> String {
         String(format: "%@-%05d.%@", kind.rawValue, seq, kind.fileExtension)
     }
 
-    /// `init.mp4` and `seg-00007-2000.m4s` (sequence, then length in ms).
     public static func filename(kind: EvidenceKind, seq: Int, durationMs: Int?) -> String {
         switch kind {
         case .initSegment:
@@ -46,7 +38,6 @@ public enum EvidenceSegmentName {
         }
     }
 
-    /// Any recording file on disk, old parts or the continuous stream.
     public static func parseAny(_ filename: String) -> (kind: EvidenceKind, seq: Int, durationMs: Int?)? {
         if filename == "init.mp4" { return (.initSegment, 0, nil) }
         if filename.hasPrefix("seg-"), filename.hasSuffix(".m4s") {
@@ -71,15 +62,11 @@ public enum EvidenceSegmentName {
     }
 }
 
-/// Upload retry schedule. Evidence matters more than a quick failure: keep
-/// trying with growing waits, and keep the file on disk if every try fails.
 public struct EvidenceRetryPolicy: Sendable {
     public var delays: [TimeInterval] = [1, 3, 6, 15, 30, 60]
 
     public init() {}
 
-    /// Seconds to wait before attempt number `attempt` (1-based after the
-    /// first try), or nil when the attempts are used up.
     public func delay(beforeRetry attempt: Int) -> TimeInterval? {
         guard attempt >= 1, attempt <= delays.count else { return nil }
         return delays[attempt - 1]
@@ -91,16 +78,12 @@ public enum EvidenceUploadError: Error, Equatable {
     case notHTTP
 }
 
-/// Sends one closed segment to the backend (`POST /evidence`, raw bytes).
 public struct EvidenceUploader: Sendable {
     private let config: @Sendable () -> VerifierConfig
     private let urlSession: URLSession
     private let token: String?
     private let policy: EvidenceRetryPolicy
 
-    /// One session for all segments: keep-alive connections are reused (no
-    /// new TLS handshake per part), several parts upload at once, and a
-    /// part waits for the network to come back instead of failing at once.
     public static let fastSession: URLSession = {
         let configuration = URLSessionConfiguration.default
         configuration.httpMaximumConnectionsPerHost = 4
@@ -124,7 +107,6 @@ public struct EvidenceUploader: Sendable {
         self.policy = policy
     }
 
-    /// The request for one segment; the file goes in as the body.
     public func request(
         sessionID: String, kind: EvidenceKind, seq: Int, durationMs: Int? = nil
     ) -> URLRequest {
@@ -144,8 +126,6 @@ public struct EvidenceUploader: Sendable {
         var request = URLRequest(url: components.url!, timeoutInterval: 60)
         request.httpMethod = "POST"
         request.setValue("application/octet-stream", forHTTPHeaderField: "Content-Type")
-        // App token everywhere; the explicit legacy evidence token still
-        // goes out when provided (the backend accepts either).
         request = base.authorize(request)
         if let token { request.setValue(token, forHTTPHeaderField: "X-Evidence-Token") }
         return request
@@ -160,8 +140,6 @@ public struct EvidenceUploader: Sendable {
         guard (200...299).contains(http.statusCode) else { throw EvidenceUploadError.badStatus(http.statusCode) }
     }
 
-    /// Uploads with the retry schedule. Returns true on success; false means
-    /// the file must stay on disk for a later retry.
     public func upload(
         file: URL, sessionID: String, kind: EvidenceKind, seq: Int, durationMs: Int? = nil
     ) async -> Bool {
@@ -174,8 +152,6 @@ public struct EvidenceUploader: Sendable {
                 return true
             } catch {
                 attempt += 1
-                // A rejected segment (4xx other than rate limits) will never
-                // succeed: stop retrying instead of hammering the backend.
                 if case EvidenceUploadError.badStatus(let code) = error, (400..<500).contains(code), code != 408, code != 429 {
                     return false
                 }
@@ -186,7 +162,6 @@ public struct EvidenceUploader: Sendable {
     }
 }
 
-/// Counts for the SOS screen.
 public struct EvidenceProgress: Sendable, Equatable {
     public var segments = 0
     public var uploaded = 0

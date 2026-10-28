@@ -1,18 +1,3 @@
-"""Where the backend keeps its data.
-
-Locally (development) everything is files, as before. On a host whose disk
-disappears when it sleeps or restarts (Google Cloud Run, Render free), the
-same data lives in the Supabase project instead:
-
-* small JSON documents (incidents, contacts, guardian codes, live links)
-  are objects in a private Storage bucket, read once when the process
-  starts and written back whenever they change;
-* recording segments are objects in a second private bucket.
-
-Selected with STORAGE_BACKEND=supabase. Everything here goes through the two
-small functions `_http` and `_stream`, which tests replace; the Supabase
-keys are only ever sent in headers and never logged.
-"""
 
 from __future__ import annotations
 
@@ -30,10 +15,8 @@ logger = logging.getLogger("safeguard.storage")
 
 
 class StorageUnavailable(Exception):
-    """The store could not be read or written right now (not 'missing')."""
+    pass
 
-
-# --- the only two network calls ------------------------------------------------
 
 def _http(method, url, *, headers, content=None, json=None, timeout=20.0):
     try:
@@ -46,8 +29,6 @@ def _http(method, url, *, headers, content=None, json=None, timeout=20.0):
 
 
 def _stream(url, *, headers, timeout=30.0):
-    """Returns (status, response headers, byte iterator). The iterator owns
-    the connection and closes it when exhausted."""
     client = httpx.Client(timeout=timeout)
     try:
         request = client.build_request("GET", url, headers=headers)
@@ -66,11 +47,7 @@ def _stream(url, *, headers, timeout=30.0):
     return response.status_code, response.headers, body()
 
 
-# --- small JSON documents ----------------------------------------------------------
-
 class StateFile:
-    """One JSON document. `read()` returns the text, or None when it does
-    not exist yet, and raises StorageUnavailable when it cannot be told."""
 
     def read(self) -> str | None:
         raise NotImplementedError
@@ -116,7 +93,6 @@ class SupabaseStateFile(StateFile):
 
 
 def as_state_file(value) -> "StateFile | None":
-    """A path string becomes a local file; a StateFile passes through."""
     if value is None or value == "":
         return None
     if isinstance(value, StateFile):
@@ -124,10 +100,7 @@ def as_state_file(value) -> "StateFile | None":
     return LocalStateFile(str(value))
 
 
-# --- Supabase Storage --------------------------------------------------------------
-
 class SupabaseObjects:
-    """One private Storage bucket, driven with the service-role key."""
 
     def __init__(self, url: str, service_key: str, bucket: str):
         self.base = f"{url.rstrip('/')}/storage/v1"
@@ -147,14 +120,14 @@ class SupabaseObjects:
             "POST", f"{self.base}/bucket", headers=self._headers(),
             json={"id": self.bucket, "name": self.bucket, "public": False},
         )
-        if status not in (200, 201, 400, 409):  # 400/409: already exists
+        if status not in (200, 201, 400, 409):
             raise StorageUnavailable(f"bucket {self.bucket}: {status}")
 
     def get(self, path: str) -> bytes | None:
         status, _, content = _http("GET", self._object_url(path), headers=self._headers())
         if status == 200:
             return content
-        if status in (400, 404):  # Storage answers 400 "not found" for a missing object
+        if status in (400, 404):
             return None
         raise StorageUnavailable(f"read {path}: {status}")
 
@@ -192,10 +165,7 @@ class SupabaseObjects:
         return _stream(self._object_url(path), headers=self._headers(extra))
 
 
-# --- recordings -------------------------------------------------------------------
-
 def _epoch(iso: str | None) -> float:
-    """Storage timestamps ("2026-10-27T17:31:12.345Z") as epoch seconds; 0 if unknown."""
     if not iso:
         return 0.0
     try:
@@ -207,7 +177,7 @@ def _epoch(iso: str | None) -> float:
 
 class EvidenceBackend:
     def put(self, session: str, name: str, data: bytes) -> None: ...
-    def segments(self, session: str) -> list[dict] | None: ...  # None = no such session
+    def segments(self, session: str) -> list[dict] | None: ...
     def delete_session(self, session: str) -> bool: ...
     def exists(self, session: str, name: str) -> bool: ...
     def response(self, session: str, name: str, media_type: str, range_header: str | None): ...
@@ -254,7 +224,7 @@ class SupabaseEvidence(EvidenceBackend):
         self._o.put(f"{session}/{name}", data, content_type)
 
     def segments(self, session):
-        items = [i for i in self._o.list_objects(session) if i.get("id")]  # skip folders
+        items = [i for i in self._o.list_objects(session) if i.get("id")]
         if not items:
             return None
         return [
@@ -280,7 +250,7 @@ class SupabaseEvidence(EvidenceBackend):
     def response(self, session, name, media_type, range_header):
         status, headers, body = self._o.stream(f"{session}/{name}", range_header)
         if status not in (200, 206):
-            for _ in body:  # drain and close
+            for _ in body:
                 pass
             return None
         out = {"Accept-Ranges": "bytes"}
@@ -290,10 +260,7 @@ class SupabaseEvidence(EvidenceBackend):
         return StreamingResponse(body, status_code=status, media_type=media_type, headers=out)
 
 
-# --- choosing the backend ------------------------------------------------------------
-
 def make_state_file(settings, name: str, local_path: str):
-    """Local file in development, a Storage object in Supabase mode."""
     if settings.storage_backend == "supabase":
         return SupabaseStateFile(
             SupabaseObjects(settings.supabase_url, settings.supabase_service_role_key,
@@ -312,11 +279,7 @@ def make_evidence(settings) -> EvidenceBackend:
     return LocalEvidence(Path(settings.evidence_dir))
 
 
-# --- profile pictures ----------------------------------------------------------------
-
 class AvatarStore:
-    """One small JPEG per account: a file locally, a Storage object (in the
-    private state bucket) in Supabase mode."""
 
     def __init__(self, objects: "SupabaseObjects | None" = None, root: Path | None = None):
         self._objects = objects

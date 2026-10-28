@@ -1,4 +1,3 @@
-"""Geometry math on synthetic masks (numpy only; no torch needed)."""
 
 import numpy as np
 
@@ -18,7 +17,7 @@ def test_full_mask():
     )
     assert area == 1.0
     assert centroid == [0.5, 0.5]
-    assert corridor == 0  # spread everywhere: no corridor majority
+    assert corridor == 0
 
 
 def test_empty_mask():

@@ -1,8 +1,5 @@
 import Foundation
 
-/// Code-phrase editing: the wearer may replace each default with one
-/// phrase of their own. Matching stays language-independent (word
-/// sequences, any script).
 public enum CodePhraseValidation: Sendable {
     public enum Failure: String, Sendable, Equatable {
         case tooShort
@@ -12,9 +9,6 @@ public enum CodePhraseValidation: Sendable {
         case collidesWithDefault
     }
 
-    /// Validates a (safe, unsafe) pair. Each needs at least 2 words, they
-    /// must differ, neither may contain the other, and neither may be a
-    /// distress word (that would SOS instead of answering).
     public static func validate(
         safe: String, unsafe: String,
         distressWords: [String] = SafetyConfig().distressWords
@@ -39,10 +33,6 @@ public enum CodePhraseValidation: Sendable {
         {
             failures.append(.isDistressWord)
         }
-        // The matcher tries unsafe first, substring-based: a safe phrase
-        // containing an unsafe default would always fire Unsafe instead
-        // and silently never answer Safe. (The reverse is harmless —
-        // unsafe wins anyway.)
         let unsafeDefaults = SafetyConfig().unsafePhrases.map { words(in: $0) }
         if !safeWords.isEmpty, unsafeDefaults.contains(where: {
             contains(words: safeWords, phrase: $0)
@@ -64,8 +54,6 @@ public enum CodePhraseValidation: Sendable {
     }
 }
 
-/// The wearer's custom phrases (UserDefaults). Empty = keep the built-in
-/// defaults. `effective` is what the matcher actually uses.
 public enum CodePhraseStore {
     public static let safeKey = "customSafePhrase"
     public static let unsafeKey = "customUnsafePhrase"
@@ -92,7 +80,6 @@ public enum CodePhraseStore {
         return SafetyConfig().unsafePhrases
     }
 
-    /// The safe phrase the countdown screen names (custom or default).
     public static func primarySafe() -> String {
         effectiveSafe()[0]
     }

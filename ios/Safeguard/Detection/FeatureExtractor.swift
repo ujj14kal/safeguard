@@ -1,37 +1,19 @@
 import CoreGraphics
 import Foundation
 
-/// Behaviour features for one tracked person. All values are normalized
-/// 0...1 (higher = more threatening); see ThreatConfig for the mapping.
 public struct PersonFeatures: Sendable, Equatable {
-    /// Relative box-height growth over the approach window.
     public var trend: Double
-    /// Box-height slope (normalized units/sec), normalized.
     public var speed: Double
-    /// Matched presence seconds over the persistence window, normalized,
-    /// plus a bonus when reappearing.
     public var persistence: Double
-    /// The same track vanished for a real gap and came back.
     public var reappearing: Bool
-    /// Mean facing-toward-user score over samples with a known pose.
     public var facing: Double
-    /// 1 when alone, 0 in a crowd.
     public var isolation: Double
-    /// Fraction of the corridor window spent near and in the forward corridor.
     public var blocking: Double
-    /// Intercept course: approaching + near centre + stable bearing.
     public var cornering: Double
-    /// Latest speech severity (global, not per-track): threatening or
-    /// harassing talk near the wearer. Stamped by the extractor while fresh.
     public var speech: Double
-    /// A hand close to the camera and, if it is growing, lunging at it.
     public var handReach: Double
-    /// Fraction of recent samples with the mouth wide open (shouting).
     public var shouting: Double
-    /// Fraction of recent samples showing a hostile hand gesture (middle
-    /// finger), weighted by how sure the classifier was.
     public var hostileGesture: Double
-    /// Fraction of recent samples with an angry face.
     public var angryFace: Double
 
     public init(
@@ -65,8 +47,6 @@ public struct PersonFeatures: Sendable, Equatable {
     }
 }
 
-/// Builds per-track behaviour features from timestamped track history.
-/// Feed live tracks at detection rate; all windows are seconds.
 public final class FeatureExtractor {
     public let config: ThreatConfig
 
@@ -81,9 +61,6 @@ public final class FeatureExtractor {
     private var histories: [Int: [Sample]] = [:]
     private var egoSamples: [(time: TimeInterval, level: Double)] = []
 
-    /// Latest speech severity + when it was reported. Speech is global
-    /// (the mic hears the scene, not one track), so one value is stamped
-    /// onto every track's features while fresh.
     private var speechSeverity = 0.0
     private var speechAt: TimeInterval = -.infinity
 
@@ -91,9 +68,6 @@ public final class FeatureExtractor {
         self.config = config
     }
 
-    /// Wearer motion level 0 (still) ... 1 (walking or swinging the phone),
-    /// from the phone's accelerometer. Without it every level is 0, so a
-    /// replayed video keeps the old behaviour.
     public func setEgoMotion(accelRMS: Double, at time: TimeInterval) {
         let span = max(config.egoMovingAccel - config.egoStillAccel, 1e-6)
         egoSamples.append((time, clamp01((accelRMS - config.egoStillAccel) / span)))
@@ -107,15 +81,11 @@ public final class FeatureExtractor {
         speechAt = -.infinity
     }
 
-    /// Report the listener's latest speech severity (0...1, clamped).
     public func setSpeech(severity: Double, at time: TimeInterval) {
         speechSeverity = clamp01(severity)
         speechAt = time
     }
 
-    /// Record one detection tick. Pass matched (live) tracks only; gaps in a
-    /// track's samples are its undetected spans. Times are seconds on any
-    /// consistent clock (production uses monotonic uptime).
     public func update(tracks: [Track], at time: TimeInterval) {
         let live = tracks.filter { $0.missed == 0 }
         for track in live {
@@ -133,7 +103,6 @@ public final class FeatureExtractor {
         }
     }
 
-    /// Features for a track, or nil when it has no samples in range.
     public func features(for trackID: Int, at time: TimeInterval) -> PersonFeatures? {
         guard let samples = histories[trackID], !samples.isEmpty else { return nil }
         var features = PersonFeatures()
@@ -194,9 +163,6 @@ public final class FeatureExtractor {
         return features
     }
 
-    /// A box that grows while the WEARER moves (walking up to a still
-    /// person) is mostly the wearer closing in. Discount the approach
-    /// features by the recent motion level; a still wearer keeps full weight.
     private func applyEgoMotionDiscount(to features: inout PersonFeatures, at time: TimeInterval) {
         let recent = egoSamples.filter { time - $0.time <= config.egoWindow }
         guard !recent.isEmpty else { return }
@@ -207,8 +173,6 @@ public final class FeatureExtractor {
         features.cornering *= keep
     }
 
-    /// Hand reach: the closest hand's size, scaled up when that hand is
-    /// growing (a lunge). Shouting: how often the mouth is wide open.
     private func applyCues(to features: inout PersonFeatures, samples: [Sample], at time: TimeInterval) {
         let recent = window(samples, time, config.featureWindow)
         let withCues = recent.filter { $0.cues != nil }
@@ -237,8 +201,6 @@ public final class FeatureExtractor {
             features.shouting = Double(open) / Double(mouths.count)
         }
 
-        // Classified gestures and expressions (MediaPipe engine). Absent
-        // cues leave both at 0, so older scores are unchanged.
         let gestureSamples = recent.compactMap { $0.cues }.filter { $0.expression != nil || !$0.gestures.isEmpty }
         if gestureSamples.count >= config.minGestureSamples {
             let hostile = gestureSamples.reduce(0.0) { sum, cues in
@@ -254,8 +216,6 @@ public final class FeatureExtractor {
         }
     }
 
-    // MARK: - Helpers
-
     private var maxWindow: TimeInterval {
         max(
             config.featureWindow,
@@ -269,8 +229,6 @@ public final class FeatureExtractor {
         samples.filter { $0.time > time - span }
     }
 
-    /// Enough matched samples, over enough time, for a slope to mean motion
-    /// rather than box jitter. Samples are in time order.
     private func hasEnoughHistory(_ samples: [Sample]) -> Bool {
         guard samples.count >= config.minTrendSamples,
               let first = samples.first, let last = samples.last
@@ -280,10 +238,6 @@ public final class FeatureExtractor {
         return last.time - first.time >= config.minTrendSpan
     }
 
-    /// Seconds the track was actually matched, from sample timestamps (not a
-    /// count times a nominal period, which under-counts when detection runs
-    /// slower than 5 Hz). Gaps longer than `reappearMinGap` were not presence.
-    /// The latest sample is credited one nominal period.
     private func matchedSeconds(_ samples: [Sample]) -> TimeInterval {
         guard !samples.isEmpty else { return 0 }
         let times = samples.map(\.time).sorted()
@@ -294,7 +248,6 @@ public final class FeatureExtractor {
         return continuous + config.detectionPeriod
     }
 
-    /// Least-squares slope, or nil with fewer than 2 samples or no time span.
     private func slope(of points: [(TimeInterval, Double)]) -> Double? {
         guard points.count >= 2 else { return nil }
         let n = Double(points.count)

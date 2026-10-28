@@ -1,7 +1,6 @@
 import AVFoundation
 import SwiftUI
 
-/// Live camera preview backed by AVCaptureVideoPreviewLayer.
 struct CameraPreviewView: UIViewRepresentable {
     let session: AVCaptureSession
 

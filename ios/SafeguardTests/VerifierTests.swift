@@ -1,10 +1,7 @@
 import CoreVideo
 import XCTest
 
-/// Verifier gate edges, client request/response shape, frame buffer.
-/// Uses a URLProtocol stub: no network, no keys, fake data only.
 final class VerifierTests: XCTestCase {
-    // MARK: - Gate
 
     func testEdgeTrigger() {
         var gate = VerifierGate()
@@ -18,21 +15,16 @@ final class VerifierTests: XCTestCase {
     func testNoRearmWithoutDip() {
         var gate = VerifierGate()
         XCTAssertTrue(gate.consume(maxScore: 0.6))
-        // 0.45 never falls below 0.50 - 0.10: stays disarmed.
         XCTAssertFalse(gate.consume(maxScore: 0.45))
         XCTAssertFalse(gate.consume(maxScore: 0.6))
     }
 
     func testProximityCannotTrigger() {
-        // The gate takes scores only — there is no proximity input to wire
-        // up. Low scores stay silent no matter how often they arrive.
         var gate = VerifierGate()
         for _ in 0..<50 {
             XCTAssertFalse(gate.consume(maxScore: 0.2))
         }
     }
-
-    // MARK: - Client
 
     private func stubSession(
         status: Int = 200, body: String = """
@@ -44,7 +36,6 @@ final class VerifierTests: XCTestCase {
         let capture = MockURLProtocol.Capture()
         MockURLProtocol.handler = { request in
             capture.request = request
-            // URLSession may stream the body instead of setting httpBody.
             if let body = request.httpBody {
                 capture.body = body
             } else if let stream = request.httpBodyStream {
@@ -163,8 +154,6 @@ final class VerifierTests: XCTestCase {
         }
     }
 
-    // MARK: - Backend URL (an iPhone must be able to reach the Mac)
-
     func testConfigPriorityOverrideThenPlistThenLocalhost() {
         let withBoth = VerifierConfig.resolve(
             override: "http://192.168.1.20:8000", plistValue: "http://10.0.0.5:8000"
@@ -177,8 +166,6 @@ final class VerifierTests: XCTestCase {
     }
 
     func testInvalidValuesFallThrough() {
-        // An empty build setting expands to "" in the Info.plist; junk typed
-        // in Settings must not break verification either.
         for junk in ["", "   ", "not a url", "ftp://host", "http://", "192.168.1.20:8000"] {
             XCTAssertEqual(
                 VerifierConfig.resolve(override: junk, plistValue: nil).baseURL,
@@ -197,8 +184,6 @@ final class VerifierTests: XCTestCase {
     }
 
     func testInfoPlistAllowsLocalBackend() throws {
-        // Without these, iOS silently blocks http:// to the Mac and every
-        // /verify call fails on a real iPhone while mocked tests stay green.
         let plistURL = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("Safeguard/Supporting/Info.plist")
@@ -215,8 +200,6 @@ final class VerifierTests: XCTestCase {
     }
 
     func testInfoPlistHasAppTokenKey() throws {
-        // The app token rides a build setting, like the backend URL: the
-        // source plist must hold a $(...) reference, never a literal token.
         let plistURL = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("Safeguard/Supporting/Info.plist")
@@ -229,7 +212,6 @@ final class VerifierTests: XCTestCase {
     }
 
     func testInfoPlistHasSpeechDescriptions() throws {
-        // Without these the app crashes on first microphone/speech use.
         let plistURL = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("Safeguard/Supporting/Info.plist")
@@ -247,7 +229,7 @@ final class VerifierTests: XCTestCase {
         let (session, capture) = stubSession()
         let key = VerifierConfig.backendURLDefaultsKey
         defer { UserDefaults.standard.removeObject(forKey: key) }
-        let client = VerifierClient(session: session) // no fixed config, as in the app
+        let client = VerifierClient(session: session)
 
         UserDefaults.standard.set("http://first.test:9", forKey: key)
         _ = try await client.verify(payload())
@@ -257,8 +239,6 @@ final class VerifierTests: XCTestCase {
         _ = try await client.verify(payload())
         XCTAssertEqual(capture.request?.url?.host, "second.test")
     }
-
-    // MARK: - Failure reasons (never a bare "Verify failed")
 
     func testClassifyUnreachable() {
         for code: URLError.Code in [
@@ -284,7 +264,6 @@ final class VerifierTests: XCTestCase {
         )
         XCTAssertEqual(noKey.kind, .noKey)
         XCTAssertTrue(noKey.message.contains("no API key"))
-        // Same 503 with a configured backend is a real server error.
         let server = VerifyFailure.classify(
             VerifierError.serverStatus(503), museConfigured: true
         )
@@ -346,12 +325,7 @@ final class VerifierTests: XCTestCase {
         XCTAssertFalse(unreachable)
     }
 
-    // MARK: - SAM 2 prompt boxes
-
     func testPixelBoxesFlipYAxis() {
-        // A person in the TOP third of the picture has Vision y 0.65...0.95
-        // (origin lower-left). SAM 2 wants top-left pixels: y 25.6...179.2.
-        // Passing Vision's y through sent 332.8...486.4, the BOTTOM third.
         let boxes = VerifyPayload.pixelBoxes(
             [CGRect(x: 0.4, y: 0.65, width: 0.2, height: 0.30)],
             in: CGSize(width: 512, height: 512)
@@ -373,8 +347,6 @@ final class VerifierTests: XCTestCase {
     }
 
     func testClipStartsAtOldestFrameWithPeople() throws {
-        // Boxes must belong to the clip's FIRST frame. Using the newest boxes
-        // on the oldest frame put SAM 2's prompts where the person no longer was.
         let buffer = FrameBuffer(maxFrames: 8)
         let early = CGRect(x: 0.20, y: 0.30, width: 0.2, height: 0.3)
         let late = CGRect(x: 0.30, y: 0.30, width: 0.3, height: 0.5)
@@ -414,11 +386,8 @@ final class VerifierTests: XCTestCase {
         }
         let clip = buffer.clip()
         XCTAssertEqual(clip.frames.count, 4)
-        // Steps 0 and 1 fell out of the ring; the oldest kept frame is step 2.
         XCTAssertEqual(clip.boxes, [boxesByStep[2]])
     }
-
-    // MARK: - Frame buffer
 
     func testFrameBufferRing() throws {
         let buffer = FrameBuffer(maxFrames: 8)
@@ -429,7 +398,6 @@ final class VerifierTests: XCTestCase {
         let snapshot = buffer.snapshot()
         XCTAssertEqual(snapshot.frames.count, 8)
         XCTAssertGreaterThan(snapshot.size.width, 0)
-        // Real JPEGs, downscaled to a 512 long edge.
         XCTAssertEqual(snapshot.frames[0].prefix(2), Data([0xFF, 0xD8]))
         XCTAssertLessThanOrEqual(max(snapshot.size.width, snapshot.size.height), 512)
     }

@@ -1,9 +1,3 @@
-"""Emergency contacts: invite codes + Telegram chat-id linking.
-
-No public webhook: the backend polls Telegram `getUpdates`, and when a
-contact opens the invite link and presses Start, their chat id is stored
-against the code. Persisted to a gitignored JSON file.
-"""
 
 import json
 import secrets
@@ -35,7 +29,7 @@ class ContactStore:
     def _load(self):
         if self._file is None:
             return []
-        text = self._file.read()  # StorageUnavailable propagates: never start empty by mistake
+        text = self._file.read()
         if text is None:
             return []
         try:
@@ -65,10 +59,9 @@ class ContactStore:
         try:
             self._file.write(json.dumps({"contacts": self.contacts}))
         except StorageUnavailable:
-            pass  # kept in memory; the next change retries
+            pass
 
     def invite(self, name):
-        """Adds a contact, returning its record (with a fresh code)."""
         clean = " ".join(str(name).split())[:60]
         if not clean:
             raise ValueError("name is required")
@@ -80,7 +73,6 @@ class ContactStore:
         return dict(record)
 
     def link(self, code, chat_id):
-        """Stores a chat id against an invite code. Returns the record."""
         for record in self.contacts:
             if record["code"] == code:
                 record["chat_id"] = chat_id
@@ -95,7 +87,6 @@ class ContactStore:
         return None
 
     def remove(self, code):
-        """Deletes a contact by invite code. True when one was removed."""
         before = len(self.contacts)
         self._contacts = [r for r in self.contacts if r["code"] != code]
         if len(self.contacts) == before:
@@ -116,11 +107,6 @@ def guardian_invite_link(bot_username, code):
 
 
 def link_from_updates(payload, store, guardians=None):
-    """Applies one Telegram `getUpdates` payload to the store.
-
-    Returns (linked codes, next offset). Pure apart from the store calls,
-    so tests feed it fake payloads without touching the network.
-    """
     linked = []
     offset = None
     results = payload.get("result") if isinstance(payload, dict) else None

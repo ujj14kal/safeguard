@@ -1,12 +1,7 @@
 import XCTest
 
-/// Voice commands: wake-word parsing with variants, the stop confirmation
-/// flow, and code-phrase conflict resolution. Execution feedback (speech +
-/// haptic + toast) lives in the view model; parsing here is pure.
 final class VoiceCommandTests: XCTestCase {
     private let parser = VoiceCommandParser()
-
-    // MARK: - Parsing
 
     func testEachCommand() {
         let cases: [(String, VoiceCommand)] = [
@@ -37,7 +32,6 @@ final class VoiceCommandTests: XCTestCase {
     }
 
     func testWakeWordVariantsAndNoise() {
-        // Mis-hearings of the wake word + polite wrapping + case/punct.
         XCTAssertEqual(parser.parse("safe guard stop"), .stopProtecting)
         XCTAssertEqual(parser.parse("save guard, status"), .status)
         XCTAssertEqual(parser.parse("SAFEGUARD, STOP!"), .stopProtecting)
@@ -58,17 +52,12 @@ final class VoiceCommandTests: XCTestCase {
     }
 
     func testUnknownCommandFallsThrough() {
-        // Returns nil: the view model then threat-scans the transcript.
         XCTAssertNil(parser.parse("safeguard, dance"))
         XCTAssertNil(parser.parse("safeguard"))
         XCTAssertNil(parser.parse("safeguard, I love you"))
     }
 
     func testCodePhraseBeatsWakeWordCommand() {
-        // Conflict resolution lives in view-model order (code phrases
-        // first), but both halves are pinned here: the parser claims no
-        // command in a code-phrase transcript, and the phrase matcher
-        // still fires with the wake word present.
         XCTAssertNil(parser.parse("safeguard open calculator"))
         XCTAssertEqual(
             CodePhraseMatcher().match("safeguard open calculator"), .safePhrase
@@ -80,15 +69,11 @@ final class VoiceCommandTests: XCTestCase {
     }
 
     func testDistressCallFallsThroughToMatcher() {
-        // "Call 112" WITHOUT the wake word is a cry for help, not the
-        // command: the parser stays out and the threat matcher fires.
         XCTAssertNil(parser.parse("somebody call 112!"))
         XCTAssertEqual(
             SpeechMatcher().match("somebody call 112!")?.category, .distress
         )
     }
-
-    // MARK: - Stop confirmation
 
     func testConfirmFlow() {
         var confirmation = StopConfirmation(windowSeconds: 5)
@@ -126,7 +111,6 @@ final class VoiceCommandTests: XCTestCase {
         confirmation.request(at: 100)
         XCTAssertEqual(confirmation.answer("hmm, let me think", at: 101), .waiting)
         XCTAssertTrue(confirmation.isPending(at: 101))
-        // ...then the wearer answers in time.
         XCTAssertEqual(confirmation.answer("yes", at: 104), .confirmed)
     }
 

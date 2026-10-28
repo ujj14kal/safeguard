@@ -1,17 +1,11 @@
 import Foundation
 import UserNotifications
 
-/// "I'll be home in 30 minutes." If the person does not tap "I'm safe" by
-/// then, the SOS countdown starts (they can still cancel it). This version
-/// lives on the phone: a local notification wakes the person at the
-/// deadline, and the countdown starts as soon as the app is open. It cannot
-/// fire by itself if the phone is off or the app was force-closed.
 @MainActor
 public final class SafeArrivalStore: ObservableObject {
     public static let shared = SafeArrivalStore()
     static let deadlineKey = "safeArrival.deadline"
     public static let choices = [15, 30, 60, 120]
-    /// A heads-up this long before the deadline.
     static let reminderLead: TimeInterval = 120
 
     @Published public private(set) var deadline: Date?
@@ -40,7 +34,6 @@ public final class SafeArrivalStore: ObservableObject {
         schedule(end, end.addingTimeInterval(-Self.reminderLead))
     }
 
-    /// "I'm safe": the timer ends and nothing happens.
     public func markSafe() {
         clear()
     }
@@ -54,15 +47,12 @@ public final class SafeArrivalStore: ObservableObject {
         return now >= deadline
     }
 
-    /// Called once when the deadline has passed: clears the timer and
-    /// returns true so the caller starts the countdown exactly once.
     public func consumeOverdue(now: Date = Date()) -> Bool {
         guard isOverdue(now: now) else { return false }
         clear()
         return true
     }
 
-    /// "2:05" for 125 seconds.
     public static func clock(_ seconds: TimeInterval) -> String {
         let total = Int(seconds.rounded(.up))
         return String(format: "%d:%02d", total / 60, total % 60)

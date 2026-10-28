@@ -1,13 +1,3 @@
-"""Standing live links and guardian codes.
-
-A CHANNEL is the one stable live link a person approves in Settings: the
-same URL works for every live stream and every SOS, so contacts can keep it.
-A GUARDIAN CODE is what a guardian holds: the protected person enters it
-(at sign-up or in Settings) and the guardian can then open a read-only page
-with the recordings of that person's incidents. Codes are long and random
-(about 59 bits) and the lookup routes are rate-limited; revoking a code
-cuts access at once.
-"""
 
 import json
 import logging
@@ -18,7 +8,6 @@ from .storage import StorageUnavailable, as_state_file
 
 logger = logging.getLogger("safeguard.links")
 
-# No 0/O/1/I/L: codes are read aloud and typed by hand.
 _ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
 _CODE_LEN = 12
 
@@ -29,8 +18,6 @@ def make_guardian_code() -> str:
 
 
 def normalize_code(code: str) -> str:
-    """Upper-case, dashes and spaces dropped, regrouped as XXXX-XXXX-XXXX.
-    Returns "" when it cannot be a code."""
     raw = "".join(ch for ch in (code or "").upper() if ch not in "- ")
     if len(raw) != _CODE_LEN or any(ch not in _ALPHABET for ch in raw):
         return ""
@@ -38,10 +25,6 @@ def normalize_code(code: str) -> str:
 
 
 class _JsonMap:
-    """A small persisted dict, shared by both stores. Persistence is a
-    StateFile (a local file in development, a Storage object in Supabase
-    mode); a read that fails raises, so a store never starts empty by
-    mistake and then overwrites the real data."""
 
     def __init__(self, path=None):
         self._file = as_state_file(path)
@@ -79,7 +62,6 @@ class GuardianStore(_JsonMap):
         return normalize_code(code) in self._data
 
     def link_chat(self, code: str, chat_id) -> bool:
-        """Remembers the guardian's Telegram chat, so an SOS can alert them."""
         key = normalize_code(code)
         if key not in self._data or chat_id is None:
             return False
@@ -101,7 +83,6 @@ class GuardianStore(_JsonMap):
 
 
 class ChannelStore(_JsonMap):
-    """device_id -> {token, wearer_name}. One standing link per device."""
 
     def get_or_create(self, device_id: str, wearer_name: str) -> dict:
         entry = self._data.get(device_id)

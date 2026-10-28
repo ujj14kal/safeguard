@@ -1,7 +1,5 @@
 import XCTest
 
-/// Every Localizable key needs a non-empty Hindi value. Reads the
-/// catalog the test target compiles (same files as the app).
 final class LocalizationTests: XCTestCase {
     private func strings(for language: String) throws -> [String: String] {
         let bundle = Bundle(for: LocalizationTests.self)
@@ -44,8 +42,6 @@ final class LocalizationTests: XCTestCase {
     private func specifiers(in text: String) -> [String] {
         let pattern = try! NSRegularExpression(pattern: "%(\\d+\\$)?[@d]")
         let range = NSRange(text.startIndex..., in: text)
-        // Positional specifiers (%2$d) let Hindi reorder arguments, so
-        // compare the multiset of specifier kinds, not their order.
         return pattern.matches(in: text, range: range).map {
             (text as NSString).substring(with: $0.range)
                 .replacingOccurrences(of: "\\d+\\$", with: "", options: .regularExpression)

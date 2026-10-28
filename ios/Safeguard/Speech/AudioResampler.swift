@@ -1,8 +1,5 @@
 import AVFoundation
 
-/// Turns microphone buffers (any format) into 16 kHz mono Int16 samples, the
-/// audio format the cloud speech service takes. Used from the audio thread,
-/// so it keeps one converter and allocates little.
 public final class PCM16Resampler: @unchecked Sendable {
     private let target = AVAudioFormat(
         commonFormat: .pcmFormatInt16, sampleRate: 16_000, channels: 1, interleaved: true

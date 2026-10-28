@@ -3,24 +3,12 @@ import Foundation
 import ImageIO
 import Vision
 
-/// On-device person detector (Apple Vision human rectangles + body pose).
-/// Behaviour-only pipeline: boxes and facing cues out, no identity, no face
-/// recognition. Synchronous; call off the main thread. Orientation defaults
-/// to `.up`; the camera delivers upright portrait buffers.
-/// Boxes are UPPER-BODY on purpose (see DECISIONS.md): they stay stable when
-/// legs are occluded or out of frame, which is what distance-trend needs.
 public final class PersonDetector {
     private let poseMatchDistance: Double
     private var poseUnavailable = false
-    /// MediaPipe hands/face (gestures + expressions). Nil when the models
-    /// are missing or failed to start: the Vision cues below take over.
     private lazy var cueEngine: CueEngine? = CueEngineFactory.make()
-    /// What the last frame's classifiers saw, owned by a person or not.
     public private(set) var lastFrameCues = FrameCues()
 
-    /// - Parameter poseMatchDistance: fallback pose-to-detection matching
-    ///   radius (normalized units). Defaults to ThreatConfig's value so all
-    ///   numbers live in config.
     public init(poseMatchDistance: Double = ThreatConfig().poseMatchDistance) {
         self.poseMatchDistance = poseMatchDistance
     }
@@ -33,17 +21,12 @@ public final class PersonDetector {
         rectRequest.upperBodyOnly = true
         let poseRequest = VNDetectHumanBodyPoseRequest()
         #if targetEnvironment(simulator)
-            // The Simulator has no usable GPU/Neural Engine path for Vision and
-            // fails with "Could not create inference context". Devices are unaffected.
             rectRequest.usesCPUOnly = true
             poseRequest.usesCPUOnly = true
         #endif
         let handler = VNImageRequestHandler(
             cvPixelBuffer: pixelBuffer, orientation: orientation, options: [:]
         )
-        // Rectangles are critical (tracking must not die); pose is enrichment
-        // (facing degrades to unknown). Performed separately so a pose failure
-        // — e.g. unsupported in the Simulator — never takes down the frame.
         try LatencyMeter.shared.measure("persons") { try handler.perform([rectRequest]) }
         var detections = (rectRequest.results ?? []).map {
             DetectedPerson(box: $0.boundingBox, confidence: $0.confidence)
@@ -66,14 +49,10 @@ public final class PersonDetector {
         return detections
     }
 
-    /// Hands and face are enrichment like pose: a failure leaves the frame
-    /// with no cues, never without people.
     private func attachCues(
         to detections: inout [DetectedPerson], handler: VNImageRequestHandler,
         pixelBuffer: CVPixelBuffer
     ) {
-        // MediaPipe runs even with no person box: a hand or face near the
-        // camera is often too close for the person detector.
         if let engine = cueEngine, let frame = engine.process(pixelBuffer) {
             lastFrameCues = Self.frameCues(from: frame)
             if !detections.isEmpty {
@@ -128,9 +107,6 @@ public final class PersonDetector {
         return FrameCues(gestures: gestures, expression: expression)
     }
 
-    /// Maps MediaPipe hands and faces to their people and classifies them.
-    /// Replaces the two Vision requests (hand pose, face landmarks) when
-    /// the engine is running, so there is one pass, not two.
     private func attachMediaPipeCues(
         _ frame: MPFrame, to detections: inout [DetectedPerson], pixelBuffer: CVPixelBuffer
     ) {
@@ -162,8 +138,6 @@ public final class PersonDetector {
         }
     }
 
-    /// The detection whose box, grown to include reaching arms, holds the
-    /// centre of `box`; the nearest centre wins when several do.
     private func owner(of box: CGRect, in detections: [DetectedPerson]) -> Int? {
         let centre = CGPoint(x: box.midX, y: box.midY)
         return detections.indices
@@ -184,8 +158,6 @@ public final class PersonDetector {
         }
     }
 
-    /// Inner-lip height over width, measured in pixels (landmark points are
-    /// normalized to the face box, which is not square).
     private static func mouthOpenRatio(
         _ face: VNFaceObservation, width: Double, height: Double
     ) -> Double? {
@@ -216,9 +188,6 @@ public final class PersonDetector {
         )
     }
 
-    /// Attach each pose to the detection containing its nose (falling back to
-    /// the nearest detection centre within range). Poses that match nothing
-    /// are dropped: no facing evidence is better than wrong evidence.
     private func attach(poses: [BodyPose], to detections: inout [DetectedPerson]) {
         for pose in poses {
             guard let anchor = pose.nose?.point ?? pose.midShoulder() else { continue }

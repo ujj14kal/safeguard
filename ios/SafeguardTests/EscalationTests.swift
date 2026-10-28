@@ -1,8 +1,5 @@
 import XCTest
 
-/// SOS escalation core: the four tracks start together and fail
-/// independently, retries back off, the end flow freezes honestly.
-/// Timestamps are explicit: no waiting.
 final class EscalationCoordinatorTests: XCTestCase {
     func testStartsAllFourTogether() {
         var coordinator = EscalationCoordinator()
@@ -12,14 +9,13 @@ final class EscalationCoordinatorTests: XCTestCase {
         for track in EscalationTrack.allCases {
             XCTAssertEqual(coordinator.status(of: track), .running, "\(track)")
         }
-        coordinator.start() // idempotent
+        coordinator.start()
         XCTAssertEqual(coordinator.status(of: .route), .running)
     }
 
     func testOneFailureDoesNotStopTheRest() {
         var coordinator = EscalationCoordinator()
         coordinator.start()
-        // Exhaust route's retries: 1 initial + 3 waits = terminal.
         coordinator.fail(.route, reason: "no network", at: 100)
         coordinator.fail(.route, reason: "no network", at: 102)
         coordinator.fail(.route, reason: "no network", at: 110)
@@ -71,7 +67,7 @@ final class EscalationCoordinatorTests: XCTestCase {
         XCTAssertEqual(coordinator.status(of: .contacts), .failed(reason: "SOS ended"))
         XCTAssertEqual(coordinator.status(of: .stream), .failed(reason: "SOS ended"))
         XCTAssertEqual(coordinator.dueRetries(at: 1000), [])
-        coordinator.end() // idempotent
+        coordinator.end()
         XCTAssertEqual(coordinator.status(of: .route), .done)
     }
 
@@ -101,7 +97,6 @@ final class EscalationCoordinatorTests: XCTestCase {
     }
 }
 
-/// Contact list rules: at most 5, no blanks, no duplicate codes.
 final class SOSContactStoreTests: XCTestCase {
     func testAddUpToFive() {
         var store = SOSContactStore()
@@ -175,14 +170,12 @@ final class SOSContactStoreTests: XCTestCase {
     }
 }
 
-/// Route choice: lowest ETA among the nearest 3 — never a crime model.
 final class RouteChoiceTests: XCTestCase {
     func testPicksLowestETAAmongNearestThree() {
         let candidates = [
             RouteCandidate(name: "Near but slow", distanceMeters: 100, etaSeconds: 900),
             RouteCandidate(name: "Near and fast", distanceMeters: 200, etaSeconds: 300),
             RouteCandidate(name: "Third", distanceMeters: 300, etaSeconds: 600),
-            // Best ETA overall, but 4th nearest: excluded.
             RouteCandidate(name: "Far and fastest", distanceMeters: 400, etaSeconds: 60),
         ]
         XCTAssertEqual(RouteChoice.pick(from: candidates)?.name, "Near and fast")
@@ -197,8 +190,6 @@ final class RouteChoiceTests: XCTestCase {
     }
 
     func testNoResultsMessagesAreClear() {
-        // No results never fails silently: the SOS screen shows one of
-        // these. Pinned exactly, like the cab share wording.
         XCTAssertEqual(RouteChoice.noLocationMessage, "Location unavailable")
         XCTAssertEqual(RouteChoice.waitingForLocationMessage, "Waiting for location…")
         XCTAssertEqual(RouteChoice.noPlacesMessage, "No staffed places found nearby")
@@ -206,9 +197,6 @@ final class RouteChoiceTests: XCTestCase {
     }
 }
 
-/// The mock-cab banner: always present, always honest.
-/// (Alert/cab/ended texts are composed server-side; their no-leak rule is
-/// pinned by backend tests now.)
 final class SOSMessageBuilderTests: XCTestCase {
     func testDemoBannerAlwaysPresent() {
         XCTAssertTrue(SOSMessageBuilder.demoBanner.contains("DEMO"))

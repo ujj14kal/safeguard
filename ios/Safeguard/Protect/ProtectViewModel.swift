@@ -7,13 +7,8 @@ import MapKit
 import SwiftUI
 import UIKit
 
-/// Protect tab model: owns the active FrameSource, runs the detect-then-track
-/// pipeline on a serial queue, keeps the screen awake while protecting
-/// (foreground-only app), and surfaces frame flow + errors.
 @MainActor
 final class ProtectViewModel: ObservableObject {
-    /// One model for the whole app, created at launch: the microphone must be
-    /// listening for distress words whichever tab is open.
     static let shared = ProtectViewModel()
 
     @Published var state: ProtectionState = .idle
@@ -36,30 +31,19 @@ final class ProtectViewModel: ObservableObject {
     @Published var listenerLive = false
     @Published var listenerDeafReason: String?
     @Published var lastHeard = ""
-    /// Debug: what the AI judge last did ("sent", its verdict, or why it failed).
     @Published var judgeStatus = String(localized: "AI judge: idle")
     @Published var cloudStatus = CloudEarState.off.summary
-    /// Meta Muse Voice Transcribe through the backend. Needs the listener
-    /// opt-in too. Off keeps all hearing on the phone.
     @AppStorage("cloudEarEnabled") var cloudEarEnabled = Defaults.current.cloudEarEnabled
-    /// Demo mode: keep the cloud ear on all the time. Off, it switches on only
-    /// when someone is near, a flag is raised, or an alert/SOS is running.
     @AppStorage("cloudEarAlwaysOn") var cloudEarAlwaysOn = Defaults.current.cloudEarAlwaysOn
     private var cloudGate = CloudEarGate()
     private var sourcePolicy = TranscriptSourcePolicy()
     private var cloudTimer: Timer?
     private var cloudWanted = false
-    /// Concerning talk heard in the last few seconds (red banner on the HUD).
     @Published var conversationFlag: ConversationFlag?
     @Published var lastSpeechInfo: String?
     @Published var toast: String?
-    /// Near-black screen saver: the camera keeps running underneath.
-    /// Lifted automatically when anything needs the wearer's eyes.
     @Published var dimmed = false
 
-    // MARK: - SOS escalation (Phase 6)
-
-    /// Four-track coordinator (route, contacts, stream, cab).
     @Published var escalation = EscalationCoordinator()
     @Published var incidentID: String?
     @Published var liveURL: String?
@@ -70,16 +54,13 @@ final class ProtectViewModel: ObservableObject {
     @Published var sosDestinationCoordinate: CLLocationCoordinate2D?
     @Published var sosDestinationETA: String?
     @Published var sosRegion: MKCoordinateRegion?
-    /// Best fresh fix of the wearer (mirrors the tracker), for the SOS map.
     @Published var sosFix: CLLocation?
     @Published var sosPlaces: [SOSPlace] = []
     @Published var sosRouteSearching = false
     @Published var sosPreciseOffHint = false
     @Published var showingCabSheet = false
     @Published var sosContacts = SOSContactStore()
-    /// Wearer's display name for SOS messages (Settings).
     @AppStorage("wearerName") var wearerName = ""
-    /// OFF by default (dry-run): turning on needs a confirm dialog.
     @AppStorage("sendRealAlerts") var sendRealAlerts = false
 
     private let incidentClient = IncidentClient()
@@ -91,33 +72,23 @@ final class ProtectViewModel: ObservableObject {
     private var routeWaitStart: TimeInterval?
     private var routeOrigin: LocationSample?
     private var routeRefreshing = false
-    /// Mock cab details (DEMO): fixed fake driver/plate + countdown end.
     private(set) var cabDeadline: TimeInterval?
     let cabDriver = "Demo Driver"
     let cabPlate = "DL-1D-EMO"
 
-    /// Countdown text for the demo cab sheet (the 1 s tick refreshes it).
     var cabCountdownText: String {
         guard let deadline = cabDeadline else { return "--:--" }
         let left = max(0, Int(deadline - Self.now))
         return String(format: "%d:%02d", left / 60, left % 60)
     }
 
-    /// Conversation-listener opt-in (default OFF). On while protecting,
-    /// transcripts feed the threat matcher; off, they are scanned for code
-    /// phrases/commands and dropped, and no window is ever built.
     @AppStorage("listenerOptIn") var listenerOptIn = Defaults.current.listenerOptIn
-    /// "auto" (follow the iPhone), "en" or "hi".
     @AppStorage("speechLanguage") var speechLanguage = "auto"
 
-    /// Safety state machine + check-in config. MainActor-owned; the pipeline
-    /// feeds it via the published callbacks below (movement alerts), and the
-    /// UI feeds replies and taps. Timers advance on the 1 s tick.
     private(set) var safety = SafetyStateMachine()
     private let safetyConfig = SafetyConfig()
     private let speaker: CheckInSpeaking = CheckInSpeaker()
 
-    /// Everything voice shares one listener (one engine, one recognizer).
     private let listener = ConversationListener()
     private var phraseMatcher: CodePhraseMatcher
     private let speechConfig = SpeechConfig()
@@ -128,18 +99,13 @@ final class ProtectViewModel: ObservableObject {
     private var stopConfirmation: StopConfirmation
     private var offlineMessageSaid = false
     private let speechVerifier = VerifierClient()
-    /// True while the app itself is speaking: voice commands are ignored
-    /// then (code phrases and the threat matcher stay live).
     private var speakingNow = false
     private var partialGate = PartialReplyGate()
 
     var unsafeCause: UnsafeCause? { safety.unsafeCause }
 
-    /// Pipeline config (immutable, safe to read cross-queue): the HUD
-    /// overlay colours boxes with the same thresholds that scored them.
     var threatConfig: ThreatConfig { pipeline.config }
 
-    /// Any tracked person red right now (too close, or alerting).
     var hasRedBox: Bool {
         let config = pipeline.config
         return debugTracks.contains { track in
@@ -152,7 +118,6 @@ final class ProtectViewModel: ObservableObject {
         }
     }
 
-    /// HUD status pill content.
     var hudStatus: HudStatus {
         HudStatus.resolve(
             asking: safety.state == .asking,
@@ -192,12 +157,6 @@ final class ProtectViewModel: ObservableObject {
         cloudTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in self?.updateCloudEar() }
         }
-        // Hands-free "start protecting" needs a hot mic while idle, so the
-        // listener runs from here on (foreground only — iOS suspends the
-        // mic in the background). Idle transcripts feed commands only: no
-        // code phrases, no window, no threat scan, no backend call.
-        // Pre-setup the mic stays off: setup asks each permission with its
-        // reason first, and starting the listener would prompt bare.
         let standard = UserDefaults.standard
         if standard.bool(forKey: "setupComplete")
             || standard.bool(forKey: "onboardingSeen")
@@ -206,30 +165,21 @@ final class ProtectViewModel: ObservableObject {
         }
         loadContacts()
         history = IncidentHistory.load()
-        saveHistory() // persists the 30-day purge, if any
+        saveHistory()
     }
 
-    /// Setup finished: the idle hot mic may start now.
     func setupFinished() {
         startListener()
     }
 
-    // CIContext is Sendable; shared for off-main replay frame conversion.
     fileprivate nonisolated static let ciContext = CIContext()
 
-    /// Serial queue for the whole detection pipeline (render + detect + track).
     private nonisolated let detectionQueue = DispatchQueue(
         label: "app.safeguard.detection", qos: .userInitiated
     )
 
-    /// Pipeline state. Confined to `detectionQueue` by convention: every
-    /// access runs on that queue (delegate callbacks funnel through it;
-    /// resets use `sync`).
     private nonisolated(unsafe) let pipeline = DetectionPipeline()
 
-    // Frames arrive on a background queue. A lock-based counter avoids spawning
-    // a Task per frame, and the gate drops frames while the previous one is
-    // still being handled (no unbounded backlog at 30 fps).
     private nonisolated let frameCounter = FrameCounter()
     private nonisolated let pipelineGate = ConversionGate()
 
@@ -237,13 +187,8 @@ final class ProtectViewModel: ObservableObject {
     private var lastFpsSample = 0
     private var fpsTimer: Timer?
 
-    /// Protecting in every safety state except idle: the camera keeps
-    /// running through the check-in and the SOS (Phase 6 escalates).
     var isProtecting: Bool { state != .idle }
 
-    /// Big status text. The safety state wins; inside Monitoring the scorer
-    /// alert wins over proximity text. The ring itself always shows
-    /// proximity while protecting (never the alert).
     var displayTitle: String {
         switch state {
         case .asking:
@@ -289,8 +234,6 @@ final class ProtectViewModel: ObservableObject {
             beginSession(status: String(localized: "Monitoring with phone camera"))
             startEgoMotion()
             Task {
-                // Let the preview produce its first frames behind the
-                // loading screen instead of flashing black.
                 try? await Task.sleep(for: .milliseconds(1100))
                 isStarting = false
             }
@@ -325,8 +268,6 @@ final class ProtectViewModel: ObservableObject {
     func stop() {
         stopLiveStream()
         isStarting = false
-        // Stopping during an SOS goes through the same end flow as the
-        // hold-to-End button: contacts hear "SOS ended" once, tracks stop.
         if sosActive {
             endSOS()
         }
@@ -351,8 +292,6 @@ final class ProtectViewModel: ObservableObject {
         safety.stopProtecting()
         speaker.stop()
         speakingNow = false
-        // The listener stays up for idle voice commands; the transcript
-        // window is still discarded on every stop.
         endCountdown()
         evidenceStatus = nil
         window.clear()
@@ -371,7 +310,6 @@ final class ProtectViewModel: ObservableObject {
 
     private func beginSession(status: String) {
         statusLine = status
-        // Foreground-only app: keep the screen awake while protecting.
         UIApplication.shared.isIdleTimerDisabled = true
         frameCounter.reset()
         lastFpsSample = 0
@@ -399,11 +337,7 @@ final class ProtectViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Gestures and expressions (MediaPipe)
-
-    /// More than 5 unwanted gestures starts the auto-SOS countdown.
     @AppStorage("gesturesTriggerSOS") var gesturesTriggerSOS = true
-    /// What the classifiers saw in the last frame, for the debug overlay.
     @Published var cueLine = ""
     @Published private(set) var unwantedGestureCount = 0
     private var gestureCounter = UnwantedGestureCounter()
@@ -414,8 +348,6 @@ final class ProtectViewModel: ObservableObject {
     fileprivate func publishFrameCues(_ cues: FrameCues, at time: TimeInterval) {
         guard isProtecting else { return }
         cueLine = cues.summary
-        // Log what was seen (rate-limited per kind) so a session can be
-        // read back off the backend log.
         for gesture in cues.gestures where gesture.kind != .other {
             logCue("gesture", kind: gesture.kind.rawValue, score: gesture.score, at: time, every: 1.5)
         }
@@ -446,8 +378,6 @@ final class ProtectViewModel: ObservableObject {
         AppLog.shared.event(event, ["kind": kind, "score": String(format: "%.2f", score)])
     }
 
-    /// Per-stage detection timing for the debug overlay, and a log line
-    /// every 10 s so latency can be read off the phone afterwards.
     @Published var latencyLine = ""
     private var latencyTicks = 0
 
@@ -481,7 +411,6 @@ final class ProtectViewModel: ObservableObject {
     }
 
     fileprivate func publishReplayFrame(_ image: UIImage?) {
-        // A frame still in flight when stop() ran must not repaint the screen.
         guard isProtecting else { return }
         if let image {
             replayImage = image
@@ -528,7 +457,6 @@ final class ProtectViewModel: ObservableObject {
             "ms": String(Int(result.museLatencyMs)),
         ])
         verifyFailure = nil
-        // Unknown levels are dropped: a strict contract beats a guess.
         if let level = MuseVerdictLevel(rawValue: result.threatLevel) {
             safety.noteMuseVerdict(level, at: Self.now)
             drainAskSpeech()
@@ -543,10 +471,7 @@ final class ProtectViewModel: ObservableObject {
         )
         verifyFailure = failure
         lastVerifyResult = failure.message
-        // Deliberately no machine input: the on-device result stands.
     }
-
-    // MARK: - Check-in replies (voice phrases, double tap, buttons)
 
     func answerSafe() {
         safety.noteReply(.safePhrase, at: Self.now)
@@ -559,9 +484,6 @@ final class ProtectViewModel: ObservableObject {
     }
 
     #if DEBUG
-        /// Simulator/demo helper (Settings → Developer): runs a real SOS
-        /// without a camera, so the SOS screen, route and tracks can be
-        /// reviewed. Same code path as the unsafe phrase.
         func debugSimulateSOS() {
             if state == .idle {
                 state = .monitoring
@@ -577,17 +499,11 @@ final class ProtectViewModel: ObservableObject {
         syncProtectionState()
     }
 
-    // MARK: - Safety plumbing
-
     private static var now: TimeInterval { ProcessInfo.processInfo.systemUptime }
 
-    /// Backend health for the Dashboard while idle (no protecting session
-    /// needed). Reachability only; latency is measured here too.
     @Published var idleBackendReachable: Bool?
     @Published var idleBackendLatencyMs: Int?
     @Published var idleMuseConfigured: Bool?
-    /// True from the tap on "Start protecting" until the camera has had a
-    /// moment to warm up: drives the branded loading screen.
     @Published var isStarting = false
 
     func checkBackend() {
@@ -605,7 +521,6 @@ final class ProtectViewModel: ObservableObject {
         Task {
             let status = await VerifierClient().fetchStatus()
             backendStatus = status
-            // Said once per session, then on-device protection only.
             if !status.reachable, !offlineMessageSaid {
                 offlineMessageSaid = true
                 confirm(String(localized: "Verification is offline"))
@@ -613,8 +528,6 @@ final class ProtectViewModel: ObservableObject {
         }
     }
 
-    /// Speaks the pending question, if any. The 10 s clock starts when the
-    /// audio starts (the speaker reports back even on failure/cancel).
     private func drainAskSpeech() {
         guard safety.takeAskSpeechDue() else { return }
         speakingNow = true
@@ -631,12 +544,8 @@ final class ProtectViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Auto-SOS countdown (distress words)
-
     @AppStorage("distressWordsEnabled") var distressWordsEnabled = Defaults.current.distressWordsEnabled
-    /// System-uptime time when the auto-SOS fires; nil outside the countdown.
     @Published var countdownDeadline: TimeInterval?
-    /// "Recording • 2 of 3 parts saved to the cloud" while an SOS records.
     @Published var evidenceStatus: String?
     @AppStorage("recordOnSOS") var recordOnSOS = Defaults.current.recordOnSOS
     nonisolated let evidence = EvidenceCapture()
@@ -649,8 +558,6 @@ final class ProtectViewModel: ObservableObject {
     private var pendingDistressStart = false
     private var countdownTimer: Timer?
 
-    /// The wearer is OK: stop the countdown (button, double tap, or the
-    /// safe code phrase all end up here or in the state machine).
     func cancelAutoSOS() {
         AppLog.shared.event("countdown_cancel", ["by": "button"])
         safety.cancelCountdown(at: Self.now)
@@ -660,8 +567,6 @@ final class ProtectViewModel: ObservableObject {
 
     private func beginCountdown() {
         countdownDeadline = Self.now + safetyConfig.autoSosSeconds
-        // One soft tap each second; the SOS itself fires on the deadline,
-        // not on a tick, so it cannot be late by up to a second.
         countdownTimer?.invalidate()
         countdownTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
@@ -684,7 +589,6 @@ final class ProtectViewModel: ObservableObject {
         countdownDeadline = nil
     }
 
-    /// SOS: start recording video and audio, saved to the backend in parts.
     private func startEvidence(force: Bool = false) {
         guard force || recordOnSOS, !usingReplay, !evidence.isRecording else { return }
         evidence.retryPending()
@@ -711,15 +615,12 @@ final class ProtectViewModel: ObservableObject {
         evidence.stop()
     }
 
-    /// A distress word heard while protecting.
     private func distressHeard() {
         AppLog.shared.event("distress", ["protecting": "true"])
         safety.noteDistressWord(at: Self.now)
         syncProtectionState()
     }
 
-    /// The safe-arrival time passed without "I'm safe": start protecting (if
-    /// needed) and run the countdown, which the person can still cancel.
     func safeArrivalExpired() {
         AppLog.shared.event("safe_arrival_expired", [:])
         pendingTimerCause = true
@@ -736,8 +637,6 @@ final class ProtectViewModel: ObservableObject {
         }
     }
 
-    /// A distress word heard while NOT protecting: start protecting at once,
-    /// then run the countdown as soon as the camera is up.
     private func distressHeardWhileIdle() {
         guard distressWordsEnabled, !pendingDistressStart else { return }
         AppLog.shared.event("distress", ["protecting": "false", "action": "auto-start"])
@@ -749,7 +648,6 @@ final class ProtectViewModel: ObservableObject {
         }
     }
 
-    /// Drives the ring/display state from the machine, announcing changes.
     private func syncProtectionState() {
         let mapped: ProtectionState
         switch safety.state {
@@ -775,7 +673,6 @@ final class ProtectViewModel: ObservableObject {
                 "cause": safety.unsafeCause.map { String(describing: $0) } ?? "",
             ])
             state = mapped
-            // Anything needing the wearer's eyes lifts the dim.
             if mapped == .asking || mapped == .suspected || mapped == .unsafe || mapped == .countdown {
                 dimmed = false
             }
@@ -787,7 +684,6 @@ final class ProtectViewModel: ObservableObject {
             } else if previous == .countdown {
                 endCountdown()
                 if mapped != .unsafe {
-                    // Cancelled countdown: a later SOS is not shout-caused.
                     pendingShoutCause = false
                     pendingGestureCause = false
                     pendingTimerCause = false
@@ -800,8 +696,6 @@ final class ProtectViewModel: ObservableObject {
                 startEvidence()
                 startEscalation()
             }
-            // Safe-from-Unsafe while an SOS runs = deliberate end (safe
-            // phrase or hold-to-End): notify contacts once, stop tracks.
             if previous == .unsafe, mapped == .safe, sosActive {
                 endSOS()
             }
@@ -809,19 +703,13 @@ final class ProtectViewModel: ObservableObject {
         }
     }
 
-    /// Calm cue text while the listening window runs (nil otherwise).
-    /// The view announces it via VoiceOver once, on appear.
     var listeningCue: String? {
         safety.state == .listening ? safetyConfig.listeningCueText : nil
     }
 
     private func announce(_ state: ProtectionState) {
-        // Asking needs no announcement: the TTS question is the signal.
-        // Listening's cue announces itself when it appears.
         switch state {
         case .suspected:
-            // One light haptic on entering the window; the app is otherwise
-            // silent (no TTS, no tones) until the question.
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
         case .safe:
             UIAccessibility.post(notification: .announcement, argument: String(localized: "You're safe"))
@@ -846,9 +734,6 @@ final class ProtectViewModel: ObservableObject {
         errorMessage = message
     }
 
-    // MARK: - Conversation listener (Part B)
-
-    /// Decides, every couple of seconds, whether the cloud ear should listen.
     private func updateCloudEar() {
         let escalated = [.suspected, .asking, .countdown, .unsafe].contains(state)
         let want = cloudGate.shouldListen(
@@ -862,14 +747,11 @@ final class ProtectViewModel: ObservableObject {
         listener.setCloudEar(want)
     }
 
-    /// Words the recogniser should favour: the ones that matter most.
     private var contextWords: [String] {
         (safetyConfig.distressWords + safetyConfig.safePhrases + safetyConfig.unsafePhrases
             + ["Safeguard", "stop protecting"]).prefix(60).map { $0 }
     }
 
-    /// One raw microphone level per buffer (dBFS RMS), hopped to the main
-    /// actor. Feeds the shouting detector and the level log.
     private func handleLevel(_ db: Float) {
         levelPeak = max(levelPeak, db)
         let now = Self.now
@@ -907,12 +789,6 @@ final class ProtectViewModel: ObservableObject {
         }
     }
 
-    /// One transcript, fixed consumer order. Idle: commands only (no code
-    /// phrases, no window, no threat scan). Protecting: code phrases first
-    /// (consumed, never scanned further), then the stop-confirmation
-    /// answer, then voice commands (never while speaking, never in the
-    /// silent window), then — only when opted in — the threat matcher.
-    /// Partial text: code phrases only, and each phrase once per utterance.
     private var lastPartialLog: (text: String, at: TimeInterval) = ("", 0)
 
     fileprivate func handlePartial(_ text: String, source: TranscriptSource) {
@@ -923,12 +799,8 @@ final class ProtectViewModel: ObservableObject {
                 "text": text, "protecting": String(isProtecting), "src": source.rawValue,
             ])
         }
-        // While the cloud ear is delivering, Apple's rougher text of the same
-        // sentence only serves distress words and code phrases below.
         let feedsConversation = source == .cloud || sourcePolicy.appleMayFeedConversation(at: Self.now)
         guard isProtecting else {
-            // Idle: a distress word starts protection without waiting for the
-            // sentence to finish, unless it is a wake-worded command.
             if distressWordsEnabled, !speakingNow, commandParser.parse(text) == nil,
                distressMatcher.matches(text)
             {
@@ -960,7 +832,6 @@ final class ProtectViewModel: ObservableObject {
         let alreadyHandled = partialGate.finishUtterance()
         if !isProtecting {
             if practicingPhrases {
-                // Setup/Settings practice: report only, never act.
                 switch phraseMatcher.match(text) {
                 case .safePhrase:
                     practiceHeard = .safe
@@ -979,7 +850,6 @@ final class ProtectViewModel: ObservableObject {
             return
         }
         if let reply = phraseMatcher.match(text) {
-            // Already acted on from the partials of this utterance.
             if alreadyHandled == reply { return }
             safety.noteReply(reply, at: Self.now)
             drainAskSpeech()
@@ -989,7 +859,6 @@ final class ProtectViewModel: ObservableObject {
         let now = Self.now
         if stopConfirmation.isPending(at: now) {
             if commandParser.parse(text) != nil {
-                // A fresh wake-worded command cancels the pending stop.
                 stopConfirmation.cancel()
             } else {
                 switch stopConfirmation.answer(text, at: now) {
@@ -1001,7 +870,7 @@ final class ProtectViewModel: ObservableObject {
                     showToast(String(localized: "Still protecting"))
                     return
                 case .waiting, .expired:
-                    break // keep scanning below
+                    break
                 }
             }
         }
@@ -1030,16 +899,10 @@ final class ProtectViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Silent conversation rating
-
     private var hapticGate = SpeechHapticGate()
     private var judgeSchedule = SpeechJudgeSchedule()
-    /// AI judging of the whole conversation (text only goes to the backend).
     @AppStorage("aiJudgeEnabled") var aiJudgeEnabled = Defaults.current.aiJudgeEnabled
 
-    /// Every chunk of talk is rated on its own and answered with a vibration
-    /// only (never a sound): a nudge, an elevated double tap, or a strong
-    /// warning pattern.
     private func rateChunk(_ text: String) {
         vibrate(SpeechHapticLevel.level(for: speechMatcher.match(text)?.severity ?? 0))
     }
@@ -1047,7 +910,6 @@ final class ProtectViewModel: ObservableObject {
     private func vibrate(_ wanted: SpeechHapticLevel) {
         let level = hapticGate.consume(wanted, at: Self.now)
         if level != .none { AppLog.shared.event("vibrate", ["level": String(describing: level)]) }
-        // Soft taps only: one, two or three, never a sound.
         let taps: Int
         switch level {
         case .none: return
@@ -1063,9 +925,6 @@ final class ProtectViewModel: ObservableObject {
         }
     }
 
-    /// Rates one piece of talk (a partial or a final): a soft vibration, a
-    /// red flag on the HUD, and the severity into the state machine, so the
-    /// wearer is warned while the sentence is still being spoken.
     private func rateAndFlag(_ text: String) {
         guard isProtecting, listenerOptIn, let found = speechMatcher.match(text) else { return }
         rateChunk(text)
@@ -1080,14 +939,7 @@ final class ProtectViewModel: ObservableObject {
         dimmed = false
     }
 
-    /// The AI layer: the backend model reads the last stretch of talk and
-    /// says whether it is safe, so threats the word list has never seen
-    /// are still caught. Text only, never audio; the on-device matcher has
-    /// already warned instantly and stays as the fallback.
     private func judgeConversation(partial: String? = nil) {
-        // A partial is the sentence still being spoken: judge it together
-        // with the window, so the verdict does not wait for the pause that
-        // ends the sentence.
         var text = window.transcript
         if let partial, !partial.isEmpty { text += (text.isEmpty ? "" : " ") + partial }
         var snippet = text
@@ -1130,8 +982,6 @@ final class ProtectViewModel: ObservableObject {
         let severity = SpeechMatcher.backendSeverity(result.severity)
         publishSpeechResult(result, onDeviceSeverity: onDevice?.severity ?? 0)
         guard severity >= ConversationFlag.minSeverity else {
-            // The AI says it is safe (a joke, a film, friends): take down a
-            // flag the word list raised, unless it was a clear threat.
             if let flag = conversationFlag, flag.severity < 0.9 { conversationFlag = nil }
             return
         }
@@ -1147,19 +997,14 @@ final class ProtectViewModel: ObservableObject {
         conversationFlag = nil
     }
 
-    /// The red banner's button: start the safety measures now.
     func launchSafetyFromFlag() {
         conversationFlag = nil
         answerUnsafe()
     }
 
-    // MARK: - Wearer motion
-
     private let motionManager = CMMotionManager()
     private var recentAccel: [Double] = []
 
-    /// Phone acceleration feeds the approach discount: a box that grows
-    /// while the wearer walks is the wearer closing in, not the person.
     private func startEgoMotion() {
         guard motionManager.isDeviceMotionAvailable, !motionManager.isDeviceMotionActive else { return }
         recentAccel = []
@@ -1181,8 +1026,6 @@ final class ProtectViewModel: ObservableObject {
         motionManager.stopDeviceMotionUpdates()
         recentAccel = []
     }
-
-    // MARK: - Voice commands (Part D)
 
     private func runCommand(_ command: VoiceCommand) {
         AppLog.shared.event("command", ["name": String(describing: command)])
@@ -1214,7 +1057,6 @@ final class ProtectViewModel: ObservableObject {
             NotificationCenter.default.post(name: .safeguardGoBack, object: nil)
         case .callEmergency:
             confirm(String(localized: "Calling 112"))
-            // telprompt always asks first: no pocket-dialled emergencies.
             if let url = URL(string: "telprompt://112") {
                 Task {
                     let opened = await UIApplication.shared.open(url)
@@ -1237,8 +1079,6 @@ final class ProtectViewModel: ObservableObject {
         return L10n.format("%@. %@. %@. %@", displayTitle, people, proximity.title, backend)
     }
 
-    /// Every voice action confirms three ways: a short spoken message, a
-    /// haptic, and a brief on-screen toast.
     private func confirm(_ text: String) {
         speak(text)
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -1304,8 +1144,6 @@ final class ProtectViewModel: ObservableObject {
 
     private func publishSpeechFallback(severity: Double, category: String) {
         guard isProtecting else { return }
-        // The backend failed (unreachable, 503, timeout, rate limit): the
-        // on-device severity stands, exactly like a failed /verify.
         safety.noteSpeech(severity: severity, at: Self.now)
         noteSpeechToPipeline(severity: severity, at: Self.now)
         drainAskSpeech()
@@ -1313,14 +1151,9 @@ final class ProtectViewModel: ObservableObject {
         lastSpeechInfo = L10n.format("Speech: %@ on-device (verification offline)", category)
     }
 
-    // MARK: - SOS escalation (Phase 6)
-
-    /// Unsafe just began: location + all four tracks start in parallel.
     private func startEscalation() {
         guard !sosActive else { return }
         if liveStreaming {
-            // Hand the running stream over to the SOS: the camera, sound and
-            // tracker keep going; the stream's incident ends in ensureIncident.
             liveStreaming = false
             liveTimer?.invalidate()
             liveTimer = nil
@@ -1349,8 +1182,6 @@ final class ProtectViewModel: ObservableObject {
         routeRefreshing = false
         routeWaitStart = nil
         if evidenceSessionID == nil {
-            // Recording off or replay: the incident still needs a session
-            // (the live page just shows no segments).
             evidenceSessionID = EvidenceSessionID.make()
         }
         cabDeadline = Self.now + 300
@@ -1365,15 +1196,11 @@ final class ProtectViewModel: ObservableObject {
         runTrack(.cab)
     }
 
-    /// Deliberate end (hold-to-End button): the machine goes Safe, and the
-    /// safe-from-Unsafe hook runs endSOS().
     func endSOSButtonHeld() {
         safety.endUnsafe(at: Self.now)
         syncProtectionState()
     }
 
-    /// Ends the SOS once: "SOS ended" goes out, tracks/location/recording
-    /// stop. Runs from the hold button, the safe phrase, or Stop.
     private func endSOS() {
         guard sosActive else { return }
         sosActive = false
@@ -1423,7 +1250,6 @@ final class ProtectViewModel: ObservableObject {
         }
     }
 
-    /// Retry pass on the 1 s tick: due tracks re-run their work.
     private func retryEscalationTracks() {
         guard sosActive else { return }
         for track in escalation.dueRetries(at: Self.now) {
@@ -1457,8 +1283,6 @@ final class ProtectViewModel: ObservableObject {
             "track": track.rawValue,
             "status": shortStatus(escalation.status(of: track)),
         ])
-        // A scheduled retry leaves the track running (silent); only a
-        // terminal failure is announced.
         if case .failed = escalation.status(of: track) {
             UIAccessibility.post(notification: .announcement, argument: L10n.format("%@ failed: %@", track.title, reason))
         }
@@ -1483,14 +1307,9 @@ final class ProtectViewModel: ObservableObject {
         return String(localized: "failed")
     }
 
-    /// Creates the incident once (the backend dedupes repeats per session):
-    /// contacts alerted, live page minted. True when an ID is known after.
     private func ensureIncident() async -> Bool {
         if incidentID != nil { return true }
         guard let session = evidenceSessionID else { return false }
-        // An SOS that begins during a live stream takes over: the stream's
-        // incident ends first so this session can start an SOS one (the
-        // same standing link, now with contacts alerted).
         if let live = liveIncidentID {
             liveIncidentID = nil
             _ = try? await incidentClient.endIncident(live)
@@ -1516,8 +1335,6 @@ final class ProtectViewModel: ObservableObject {
         }
     }
 
-    /// Contacts track: incident created = done (per-contact Sent / Failed /
-    /// Dry-run outcomes ride in the delivery chips, not the track status).
     private func runContactsTrack() async {
         guard sosActive else { return }
         if await ensureIncident() {
@@ -1527,8 +1344,6 @@ final class ProtectViewModel: ObservableObject {
         }
     }
 
-    /// Stream track: done when the live page exists (segments land on it
-    /// as the evidence uploader sends them).
     private func runStreamTrack() async {
         guard sosActive else { return }
         if await ensureIncident(), liveURL != nil {
@@ -1538,10 +1353,6 @@ final class ProtectViewModel: ObservableObject {
         }
     }
 
-    /// Route track: nearest staffed/public places by walking ETA, drawn on
-    /// the SOS map. Waits briefly for an accurate fix (a cold start often
-    /// delivers a cell-tower reading first), then refines on its own as the
-    /// fix improves or the wearer moves.
     private func runRouteTrack() async {
         guard sosActive else { return }
         guard let first = locationTracker.latest else {
@@ -1555,7 +1366,6 @@ final class ProtectViewModel: ObservableObject {
         routeWaitStart = nil
         sosRouteSearching = true
         sosRouteMessage = RouteChoice.waitingForLocationMessage
-        // Give GPS a few seconds to settle on a precise fix.
         let waitUntil = Self.now + LocationFixPolicy.preciseWaitSeconds
         while sosActive, Self.now < waitUntil,
               let fix = locationTracker.latest,
@@ -1582,8 +1392,6 @@ final class ProtectViewModel: ObservableObject {
         }
     }
 
-    /// Finds help near `fix` and publishes the result. False when nothing
-    /// staffed was found anywhere in range.
     private func computeRoute(from fix: CLLocation) async throws -> Bool {
         let origin = LocationSample(
             latitude: fix.coordinate.latitude, longitude: fix.coordinate.longitude,
@@ -1621,8 +1429,6 @@ final class ProtectViewModel: ObservableObject {
             sosRouteMessage = nil
             return true
         }
-        // No walking route (maps data thin here): still point at the
-        // nearest place with its straight-line distance.
         let closest = nearest[0]
         sosRoute = nil
         sosDestinationName = closest.place.name
@@ -1634,8 +1440,6 @@ final class ProtectViewModel: ObservableObject {
         return true
     }
 
-    /// Silent re-run when the fix got accurate or the wearer moved; a
-    /// failure keeps the route already on screen.
     private func refreshRouteIfNeeded() {
         guard sosActive, escalation.status(of: .route) == .done, !routeRefreshing,
               let origin = routeOrigin, let fix = locationTracker.latest
@@ -1652,9 +1456,6 @@ final class ProtectViewModel: ObservableObject {
         }
     }
 
-    /// Police and hospitals near `coordinate`, widening the radius until
-    /// something turns up (maps data is thin in many places). Uses Apple's
-    /// point-of-interest search first, then a text search as a backstop.
     private func searchStaffedPlaces(
         near coordinate: CLLocationCoordinate2D
     ) async throws -> [(place: SOSPlace, item: MKMapItem)] {
@@ -1736,8 +1537,6 @@ final class ProtectViewModel: ObservableObject {
         )
     }
 
-    /// Walking directions in Google Maps (the app when installed, else the
-    /// web page, which iOS hands to the app on its own). No API key needed.
     func openDestinationInGoogleMaps() {
         guard let point = sosDestinationCoordinate else { return }
         let origin = locationTracker.latest.map {
@@ -1761,11 +1560,6 @@ final class ProtectViewModel: ObservableObject {
         ])
     }
 
-    /// Cab track: the Uber ride is prepared (pickup = where the wearer is,
-    /// drop-off = the nearest police station or hospital). It never opens
-    /// Uber by itself (that would pull the app to the background and stop
-    /// the camera and recording); the SOS screen has one button for it, and
-    /// contacts get their own "send a cab" link in the alert.
     private func runCabTrack() async {
         guard sosActive else { return }
         guard locationTracker.latest != nil else {
@@ -1775,7 +1569,6 @@ final class ProtectViewModel: ObservableObject {
         trackDone(.cab)
     }
 
-    /// Where the Uber trip would start and end, for the SOS screen.
     var ridePickup: UberDeepLink.Place? {
         guard let fix = locationTracker.latest else { return nil }
         return UberDeepLink.Place(
@@ -1792,8 +1585,6 @@ final class ProtectViewModel: ObservableObject {
         )
     }
 
-    /// Opens Uber with the trip filled in (app first, web page as the
-    /// fallback). The rider confirms the booking inside Uber.
     func openUberRide() {
         guard let pickup = ridePickup else {
             showToast(RouteChoice.noLocationMessage)
@@ -1809,7 +1600,6 @@ final class ProtectViewModel: ObservableObject {
         }
     }
 
-    /// Manual re-share from the demo sheet.
     func shareCabDetails() {
         guard sosActive, let id = incidentID else {
             showToast(String(localized: "No active SOS"))
@@ -1828,15 +1618,10 @@ final class ProtectViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Live stream (the person's own, shared by hand)
-
     @Published private(set) var liveStreaming = false
     private var liveIncidentID: String?
     private var liveTimer: Timer?
 
-    /// Starts a live stream on the person's standing link: camera, sound
-    /// and location go to it, and NOBODY is messaged (they share the link
-    /// themselves). Needs the camera, so protection starts if it is off.
     func startLiveStream() async {
         guard !liveStreaming, !sosActive else { return }
         guard LiveLinkStore.shared.url != nil else {
@@ -1907,8 +1692,6 @@ final class ProtectViewModel: ObservableObject {
         }
     }
 
-    // MARK: - SOS location stream
-
     private func startSOSLocationTimer() {
         sosLocationTimer?.invalidate()
         sosLocationTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in
@@ -1935,8 +1718,6 @@ final class ProtectViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Contacts (Phase 6)
-
     private static let contactsDefaultsKey = "sosContactsJSON"
 
     private func loadContacts() {
@@ -1954,7 +1735,6 @@ final class ProtectViewModel: ObservableObject {
         }
     }
 
-    /// Creates a backend invite and adds the contact. Returns the share link.
     func inviteContact(name: String, phone: String? = nil) async -> URL? {
         guard !sosContacts.isFull else {
             showToast(String(localized: "At most 5 contacts"))
@@ -1979,8 +1759,6 @@ final class ProtectViewModel: ObservableObject {
         saveContacts()
     }
 
-    /// Contacts whose invite the server does not know (it answered 404):
-    /// they were made on an older backend, so their link can never work.
     @Published private(set) var staleContactCodes: Set<String> = []
 
     func refreshContacts() {
@@ -1993,16 +1771,12 @@ final class ProtectViewModel: ObservableObject {
                 } catch VerifierError.serverStatus(404) {
                     staleContactCodes.insert(contact.code)
                 } catch {
-                    // Offline or a server hiccup: not a verdict on the invite.
                 }
             }
             saveContacts()
         }
     }
 
-    // MARK: - Phase 7: practice, history, data
-
-    /// Code-phrase practice outcome for setup/Settings ("Heard: …").
     enum PracticeHeard: Equatable {
         case none
         case noMatch
@@ -2016,14 +1790,13 @@ final class ProtectViewModel: ObservableObject {
     func startPhrasePractice() {
         practiceHeard = .none
         practicingPhrases = true
-        startListener() // permissions were granted in the setup step before
+        startListener()
     }
 
     func stopPhrasePractice() {
         practicingPhrases = false
     }
 
-    /// Rebuilds the matcher after the wearer edits code phrases.
     func refreshPhrases() {
         phraseMatcher = CodePhraseMatcher(
             safePhrases: CodePhraseStore.effectiveSafe(),
@@ -2040,15 +1813,11 @@ final class ProtectViewModel: ObservableObject {
         locationTracker.requestPermission()
     }
 
-    // MARK: - Incident history (Activity tab)
-
     @Published var history = IncidentHistory()
     @Published private(set) var sosStartedAt: Date?
     private var sosCause: String?
     private var lastEvidenceProgress = EvidenceProgress()
-    /// Set when shouting triggers the distress path; consumed at SOS start.
     private var pendingShoutCause = false
-    /// What triggered the current check-in ("flag" or "checkin").
     private var askTrigger = "checkin"
 
     private func saveHistory() {
@@ -2108,11 +1877,6 @@ final class ProtectViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Delete all my data (Settings → Data)
-
-    /// Wipes local data, then asks the backend to delete this device's
-    /// evidence sessions and contacts. Refuses during an active SOS.
-    /// Returns what happened, honestly (offline failures listed).
     func deleteAllMyData(keepingSetup: Bool = false) async -> DataWipeReport? {
         guard !sosActive else {
             showToast(String(localized: "End the SOS first"))
@@ -2120,7 +1884,6 @@ final class ProtectViewModel: ObservableObject {
         }
         let sessions = Set(history.entries.compactMap(\.evidenceSessionID))
         let codes = sosContacts.contacts.map(\.code)
-        // The account goes first: deleting it needs the saved session.
         var accountDeleted: Bool?
         if AccountStore.shared.isSignedIn {
             accountDeleted = await AccountStore.shared.deleteAccount()
@@ -2167,9 +1930,6 @@ final class ProtectViewModel: ObservableObject {
         return report
     }
 
-    /// Setup dry-run: a labelled SAMPLE SOS. A dry-run (never real),
-    /// non-test incident is started and ended right away so the preview is
-    /// exactly the text contacts would receive. No recording, no location.
     func runSampleSOS() async -> String? {
         do {
             let result = try await incidentClient.startIncident(
@@ -2185,7 +1945,6 @@ final class ProtectViewModel: ObservableObject {
         }
     }
 
-    /// Settings test button: a test-flagged incident, ended right away.
     func sendTestAlert() {
         let codes = sosContacts.linkedCodes
         guard !codes.isEmpty else {
@@ -2222,8 +1981,6 @@ extension ProtectViewModel: ConversationListenerDelegate {
     }
 }
 
-/// Detection pipeline state: frame render, throttled Vision detection, IoU
-/// tracking. All methods run on the view model's `detectionQueue`.
 private final class DetectionPipeline {
     let config: ThreatConfig
     let detector: PersonDetector
@@ -2236,7 +1993,6 @@ private final class DetectionPipeline {
     var sweepGate: NearSweepGate
     let frameBuffer = FrameBuffer()
     var lastDetect = Date.distantPast
-    // 10 detections a second (was 5): the vision pass takes about 65 ms.
     let detectInterval: TimeInterval = 0.1
 
     init(config: ThreatConfig = ThreatConfig()) {
@@ -2258,8 +2014,6 @@ private final class DetectionPipeline {
         frameBuffer.clear()
     }
 
-    /// Latest speech severity from the conversation listener (global, not
-    /// per-track): stamped onto every track's features while fresh.
     func setSpeech(severity: Double, at time: TimeInterval) {
         extractor.setSpeech(severity: severity, at: time)
     }
@@ -2279,8 +2033,6 @@ private final class DetectionPipeline {
         Task { await owner.publishFrameCues(frameCues, at: nowSeconds) }
         let tracks = tracker.update(detections: people)
         let live = tracks.filter { $0.missed == 0 }
-        // Store the boxes WITH their frame so a verify clip can prompt SAM 2 on
-        // its first frame with the boxes that were actually seen there.
         frameBuffer.append(
             pixelBuffer: frame.pixelBuffer, at: nowSeconds, boxes: live.map(\.box)
         )
@@ -2349,8 +2101,6 @@ extension ProtectViewModel: FrameSourceDelegate {
     nonisolated func frameSource(_ source: any FrameSource, didOutput frame: SafeguardFrame) {
         frameCounter.increment()
         evidence.appendVideo(frame.pixelBuffer, at: frame.timestamp)
-        // Drop frames while one is still being handled: bounds the queue
-        // and the detection work under a 30 fps source.
         guard pipelineGate.tryEnter() else { return }
         let isReplay = source is VideoFileSource
         detectionQueue.async { [weak self] in
@@ -2366,7 +2116,6 @@ extension ProtectViewModel: FrameSourceDelegate {
     }
 }
 
-/// Thread-safe frame counter shared between the capture queue and the main actor.
 private final class FrameCounter: @unchecked Sendable {
     private let lock = NSLock()
     private var count = 0
@@ -2376,8 +2125,6 @@ private final class FrameCounter: @unchecked Sendable {
     func reset() { lock.withLock { count = 0 } }
 }
 
-/// Lets one frame be handled at a time; later frames are dropped until the
-/// previous one finishes.
 private final class ConversionGate: @unchecked Sendable {
     private let lock = NSLock()
     private var busy = false

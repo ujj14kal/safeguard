@@ -1,8 +1,5 @@
 import SwiftUI
 
-/// Step 7: a labelled SAMPLE SOS. Nothing real is sent, recorded, or
-/// located: a dry-run incident shows the red screen, the four track chips
-/// and exactly the text contacts would receive.
 struct SetupDryRunStep: View {
     @StateObject private var model = ProtectViewModel.shared
     @State private var running = false

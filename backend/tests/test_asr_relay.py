@@ -1,4 +1,3 @@
-"""/asr: relays phone audio to the (fake) upstream and events back."""
 
 import asyncio
 import json
@@ -11,12 +10,10 @@ from fastapi.testclient import TestClient
 from app import main
 from app.config import Settings
 
-# A made-up value assembled at runtime, never a real credential.
 fake_key = "-".join(["not", "a", "real", "key"])
 
 
 class FakeMeta:
-    """A tiny stand-in for Meta's realtime ASR: acks, then echoes a transcript per audio frame."""
 
     def __init__(self):
         self.handshake = None

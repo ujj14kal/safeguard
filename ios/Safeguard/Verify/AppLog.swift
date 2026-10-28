@@ -1,7 +1,5 @@
 import Foundation
 
-/// Pure event queue behind `AppLog`: capped, oldest dropped first, drained in
-/// batches. Kept separate so the policy is testable without a network.
 public struct AppLogBuffer: Sendable {
     public private(set) var events: [[String: String]] = []
     private let cap: Int
@@ -18,25 +16,18 @@ public struct AppLogBuffer: Sendable {
     public var isEmpty: Bool { events.isEmpty }
     public var count: Int { events.count }
 
-    /// Takes up to `limit` events off the front.
     public mutating func drain(limit: Int = 100) -> [[String: String]] {
         let batch = Array(events.prefix(limit))
         events.removeFirst(batch.count)
         return batch
     }
 
-    /// Puts a failed batch back at the front (still capped).
     public mutating func requeue(_ batch: [[String: String]]) {
         events.insert(contentsOf: batch, at: 0)
         if events.count > cap { events.removeFirst(events.count - cap) }
     }
 }
 
-/// Debug event log: what the app hears and what it decides to do, sent in
-/// small batches to the backend (`POST /applog`, read back at
-/// `backend/logs/app-events.jsonl`). It holds transcripts ON PURPOSE, for
-/// testing, so it is a Settings switch ("Debug log") and must be off for
-/// real use. Failures are silent: logging must never affect the app.
 public final class AppLog: @unchecked Sendable {
     public static let shared = AppLog()
     public static let enabledKey = "debugLogEnabled"
@@ -59,16 +50,12 @@ public final class AppLog: @unchecked Sendable {
 
     public var isEnabled: Bool { UserDefaults.standard.bool(forKey: Self.enabledKey) }
 
-    /// Queued (unsent) event count, for tests and the wipe report.
     public var queuedCount: Int { lock.withLock { buffer.count } }
 
-    /// Drops every queued event. "Delete all my data" calls this.
     public func clearQueue() {
         lock.withLock { _ = buffer.drain(limit: Int.max) }
     }
 
-    /// Records one event. `kind` is a short name ("heard", "judge", "state");
-    /// fields are plain strings.
     public func event(_ kind: String, _ fields: [String: String] = [:]) {
         guard isEnabled else { return }
         var event = fields
@@ -109,7 +96,6 @@ public final class AppLog: @unchecked Sendable {
                 if !ok { self.buffer.requeue(batch) }
                 if !self.buffer.isEmpty, !self.flushScheduled {
                     self.flushScheduled = true
-                    // Back off a little after a failure.
                     DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + (ok ? 0.5 : 5)) {
                         self.flush()
                     }

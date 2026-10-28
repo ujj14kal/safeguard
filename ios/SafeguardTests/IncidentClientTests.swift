@@ -1,7 +1,5 @@
 import XCTest
 
-/// Incident + contact calls: request shapes, auth header, strict parsing.
-/// Reuses the URLProtocol stub: no network, no real tokens.
 final class IncidentClientTests: XCTestCase {
     private var fakeToken: String { ["not", "a", "real", "token"].joined(separator: "-") }
 
@@ -62,8 +60,6 @@ final class IncidentClientTests: XCTestCase {
         )
     }
 
-    // MARK: - Auth header
-
     func testAuthorizeStampsToken() {
         let request = URLRequest(url: URL(string: "http://example.test:9/x")!)
         let stamped = VerifierConfig.authorize(request, token: fakeToken)
@@ -75,8 +71,6 @@ final class IncidentClientTests: XCTestCase {
         let empty = VerifierConfig.authorize(request, token: "")
         XCTAssertNil(empty.value(forHTTPHeaderField: "X-Safeguard-Token"))
     }
-
-    // MARK: - Start
 
     private let startJSON = """
         {"id": "inc-abc", "share_token": "share123", "live_url": "https://demo.test/live/share123",
@@ -104,8 +98,6 @@ final class IncidentClientTests: XCTestCase {
     }
 
     func testStartDefaultsToDryRun() async throws {
-        // The dangerous default must be the safe one: dry-run unless the
-        // Settings switch (OFF by default, behind a confirm) says otherwise.
         let (session, capture) = captureSession(body: startJSON)
         _ = try await client(session).startIncident(
             sessionID: "sos-abcdef12", wearerName: "Aarav", contactCodes: []
@@ -160,8 +152,6 @@ final class IncidentClientTests: XCTestCase {
         }
     }
 
-    // MARK: - Location / end / cab
-
     func testLocationRequestShape() async throws {
         let (session, capture) = captureSession(body: "{\"stored\": 3}")
         try await client(session).sendLocation(
@@ -195,8 +185,6 @@ final class IncidentClientTests: XCTestCase {
         XCTAssertEqual(json["driver"] as? String, "Demo Driver")
         XCTAssertEqual(json["eta_min"] as? Int, 4)
     }
-
-    // MARK: - Contacts
 
     func testInviteParses() async throws {
         let body = "{\"name\": \"Meera\", \"code\": \"abc123\", \"link\": \"https://t.me/bot?start=abc123\"}"

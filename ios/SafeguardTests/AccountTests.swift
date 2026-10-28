@@ -1,7 +1,5 @@
 import XCTest
 
-/// Account rules: client-side validation, the store's sign-up/in/out and
-/// session handling (fake service, in-memory secrets, sandbox defaults).
 final class AccountValidationTests: XCTestCase {
     func testEmail() {
         XCTAssertTrue(AccountValidation.emailValid("asha@example.test"))
@@ -149,7 +147,6 @@ final class AccountStoreTests: XCTestCase {
         XCTAssertTrue(saved)
         XCTAssertNotNil(service.serverAvatar)
         XCTAssertEqual(store.avatarData, service.serverAvatar)
-        // A new phone fetches it from the server.
         let fresh = AccountStore(service: service, secrets: secrets, defaults: suite,
                                  avatarCache: FileManager.default.temporaryDirectory
                                      .appendingPathComponent("avatar-\(UUID().uuidString).jpg"))
@@ -243,7 +240,7 @@ final class AccountStoreTests: XCTestCase {
     }
 
     func testExpiredSessionIsRefreshed() async {
-        service.expiresIn = 10 // inside the 60 s margin
+        service.expiresIn = 10
         _ = await store.signIn(email: "a@b.co", password: pw)
         let token = await store.validAccessToken()
         XCTAssertEqual(token, "renewed")
@@ -303,7 +300,6 @@ final class EvidenceTuningTests: XCTestCase {
     func testPartsAreShortAndSmall() {
         XCTAssertEqual(EvidenceRecorder.segmentSeconds, 4)
         XCTAssertEqual(EvidenceRecorder.frameInterval, 1.0 / 15, accuracy: 0.0001)
-        // 4 s at 0.9 Mbit/s is about 450 kB.
         let bytes = Double(EvidenceRecorder.videoBitRate) / 8 * EvidenceRecorder.segmentSeconds
         XCTAssertLessThan(bytes, 600_000)
     }

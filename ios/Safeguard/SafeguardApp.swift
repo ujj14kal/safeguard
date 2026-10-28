@@ -19,13 +19,10 @@ struct SafeguardApp: App {
                 }
             }
             .statusBarHidden(showSplash)
-            // Dark theme, forced app-wide (the splash stays white by design).
             .preferredColorScheme(.dark)
             .task {
                 CueEngineFactory.make = { MediaPipeCueEngine() }
                 _ = ProtectViewModel.shared
-                // An earlier build downloaded a 889 MB on-device model; it is
-                // no longer used, so reclaim the space.
                 if let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
                     try? FileManager.default.removeItem(at: docs.appendingPathComponent("huggingface"))
                 }
@@ -34,10 +31,8 @@ struct SafeguardApp: App {
         }
     }
 
-    /// Holds the splash for `SplashView.holdSeconds`, then cross-fades into the app.
     private func dismissSplash() async {
         #if DEBUG
-            // Skip while developing: defaults write io.github.ujj14kal.safeguard skipSplash -bool YES
             if UserDefaults.standard.bool(forKey: "skipSplash") {
                 showSplash = false
                 return
@@ -50,19 +45,10 @@ struct SafeguardApp: App {
     }
 }
 
-/// In-app splash: the logo with "Safeguard" beneath it, shown for about 3.5 s
-/// on every launch, then a smooth cross-fade into the app.
-///
-/// The system launch screen (Info.plist `UILaunchScreen`) already shows the
-/// same `LaunchLogo` image, centred on the same white, at the same size. This
-/// view therefore starts with the logo fully visible in exactly that place, so
-/// there is no flash or jump at the hand-off; only the title animates in.
 struct SplashView: View {
-    /// How long the splash stays before fading out (the brief asked for 3-4 s).
     static let holdSeconds: Double = 3.5
     static let fadeOutSeconds: Double = 0.6
 
-    /// Logo is 220 pt tall (the asset's natural size); the title sits below it.
     private static let titleOffset: CGFloat = 110 + 44
 
     private static let brandPurple = DS.Colors.brandPurple
@@ -89,11 +75,9 @@ struct SplashView: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Safeguard")
         .onAppear {
-            // Title fades and rises into place after a short beat.
             withAnimation(.easeOut(duration: 0.9).delay(0.5)) {
                 titleVisible = true
             }
-            // The logo breathes very slightly for the rest of the hold.
             withAnimation(.easeInOut(duration: Self.holdSeconds)) {
                 settled = true
             }

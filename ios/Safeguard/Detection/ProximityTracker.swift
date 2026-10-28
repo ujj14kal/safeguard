@@ -1,7 +1,5 @@
 import Foundation
 
-/// How close the nearest tracked person is. DISPLAY ONLY: proximity never
-/// triggers alerts or escalation. Ordered clear < near < tooClose.
 public enum Proximity: Int, Sendable, Equatable, Comparable, CaseIterable {
     case clear
     case near
@@ -11,7 +9,6 @@ public enum Proximity: Int, Sendable, Equatable, Comparable, CaseIterable {
         lhs.rawValue < rhs.rawValue
     }
 
-    /// Status text. Deliberately distinct from the SOS treatment.
     public var title: String {
         switch self {
         case .clear: String(localized: "Clear")
@@ -20,11 +17,8 @@ public enum Proximity: Int, Sendable, Equatable, Comparable, CaseIterable {
         }
     }
 
-    /// Spoken on level changes (not every frame).
     public var announcement: String { title }
 
-    /// Never colour alone: every level has its own symbol. Red `tooClose`
-    /// uses a warning triangle, never the SOS circle.
     public var symbolName: String {
         switch self {
         case .clear: "shield.fill"
@@ -34,9 +28,6 @@ public enum Proximity: Int, Sendable, Equatable, Comparable, CaseIterable {
     }
 }
 
-/// Nearest-person proximity with hold-to-rise and hysteresis hold-to-fall,
-/// so box jitter never flashes colours. Pure; all times are seconds.
-/// Not thread-safe: call from one serial queue.
 public struct ProximityTracker: Sendable {
     public private(set) var level: Proximity = .clear
 
@@ -56,8 +47,6 @@ public struct ProximityTracker: Sendable {
         fallStart = nil
     }
 
-    /// Feed the nearest live box height (nil = no people) at a timestamp in
-    /// seconds. Returns the (possibly changed) level.
     @discardableResult
     public mutating func update(nearestHeight: Double?, at time: TimeInterval) -> Proximity {
         switch level {

@@ -1,8 +1,5 @@
 import Foundation
 
-/// "Delete all my data": wipes every local trace, then asks the backend to
-/// delete this device's evidence sessions and contacts. Local work is
-/// injectable (defaults + documents) so tests run it against a sandbox.
 public struct DataWipeReport: Sendable, Equatable {
     public var removedKeys: [String] = []
     public var removedFiles: [String] = []
@@ -11,11 +8,6 @@ public struct DataWipeReport: Sendable, Equatable {
 }
 
 public enum DataWipe {
-    /// Removes every owned UserDefaults key plus the history file and the
-    /// local Evidence folder. Returns what was actually removed. Presence
-    /// is read from the persistent domain, so registered fallback defaults
-    /// (e.g. the debug-log flag) never count as stored data. `domain`
-    /// defaults to this bundle's id; tests pass their suite name.
     @discardableResult
     public static func wipeLocal(
         defaults: UserDefaults = .standard, documents: URL? = nil,

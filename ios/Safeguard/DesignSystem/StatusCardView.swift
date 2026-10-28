@@ -1,7 +1,5 @@
 import SwiftUI
 
-/// Reusable grouped status card. Used for mock SOS track states in Previews
-/// now; the live SOS screen adopts it in Phase 6.
 struct StatusCardView: View {
     enum Status {
         case starting, active, retrying, failed, done

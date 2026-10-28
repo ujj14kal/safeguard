@@ -1,8 +1,6 @@
 import SwiftUI
 import UIKit
 
-/// Finished Settings: profile, people, phrases, listening, alerts,
-/// permissions, data, about, and the DEBUG-only developer section.
 struct SettingsView: View {
     @ObservedObject private var model = ProtectViewModel.shared
     @AppStorage("debugOverlayEnabled") private var debugOverlayEnabled = Defaults.debugOverlayDefault
@@ -98,7 +96,6 @@ struct SettingsView: View {
                 set: { if !$0 { wipeReport = nil } }
             )) {
                 Button("Done — restart setup") {
-                    // The wipe kept this key so the report could show; now go.
                     UserDefaults.standard.removeObject(forKey: "setupComplete")
                     wipeReport = nil
                 }
@@ -119,7 +116,6 @@ struct SettingsView: View {
             #endif
         }
     }
-
 
     private var accountSection: some View {
         Section {
@@ -408,7 +404,6 @@ extension SettingsView {
     static let aboutPrivacy = String(localized: "Safeguard watches for threatening behaviour — never appearance or identity. Transcripts stay on this phone unless you switch on a cloud helper; cloud features send data to your own Safeguard backend and on to Meta's models.")
 }
 
-/// Version and build read from the bundle (never a hard-coded label).
 enum AboutInfo {
     static var version: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"

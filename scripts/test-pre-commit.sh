@@ -1,11 +1,4 @@
 #!/usr/bin/env bash
-# Tests scripts/pre-commit.sh in a throwaway repo: every FAKE secret must be
-# blocked and every code reference must pass.
-# Run: ./scripts/test-pre-commit.sh [path/to/another/hook.sh]
-#
-# The fake secrets are assembled at runtime (name and value joined by `mk`) so
-# this file never contains a contiguous `<name> = <value>` that the hook itself
-# would block when this file is committed.
 set -uo pipefail
 cd "$(dirname "$0")/.."
 HOOK="$(cd "$(dirname "${1:-scripts/pre-commit.sh}")" && pwd)/$(basename "${1:-scripts/pre-commit.sh}")"

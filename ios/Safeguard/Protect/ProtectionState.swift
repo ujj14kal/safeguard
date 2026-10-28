@@ -1,8 +1,5 @@
 import SwiftUI
 
-/// Display states for the shield ring and preview screens. UI-only in Phase 1;
-/// the full SafetyStateMachine (prompt, 10 s no-reply, cooldown, code phrases)
-/// arrives in Phase 5 and drives these states.
 enum ProtectionState: String, CaseIterable {
     case idle, monitoring, suspected, asking, safe, unsafe, countdown
 
@@ -54,6 +51,5 @@ enum ProtectionState: String, CaseIterable {
         }
     }
 
-    /// States in which the ring breathes (actively watching).
     var isProtecting: Bool { self == .monitoring }
 }

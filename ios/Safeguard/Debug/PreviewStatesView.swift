@@ -1,8 +1,6 @@
 #if DEBUG
     import SwiftUI
 
-    /// Debug-only screen rendering every protection state plus mock SOS track
-    /// cards, so all screens are reviewable in the Simulator without a camera.
     struct PreviewStatesView: View {
         var body: some View {
             ScrollView {

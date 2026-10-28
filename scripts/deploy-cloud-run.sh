@@ -1,14 +1,4 @@
 #!/usr/bin/env bash
-# Deploys the backend to Google Cloud Run, using the values in .env.
-#
-#   ./scripts/deploy-cloud-run.sh <gcp-project-id> [region]
-#
-# Needs: gcloud (logged in), a project with billing linked (Cloud Run's free
-# allowance applies; nothing is charged within it), and these in .env:
-# META_MODEL_API_KEY, SAFEGUARD_APP_TOKEN, SUPABASE_URL, SUPABASE_ANON_KEY,
-# SUPABASE_SERVICE_ROLE_KEY (TELEGRAM_BOT_TOKEN and NOTIFY_MODE=telegram optional).
-# One instance at most and none kept warm: that is what keeps it free and
-# keeps the in-memory state consistent. See deploy/CLOUD_RUN.md.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

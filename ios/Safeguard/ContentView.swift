@@ -1,8 +1,5 @@
 import SwiftUI
 
-/// Main tab structure: Dashboard, Protect, Contacts, Activity, Settings.
-/// First launch shows the blocking setup flow instead (old installs that
-/// saw the one-screen onboarding go straight to the tabs).
 struct ContentView: View {
     @State private var selection: Tab = .dashboard
     @AppStorage("onboardingSeen") private var onboardingSeen = false
@@ -19,15 +16,12 @@ struct ContentView: View {
     }
 
     #if DEBUG
-        /// Headless hooks bypass onboarding: screenshots start past it.
         private var onboardingBypassed: Bool {
             UserDefaults.standard.string(forKey: "debugInitialTab") != nil
                 || UserDefaults.standard.string(forKey: "debugInitialRoute") != nil
         }
     #endif
 
-    /// Blocking setup: no way to reach the app until it completes.
-    /// The debug bypass stays DEBUG-only (screenshots start past it).
     private var showSetup: Bool {
         if rerunSetup { return true }
         #if DEBUG
@@ -36,7 +30,6 @@ struct ContentView: View {
         return !setupComplete && !onboardingSeen
     }
 
-    /// An account is compulsory: nothing else is reachable until signed in.
     private var needsAccount: Bool {
         #if DEBUG
             if onboardingBypassed { return false }
@@ -98,8 +91,6 @@ struct ContentView: View {
         }
         .onAppear {
             #if DEBUG
-                // Headless screenshot hook (Simulator):
-                // defaults write io.github.ujj14kal.safeguard debugInitialTab settings
                 let initial = UserDefaults.standard.string(forKey: "debugInitialTab")
                 if initial == "settings" {
                     selection = .settings
@@ -119,8 +110,6 @@ struct ContentView: View {
 }
 
 extension ContentView {
-    /// The safe-arrival deadline passed: bring up Protect and start the
-    /// (cancellable) SOS countdown, once.
     fileprivate func checkSafeArrival() {
         guard safeArrival.consumeOverdue() else { return }
         selection = .protect

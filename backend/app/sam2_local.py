@@ -1,11 +1,3 @@
-"""Optional SAM 2 video segmentation (Meta, local checkpoint).
-
-Per the SAM 2 README: build_sam2_video_predictor(model_cfg, checkpoint) ->
-init_state(jpeg_dir) -> add_new_points_or_box -> propagate_in_video.
-Frames arrive as PIL images; prompts are the on-device person boxes on the
-first frame. Everything is import-guarded: without torch/sam2 or without a
-checkpoint, this module reports unavailable and /verify uses Muse-only.
-"""
 
 import base64
 import io
@@ -36,7 +28,6 @@ class Sam2Unavailable(Exception):
 
 
 class Sam2Runner:
-    """One predictor per process; sticky-skips after a slow/failed attempt."""
 
     def __init__(
         self,
@@ -74,10 +65,6 @@ class Sam2Runner:
     def _ensure_predictor(self):
         if self._predictor is not None:
             return self._predictor
-        # No hydra.initialize here: importing sam2 already initializes
-        # GlobalHydra with pkg://sam2 on the search path, so the repo-style
-        # config name resolves inside the installed package from any CWD
-        # (calling initialize again raises "already initialized").
         device = "cuda" if torch.cuda.is_available() else "cpu"
         self._predictor = build_sam2_video_predictor(
             self.model_cfg, self.checkpoint_path, device=device
@@ -87,11 +74,6 @@ class Sam2Runner:
     def run(
         self, frames_b64: list[str], boxes_xyxy: list[list[float]]
     ) -> tuple[dict, float]:
-        """Segment prompted persons across frames.
-
-        boxes_xyxy: on-device person boxes on frame 0, pixels (x0,y0,x1,y1).
-        Returns (geometry dict, latency seconds). Raises Sam2Unavailable.
-        """
         if not self.available:
             raise Sam2Unavailable(self.unavailable_reason())
         now = time.monotonic()
@@ -162,7 +144,6 @@ class Sam2Runner:
 
 
 def write_frames(frames_b64: list[str], frame_dir: str) -> tuple[int, int]:
-    """Decode base64 JPEGs into name-ordered files. Returns (width, height)."""
     width = height = 0
     for index, blob in enumerate(frames_b64):
         image = Image.open(io.BytesIO(base64.b64decode(blob))).convert("RGB")
@@ -172,10 +153,6 @@ def write_frames(frames_b64: list[str], frame_dir: str) -> tuple[int, int]:
 
 
 def mask_stats(flat, width: int, height: int, corridor_half_width: float):
-    """mask: flat bool numpy array (row-major, height*width).
-
-    Returns (area fraction, [cx, cy] normalized, corridor-majority 0/1).
-    """
     total = flat.size
     area = float(flat.sum()) / total if total else 0.0
     if flat.sum() == 0:

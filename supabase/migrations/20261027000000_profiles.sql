@@ -1,6 +1,3 @@
--- Safeguard accounts: one profile row per Supabase Auth user.
--- Run in the Supabase SQL editor of the Safeguard project (or
--- `supabase db push` after `supabase link`). Idempotent.
 
 create table if not exists public.profiles (
   id          uuid primary key references auth.users (id) on delete cascade,
@@ -8,19 +5,14 @@ create table if not exists public.profiles (
   name        text not null default '',
   phone       text,
   language    text not null default 'en' check (language in ('en', 'hi')),
-  -- The guardian who may review this person's recordings (XXXX-XXXX-XXXX).
   guardian_code text,
   consent_at  timestamptz,
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );
 
--- Existing projects that already ran the first version of this file:
 alter table public.profiles add column if not exists guardian_code text;
 
--- Row level security: a signed-in user can read and edit only their own
--- row. The backend writes with the service-role key, which bypasses RLS;
--- that key never leaves the server.
 alter table public.profiles enable row level security;
 
 drop policy if exists "profiles_select_own" on public.profiles;
@@ -30,9 +22,6 @@ create policy "profiles_select_own" on public.profiles
 drop policy if exists "profiles_update_own" on public.profiles;
 create policy "profiles_update_own" on public.profiles
   for update using ((select auth.uid()) = id) with check ((select auth.uid()) = id);
-
--- No insert/delete policy on purpose: rows are created and removed by the
--- backend (sign-up, account deletion) and by the cascade from auth.users.
 
 create or replace function public.touch_profiles_updated_at()
 returns trigger language plpgsql set search_path = '' as $$

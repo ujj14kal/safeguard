@@ -3,12 +3,6 @@ import CoreVideo
 import Foundation
 import MediaPipeTasksVision
 
-/// Google MediaPipe (Apache-2.0) Gesture Recognizer (hand landmarks plus
-/// canned gestures) and Face Landmarker (478 points plus 52 blendshapes),
-/// run in VIDEO mode so they track between frames instead of detecting
-/// from scratch every time. Returns nil from `init` when the models are
-/// missing or the tasks fail to start, and the caller keeps the Vision
-/// path. Not thread-safe: call from the one detection queue.
 final class MediaPipeCueEngine: CueEngine {
     private let gestures: GestureRecognizer
     private let faces: FaceLandmarker
@@ -38,7 +32,6 @@ final class MediaPipeCueEngine: CueEngine {
             f.minFacePresenceConfidence = 0.4
             f.minTrackingConfidence = 0.4
             #if !targetEnvironment(simulator)
-                // Apple GPU on a real phone; the Simulator has no usable GPU path.
                 g.baseOptions.delegate = .GPU
                 f.baseOptions.delegate = .GPU
             #endif
@@ -54,7 +47,6 @@ final class MediaPipeCueEngine: CueEngine {
         guard let image = try? MPImage(pixelBuffer: pixelBuffer) else { return nil }
         let width = Double(CVPixelBufferGetWidth(pixelBuffer))
         let height = Double(CVPixelBufferGetHeight(pixelBuffer))
-        // Timestamps must strictly increase.
         let now = Int(ProcessInfo.processInfo.systemUptime * 1000)
         lastTimestampMs = max(now, lastTimestampMs + 1)
 
@@ -87,7 +79,6 @@ final class MediaPipeCueEngine: CueEngine {
                         if let name = category.categoryName { shapes[name] = category.score }
                     }
                 }
-                // Inner lips: 13 upper, 14 lower, corners 78 and 308.
                 let openH = abs(Double(landmarks[13].y - landmarks[14].y)) * height
                 let openW = abs(Double(landmarks[78].x - landmarks[308].x)) * width
                 outFaces.append(MPFace(

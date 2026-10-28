@@ -1,13 +1,3 @@
-"""User accounts on Supabase.
-
-Supabase Auth keeps the credentials (passwords are never stored or logged
-here); this backend relays sign-up / sign-in so the Supabase keys stay on
-the server, and keeps the user's profile (name, phone, language, consent)
-in a `profiles` table written with the service-role key.
-
-Every call goes through `_call`, the one place that talks HTTP, so tests
-replace it. Nothing here logs request bodies, passwords or tokens.
-"""
 
 import logging
 import re
@@ -27,7 +17,6 @@ PROFILE_FIELDS = ("name", "phone", "language", "guardian_code")
 
 
 class AccountsError(Exception):
-    """A failure with a status the endpoint can return as-is."""
 
     def __init__(self, status_code: int, message: str):
         super().__init__(message)
@@ -49,7 +38,6 @@ def valid_phone(phone: str) -> bool:
 
 
 def password_problem(password: str) -> str | None:
-    """Plain-language reason a password is rejected, or None."""
     if len(password) < MIN_PASSWORD_LEN:
         return f"use at least {MIN_PASSWORD_LEN} characters"
     if len(password) > MAX_PASSWORD_LEN:
@@ -60,7 +48,6 @@ def password_problem(password: str) -> str | None:
 
 
 def clean_profile(fields: dict) -> dict:
-    """Only the profile columns, trimmed; empty phone becomes None."""
     out: dict = {}
     for key in PROFILE_FIELDS:
         if key not in fields or fields[key] is None:
@@ -85,7 +72,6 @@ class Session:
 
 
 def _call(method, url, *, headers, json=None, params=None, timeout=10.0):
-    """The only HTTP call. Returns (status_code, parsed json or {})."""
     try:
         response = httpx.request(
             method, url, headers=headers, json=json, params=params, timeout=timeout
@@ -116,7 +102,6 @@ class SupabaseAccounts:
         self._anon = anon_key
         self._service = service_key
 
-    # -- header helpers (keys only ever leave in headers, never logged) --
 
     def _anon_headers(self, bearer: str | None = None) -> dict:
         return {
@@ -135,7 +120,6 @@ class SupabaseAccounts:
             headers["Prefer"] = prefer
         return headers
 
-    # -- auth --
 
     def sign_up(self, email: str, password: str, profile: dict) -> tuple[dict, Session | None]:
         code, body = _call(
@@ -186,7 +170,6 @@ class SupabaseAccounts:
         return self._session(body)
 
     def user_for(self, access_token: str) -> dict:
-        """The signed-in user for an access token (Supabase validates it)."""
         code, body = _call(
             "GET", f"{self.url}/auth/v1/user", headers=self._anon_headers(access_token)
         )
@@ -204,7 +187,6 @@ class SupabaseAccounts:
     def delete_user(self, user_id: str) -> None:
         if not _UUID_RE.match(user_id):
             raise AccountsError(422, "bad user id")
-        # Profile rows cascade from auth.users, but delete explicitly too.
         self._profile_call("DELETE", {"id": f"eq.{user_id}"})
         code, _ = _call(
             "DELETE", f"{self.url}/auth/v1/admin/users/{user_id}",
@@ -213,7 +195,6 @@ class SupabaseAccounts:
         if code >= 300 and code != 404:
             raise AccountsError(503, "could not delete the account")
 
-    # -- profile rows --
 
     def _profile_call(self, method, params, json=None, prefer=None):
         return _call(

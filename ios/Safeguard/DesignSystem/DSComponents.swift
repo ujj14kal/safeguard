@@ -1,24 +1,15 @@
 import SwiftUI
 import UIKit
 
-/// Shared building blocks for the Apple-style look: soft cards, springs,
-/// skeleton loaders and a branded loading screen. Colours come from `DS`;
-/// every animation is skipped under Reduce Motion.
 extension DS {
     enum Motion {
-        /// Default for state changes: critically damped, no wobble.
         static let smooth = Animation.smooth(duration: 0.4)
-        /// Quick feedback (chips, toggles).
         static let snappy = Animation.snappy(duration: 0.28)
-        /// Arrival of something important (SOS cards).
         static let lively = Animation.spring(response: 0.5, dampingFraction: 0.82)
     }
 
-    /// Continuous corner radius for cards (matches the system's squircle).
     static let cardRadius: CGFloat = 24
 }
-
-// MARK: - Card
 
 struct DSCardModifier: ViewModifier {
     var padding: CGFloat = DS.Spacing.medium
@@ -40,20 +31,16 @@ struct DSCardModifier: ViewModifier {
 }
 
 extension View {
-    /// Soft surface card with a hairline border.
     func dsCard(padding: CGFloat = DS.Spacing.medium, tint: Color? = nil) -> some View {
         modifier(DSCardModifier(padding: padding, tint: tint))
     }
 
-    /// Haptic tap, system-standard.
     func tapHaptic(_ style: UIImpactFeedbackGenerator.FeedbackStyle = .light) -> some View {
         simultaneousGesture(TapGesture().onEnded {
             UIImpactFeedbackGenerator(style: style).impactOccurred()
         })
     }
 }
-
-// MARK: - Skeleton / shimmer
 
 struct ShimmerModifier: ViewModifier {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -88,7 +75,6 @@ extension View {
     func shimmering() -> some View { modifier(ShimmerModifier()) }
 }
 
-/// Placeholder bar shown while real content loads.
 struct SkeletonBar: View {
     var width: CGFloat? = nil
     var height: CGFloat = 14
@@ -102,7 +88,6 @@ struct SkeletonBar: View {
     }
 }
 
-/// Card-shaped skeleton (two lines of text and an icon).
 struct SkeletonRow: View {
     var body: some View {
         HStack(spacing: DS.Spacing.medium) {
@@ -118,11 +103,6 @@ struct SkeletonRow: View {
     }
 }
 
-// MARK: - Branded loading screen
-
-/// Full-area loading state: a turning arc around the shield, a title and
-/// a quieter line below. Used while the camera warms up, and anywhere a
-/// screen waits on something.
 struct LoadingScreen: View {
     let title: String
     var subtitle: String?
@@ -178,9 +158,6 @@ struct LoadingScreen: View {
     }
 }
 
-// MARK: - Small pieces
-
-/// Capsule status chip: icon + word, colour always paired with text.
 struct StatusPill: View {
     let text: String
     let symbol: String
@@ -197,7 +174,6 @@ struct StatusPill: View {
     }
 }
 
-/// Dot that pulses softly: "live" indicator.
 struct PulsingDot: View {
     var color: Color = DS.Colors.ok
     var size: CGFloat = 10
@@ -225,7 +201,6 @@ struct PulsingDot: View {
     }
 }
 
-/// Section title in the card lists.
 struct DSSectionHeader: View {
     let title: String
     var trailing: String?

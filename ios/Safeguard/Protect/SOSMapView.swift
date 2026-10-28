@@ -2,9 +2,6 @@ import CoreLocation
 import MapKit
 import SwiftUI
 
-/// The SOS map: where the wearer is (with the fix's error circle), the
-/// nearest staffed places, and the walking route. The camera frames
-/// everything on its own and follows as the fix or route improves.
 struct SOSMapView: View {
     let fix: CLLocation?
     let places: [SOSPlace]
@@ -81,7 +78,6 @@ struct SOSMapView: View {
             && abs(place.coordinate.longitude - destination.longitude) < 0.00002
     }
 
-    /// Frames the wearer, the destination and the route with breathing room.
     private func refit(animated: Bool) {
         var points: [CLLocationCoordinate2D] = []
         if let fix { points.append(fix.coordinate) }
@@ -97,7 +93,6 @@ struct SOSMapView: View {
     }
 }
 
-/// Blue "you are here" dot with a white ring and a soft halo.
 private struct YouDot: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var halo = false

@@ -1,4 +1,3 @@
-"""Tests for POST /verify-speech: strict JSON, guards, fallback, privacy."""
 
 import httpx
 
@@ -48,7 +47,7 @@ def test_snippet_reaches_muse_prompt(client, monkeypatch):
     client.post("/verify-speech", json=speech_request(snippet="unique marker words"))
     user_text = seen["messages"][1]["content"]
     assert "unique marker words" in user_text
-    assert "coercion" in user_text  # on-device context also passed
+    assert "coercion" in user_text
 
 
 def test_muse_can_downgrade(client, monkeypatch):

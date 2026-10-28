@@ -1,7 +1,4 @@
 #!/usr/bin/env bash
-# Runs the XCTest suite on a Simulator.
-# Needs the iOS platform + a Simulator runtime (Xcode -> Settings -> Platforms).
-# Usage: ./scripts/test.sh ["iPhone 17"]
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

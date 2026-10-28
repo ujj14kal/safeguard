@@ -1,7 +1,5 @@
 import Foundation
 
-// MARK: - Readiness (pure checks, shared with the Protect page)
-
 enum ReadinessLevel: Equatable {
     case ok, warning, problem
 }
@@ -22,14 +20,11 @@ struct ReadinessItem: Identifiable, Equatable {
     let fix: ReadinessFix
 }
 
-/// What the Dashboard reports: is this phone actually ready to protect?
-/// Inputs are plain values so tests can pin every rule.
 struct ReadinessInput: Equatable {
     var camera: PermissionStatus
     var microphone: PermissionStatus
     var speech: PermissionStatus
     var location: PermissionStatus
-    /// nil = still checking.
     var backendReachable: Bool?
     var contactCount: Int
     var linkedCount: Int
@@ -141,13 +136,10 @@ enum Readiness {
             )
     }
 
-    /// "5 of 7 ready" progress.
     static func readyCount(_ items: [ReadinessItem]) -> Int {
         items.filter { $0.level == .ok }.count
     }
 }
-
-// MARK: - Stats (pure)
 
 struct DashboardStats: Equatable {
     var eventsLast30Days: Int

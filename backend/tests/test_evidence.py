@@ -1,4 +1,3 @@
-"""POST /evidence: raw segment upload with validated names, size cap, token."""
 
 import pytest
 from fastapi.testclient import TestClient

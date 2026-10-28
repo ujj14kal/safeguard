@@ -1,9 +1,6 @@
 import CoreGraphics
 import Foundation
 
-/// Aspect-fill mapping: Vision boxes (normalized, origin lower-left) onto
-/// a view showing a `frame`-sized buffer scaled to fill `view`. One
-/// implementation for the HUD overlay and (in tests) the full-screen size.
 public enum AspectFillMapper {
     public static func boxRect(_ box: CGRect, frame: CGSize, view: CGSize) -> CGRect {
         guard frame.width > 0, frame.height > 0, view.width > 0, view.height > 0 else {
@@ -22,9 +19,6 @@ public enum AspectFillMapper {
     }
 }
 
-/// Per-track box level. Direct threshold mapping (no holds): a box must
-/// never disagree with the person it sits on, while the global proximity
-/// level keeps its rise/fall holds. Any alerting track is red.
 public enum PersonBoxLevel {
     public static func level(
         alert: Bool, height: Double, config: ThreatConfig
@@ -39,9 +33,6 @@ public enum PersonBoxLevel {
     }
 }
 
-/// HUD status pill content. Resolved from primitives with a fixed priority;
-/// never colour alone — every state has its own icon + text. Unsafe is not
-/// a pill: it gets the full SOS scrim.
 public struct HudStatus: Sendable, Equatable {
     public var text: String
     public var symbol: String

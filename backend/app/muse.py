@@ -1,11 +1,3 @@
-"""Muse client over the Meta Model API Chat Completions endpoint.
-
-Docs: https://dev.meta.ai/docs (OpenAI-compatible Chat Completions; auth header built from the key at runtime).
-MODEL_API_KEY, Chat Completions documented as the OpenAI-compatible
-messages-array endpoint. Vision input as base64 data-URL images, strict JSON
-via response_format. Nothing here is invented: shapes follow the documented
-OpenAI-compatible contract.
-"""
 
 import json
 import re
@@ -73,40 +65,31 @@ class MuseError(Exception):
     pass
 
 
-# Appearance guard: a verdict must describe behaviour, never looks. Whole-word
-# patterns only. The first version matched substrings, so "age" rejected
-# "image", "manage", "average", "engaged", "message" and "stage": ordinary
-# behaviour verdicts ("no approach across the image sequence") were refused.
 _APPEARANCE_PATTERNS = [
     re.compile(pattern, re.IGNORECASE)
     for pattern in (
-        # clothing and grooming
         r"\bwear(?:s|ing)?\b",
         r"\bwore\b",
         r"\bclothes\b",
         r"\bclothing\b",
         r"\bdressed\b",
         r"\b(?:hoodie|jacket|shirt|jeans|coat|skirt|hat|uniform|beard|tattoos?|bald)\b",
-        # ethnicity, race, skin
         r"\bethnic(?:ity|ities)?\b",
         r"\bracial(?:ly)?\b",
         r"\brace\b",
         r"\bskinny\b",
         r"\bskin\b",
-        # age
         r"\bage\b",
         r"\baged\b",
         r"\belderly\b",
         r"\bteen(?:ager|aged)?s?\b",
         r"\b(?:old|young|middle-aged)\s+(?:man|woman|male|female|person|guy|girl|lady)\b",
-        # gender presentation
         r"\b(?:man|men|woman|women|male|female|boy|girl|guy|lady|gentleman)\b",
     )
 ]
 
 
 def mentions_appearance(text: str) -> str | None:
-    """Return the first appearance term found in `text` (whole words), else None."""
     for pattern in _APPEARANCE_PATTERNS:
         match = pattern.search(text)
         if match:
@@ -126,10 +109,8 @@ class MuseClient:
         self.api_key = api_key
         self.model = model
         self.timeout_s = timeout_s
-        # Lower effort = faster answers (docs: "low" for direct-answer tasks).
-        # Empty means the model decides. Speech judging sets it from config.
-        self.reasoning_effort = ""  # vision verify
-        self.speech_reasoning_effort = ""  # speech judge
+        self.reasoning_effort = ""
+        self.speech_reasoning_effort = ""
 
     def verify(
         self,
@@ -137,7 +118,6 @@ class MuseClient:
         on_device_features: dict,
         sam2_geometry: dict | None,
     ) -> tuple[dict, float]:
-        """Returns (strict verdict dict, latency seconds). Raises MuseError."""
         if not self.api_key:
             raise MuseError("META_MODEL_API_KEY is not set")
         context = {
@@ -187,7 +167,6 @@ class MuseClient:
 
 
     def verify_speech(self, snippet: str, on_device: dict) -> tuple[dict, float]:
-        """Judge one reported-speech snippet. Returns (verdict dict, latency s)."""
         if not self.api_key:
             raise MuseError("META_MODEL_API_KEY is not set")
         body = {
@@ -225,7 +204,6 @@ class MuseClient:
 
 
 def parse_verdict(raw_body: str) -> dict:
-    """Extract and strictly validate the verdict JSON. Raises MuseError."""
     try:
         envelope = json.loads(raw_body)
         content = envelope["choices"][0]["message"]["content"]
@@ -248,7 +226,6 @@ def parse_verdict(raw_body: str) -> dict:
         raise MuseError(f"bad confidence: {confidence!r}")
     if not isinstance(reason, str) or not reason:
         raise MuseError("bad reason: must be a non-empty string")
-    # Appearance-guard: the model must never smuggle looks-based labels in.
     term = mentions_appearance(" ".join(behaviours + [reason]))
     if term:
         raise MuseError(f"verdict mentions appearance ({term!r}); refusing to use it")
@@ -261,7 +238,6 @@ def parse_verdict(raw_body: str) -> dict:
 
 
 def parse_speech_verdict(raw_body: str) -> dict:
-    """Extract and strictly validate a speech verdict. Raises MuseError."""
     try:
         envelope = json.loads(raw_body)
         content = envelope["choices"][0]["message"]["content"]
@@ -284,11 +260,6 @@ def parse_speech_verdict(raw_body: str) -> dict:
         raise MuseError(f"bad directed_at_wearer: {directed!r}")
     if not isinstance(reason, str) or not reason:
         raise MuseError("bad reason: must be a non-empty string")
-    # Appearance guard, speech edition. The verdict is about what was SAID, so
-    # a stray look-word in the explanation (often "woman", meaning the wearer)
-    # must not throw away a correct severity: the explanation is replaced by a
-    # neutral line and any category carrying a look-word is dropped. The
-    # severity itself still comes only from the speech.
     if mentions_appearance(reason):
         reason = "Concerning speech (explanation withheld by the appearance guard)"
     categories = [c for c in categories if not mentions_appearance(c)]

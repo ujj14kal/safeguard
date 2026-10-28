@@ -2,10 +2,7 @@ import CoreVideo
 import Foundation
 import XCTest
 
-/// Shared test helpers. Compiled into the Xcode test target and into the
-/// macOS verification harness (same files, same assertions).
 enum TestHelpers {
-    /// Solid-fill BGRA pixel buffer.
     static func makePixelBuffer(
         width: Int = 640, height: Int = 480, fill: UInt8 = 0
     ) throws -> CVPixelBuffer {
@@ -25,7 +22,6 @@ enum TestHelpers {
         return pixelBuffer
     }
 
-    /// Deterministic pseudo-random noise buffer (fixed seed).
     static func makeNoiseBuffer(
         width: Int = 320, height: Int = 240, seed: UInt64 = 42
     ) throws -> CVPixelBuffer {

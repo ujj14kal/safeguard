@@ -1,8 +1,5 @@
 import Foundation
 
-/// Stub for Meta AI glasses input. Roadmap: Meta's Wearables Device Access
-/// Toolkit will deliver frames here; everything downstream (detector, tracker,
-/// scorer, state machine) already speaks FrameSource and changes not at all.
 final class GlassesSource: FrameSource {
     weak var delegate: (any FrameSourceDelegate)?
     var isRunning: Bool { false }

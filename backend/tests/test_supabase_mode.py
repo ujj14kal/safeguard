@@ -1,5 +1,3 @@
-"""Supabase storage mode: state and recordings live in Storage buckets, so a
-host that sleeps or restarts loses nothing. A fake Storage plays Supabase."""
 
 import json
 import re
@@ -87,7 +85,6 @@ def fake(monkeypatch):
 
 @pytest.fixture()
 def hosted(fake, monkeypatch):
-    """The app in Supabase mode with empty stores (as after a cold start)."""
     settings = Settings(
         storage_backend="supabase", supabase_url=URL, supabase_service_role_key=KEY,
         supabase_anon_key="anon", app_token="", public_base_url="https://demo.test",
@@ -115,8 +112,6 @@ def start(api, **over):
     assert res.status_code == 200, res.text
     return res.json()
 
-
-# --- the state file ----------------------------------------------------------
 
 def test_state_file_round_trip_and_missing(fake):
     f = SupabaseStateFile(SupabaseObjects(URL, KEY, "safeguard-state"), "x.json")
@@ -146,7 +141,6 @@ def test_stores_survive_a_cold_start(fake):
     token = channels.get_or_create("device-1234", "Asha")["token"]
     contacts = ContactStore(files("contacts.json"))
     invite = contacts.invite("Meera")
-    # A new process, nothing in memory:
     again = IncidentStore(path=files("incidents.json"))
     assert again.get(inc.id).guardian_code == "AAAA-BBBB-CCCC"
     assert again.get(inc.id).latest()["lat"] == 1.0
@@ -165,8 +159,6 @@ def test_a_failed_read_never_overwrites_real_data(fake):
     fake.down = False
     assert GuardianStore(files("guardians.json")).exists(code)
 
-
-# --- the API ------------------------------------------------------------------
 
 def test_recordings_go_to_the_bucket_and_play_back_with_ranges(hosted, fake):
     inc = start(hosted)
@@ -223,8 +215,6 @@ def test_applog_stays_in_memory_with_no_disk(hosted, tmp_path, monkeypatch):
     assert hosted.get("/applog").json()["events"][-1]["kind"] == "x"
     assert not (tmp_path / "logs").exists()
 
-
-# --- Telegram webhook ----------------------------------------------------------
 
 def test_telegram_webhook_links_a_contact_and_checks_the_secret(hosted, fake, monkeypatch):
     monkeypatch.setattr(main, "SETTINGS", Settings(

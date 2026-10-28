@@ -3,8 +3,6 @@ import CoreLocation
 import Speech
 import SwiftUI
 
-/// Reads and requests the four system permissions. Status only — the views
-/// decide what to show.
 enum SetupPermissions {
     static func status(of permission: SetupPermission) -> PermissionStatus {
         switch permission {
@@ -47,8 +45,6 @@ enum SetupPermissions {
         }
     }
 
-    /// Asks one permission (the system prompt). Location has no callback —
-    /// the view re-checks when the app returns to the foreground.
     static func request(_ permission: SetupPermission) async {
         switch permission {
         case .camera:

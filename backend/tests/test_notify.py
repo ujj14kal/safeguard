@@ -1,4 +1,3 @@
-"""Notifier unit tests: dry-run logging, Telegram shapes, message builders."""
 
 import json
 

@@ -1,8 +1,3 @@
-"""Verdict parsing and the appearance guard.
-
-The guard must refuse looks-based wording but never refuse ordinary behaviour
-verdicts. Fake data only.
-"""
 
 import json
 
@@ -21,8 +16,6 @@ def envelope(reason: str, behaviours=("stationary",), level: str = "low") -> str
     return json.dumps({"choices": [{"message": {"content": json.dumps(verdict)}}]})
 
 
-# Wording a model will plausibly use. Several contain "age" or "man" INSIDE
-# another word, which the old substring check wrongly refused.
 CLEAN_REASONS = [
     "A person is standing still while the camera moves toward them.",
     "No approach is visible across the image sequence.",

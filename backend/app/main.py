@@ -1,11 +1,3 @@
-"""Safeguard backend.
-
-Phase 1: health check. Phase 4: POST /verify (SAM 2 + Muse, with fallback).
-Phase 5: POST /verify-speech (Muse judges a text snippet, never audio).
-Phase 6: SOS escalation — contacts, incidents, family live viewer. No API
-keys in code: all configuration comes from environment variables (see
-/.env.example).
-"""
 
 import asyncio
 import base64
@@ -88,8 +80,6 @@ app = FastAPI(title="Safeguard backend", lifespan=lifespan)
 
 @app.exception_handler(StorageUnavailable)
 async def _storage_unavailable(_request: Request, exc: StorageUnavailable):
-    # The data store could not be reached: say so (retry later) instead of
-    # pretending nothing exists or silently losing a write.
     logger.warning("storage unavailable: %s", exc)
     return JSONResponse(status_code=503, content={"detail": "storage unavailable, try again"})
 
@@ -111,11 +101,6 @@ _sam2 = Sam2Runner(
     corridor_half_width=SETTINGS.verify_corridor_half_width,
 )
 _daily_counts: Counter[str] = Counter()
-
-# --- Phase 6: app token auth + stores -------------------------------------------
-# Every app-to-backend endpoint requires X-Safeguard-Token when
-# SAFEGUARD_APP_TOKEN is set; unset means open (local dev), with a startup
-# warning. /health and the share-token viewer are always public.
 
 
 def app_token_ok(provided: str | None) -> bool:
@@ -186,13 +171,10 @@ def live_url_for(share_token: str) -> str:
 
 
 def _telegram_webhook_secret() -> str:
-    """Telegram echoes this in a header on every webhook call; derived from
-    the bot token so there is nothing extra to configure."""
     return hashlib.sha256(("safeguard-tg:" + SETTINGS.telegram_bot_token).encode()).hexdigest()[:48]
 
 
 async def _register_telegram_webhook() -> None:
-    """For hosts that scale to zero: Telegram calls us, nobody polls."""
     base = SETTINGS.public_base_url.rstrip("/")
     if not base.startswith("https://"):
         logger.warning("telegram webhook needs an https PUBLIC_BASE_URL (got %r)", base)
@@ -231,11 +213,9 @@ async def telegram_webhook(
 
 
 async def _telegram_poll_loop() -> None:
-    """Local development: poll getUpdates and link /start <code> senders."""
     token = SETTINGS.telegram_bot_token
     offset = None
     async with httpx.AsyncClient(timeout=25) as client:
-        # Telegram refuses getUpdates while a webhook is set.
         try:
             await client.post(f"{TELEGRAM_API}/bot{token}/deleteWebhook")
         except httpx.HTTPError:
@@ -259,7 +239,6 @@ async def _telegram_poll_loop() -> None:
 class VerifyRequest(BaseModel):
     frames_b64: list[str] = Field(min_length=1, max_length=8)
     on_device_features: dict = Field(default_factory=dict)
-    # Person boxes on frame 0 in pixels [x0, y0, x1, y1] (SAM 2 prompts).
     boxes_xyxy: list[list[float]] = Field(default_factory=list)
 
 
@@ -275,9 +254,6 @@ class VerifyResponse(BaseModel):
 
 @app.get("/health")
 def health(x_safeguard_token: str | None = Header(default=None)) -> dict:
-    # Open to anyone, but only a caller with the app token learns whether the
-    # Muse key is set. That flag tells the app whether a 5xx means "no API
-    # key" (setup problem) rather than a crash. The key itself never leaves.
     if app_token_ok(x_safeguard_token):
         return {"status": "ok", "muse_configured": bool(SETTINGS.meta_model_api_key)}
     return {"status": "ok"}
@@ -342,7 +318,6 @@ def verify(
 
 
 class SpeechVerifyRequest(BaseModel):
-    # Short TEXT snippet (trigger sentence + a little context). Never audio.
     snippet: str = Field(min_length=1, max_length=2000)
     on_device: dict = Field(default_factory=dict)
 
@@ -360,8 +335,6 @@ def verify_speech(
     x_safeguard_token: str | None = Header(default=None),
 ) -> SpeechVerifyResponse:
     require_app_token(x_safeguard_token)
-    # Its own budget: the app judges the conversation continuously, and a
-    # chatty crowd must not starve movement verification (or vice versa).
     if not _speech_limiter.allow():
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -387,7 +360,6 @@ def verify_speech(
 
 
 def log_speech_call(muse_latency: float, verdict: dict) -> None:
-    """Log counts, latency and severity — NEVER the transcript snippet."""
     day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     _daily_counts[day] += 1
     record = {
@@ -403,7 +375,7 @@ def log_speech_call(muse_latency: float, verdict: dict) -> None:
     line = json.dumps(record)
     logger.info(line)
     if SETTINGS.storage_backend == "supabase":
-        return  # logged above to stdout (Cloud Logging); no local disk to fill
+        return
     try:
         os.makedirs(os.path.dirname(SETTINGS.verify_log_path) or ".", exist_ok=True)
         with open(SETTINGS.verify_log_path, "a") as handle:
@@ -415,7 +387,6 @@ def log_speech_call(muse_latency: float, verdict: dict) -> None:
 def log_call(
     path: str, sam2_latency: float | None, muse_latency: float, threat_level: str
 ) -> None:
-    """Append one JSON line per call and keep a daily counter."""
     day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     _daily_counts[day] += 1
     record = {
@@ -430,7 +401,7 @@ def log_call(
     line = json.dumps(record)
     logger.info(line)
     if SETTINGS.storage_backend == "supabase":
-        return  # logged above to stdout (Cloud Logging); no local disk to fill
+        return
     try:
         os.makedirs(os.path.dirname(SETTINGS.verify_log_path) or ".", exist_ok=True)
         with open(SETTINGS.verify_log_path, "a") as handle:
@@ -439,10 +410,7 @@ def log_call(
         logger.warning("could not write verify log: %s", exc)
 
 
-# --- SOS evidence -----------------------------------------------------------
-
 _SESSION_RE = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
-# video/audio: the older separate parts; init/seg: the continuous fragmented stream.
 _EVIDENCE_KINDS = {"video": {"mp4"}, "audio": {"m4a"}, "init": {"mp4"}, "seg": {"m4s"}}
 
 
@@ -450,8 +418,6 @@ _evidence_backend: EvidenceBackend | None = None
 
 
 def get_evidence() -> EvidenceBackend:
-    """Local folders in development (rebuilt each call so settings changes
-    apply), a cached Supabase Storage client in Supabase mode."""
     global _evidence_backend
     if SETTINGS.storage_backend != "supabase":
         return make_evidence(SETTINGS)
@@ -465,9 +431,6 @@ def _evidence_root() -> Path:
 
 
 def _check_evidence_or_app_token(evidence: str | None, app: str | None) -> None:
-    # Phase 6: /evidence accepts EITHER the app token or the legacy evidence
-    # token (kept so the pinned evidence-token tests keep passing; the app
-    # sends the app token everywhere).
     ev_ok = bool(SETTINGS.evidence_token) and evidence == SETTINGS.evidence_token
     app_ok = bool(SETTINGS.app_token) and app_token_ok(app)
     if ev_ok or app_ok:
@@ -490,13 +453,6 @@ async def upload_evidence(
     x_evidence_token: str | None = Header(default=None),
     x_safeguard_token: str | None = Header(default=None),
 ) -> dict:
-    """Store one recording segment (raw bytes in the body) from an SOS.
-
-    The app records video and audio in short segments while an SOS runs and
-    uploads each as soon as it is closed, so a phone that is taken or
-    smashed has already sent most of the evidence. File names are fixed by
-    the server from validated fields; nothing from the client is used as a path.
-    """
     _check_evidence_or_app_token(x_evidence_token, x_safeguard_token)
     if not _SESSION_RE.match(session):
         raise HTTPException(status_code=422, detail="bad session id")
@@ -532,7 +488,6 @@ def list_evidence(
     x_evidence_token: str | None = Header(default=None),
     x_safeguard_token: str | None = Header(default=None),
 ) -> dict:
-    """List the segments stored for one SOS session (names and sizes only)."""
     _check_evidence_or_app_token(x_evidence_token, x_safeguard_token)
     if not _SESSION_RE.match(session):
         raise HTTPException(status_code=422, detail="bad session id")
@@ -547,8 +502,6 @@ def delete_evidence(
     session: str,
     x_safeguard_token: str | None = Header(default=None),
 ) -> dict:
-    """Deletes every segment stored for one SOS session. Idempotent: a
-    missing session deletes nothing and still returns 200."""
     require_app_token(x_safeguard_token)
     if not _SESSION_RE.match(session):
         raise HTTPException(status_code=422, detail="bad session id")
@@ -557,11 +510,6 @@ def delete_evidence(
     logger.info("evidence deleted session=%s", session)
     return {"deleted": True}
 
-
-# --- App event log (debug) --------------------------------------------------
-# Unlike the verify logs, this one DOES hold what the app heard: it exists so
-# the developer can see what the app is doing while testing. The app only
-# sends it when the "Debug log" setting is on. Switch it off before real use.
 
 _APPLOG_MAX_EVENTS = 200
 _APPLOG_MAX_FIELD = 600
@@ -596,7 +544,6 @@ def post_applog(
         clean["server_ts"] = now
         lines.append(json.dumps(clean, ensure_ascii=False))
     if lines and SETTINGS.storage_backend == "supabase":
-        # No disk to keep: a bounded in-memory tail, readable via GET.
         _applog_ring.extend(lines)
     elif lines:
         with _applog_path().open("a", encoding="utf-8") as handle:
@@ -619,11 +566,6 @@ def get_applog(
     tail = path.read_text(encoding="utf-8").splitlines()[-count:]
     return {"events": [json.loads(line) for line in tail if line.strip()]}
 
-
-# --- Realtime speech to text (Muse Voice Transcribe relay) -------------------
-# The phone streams 16 kHz mono PCM16 audio here as binary WebSocket frames;
-# this relays it to Meta's realtime ASR and sends the JSON events (partial and
-# final transcripts) straight back. The API key never leaves this server.
 
 ASR_KEYWORDS = [
     "bachao", "madad", "help me", "save me", "bhosdike", "madarchod", "behenchod",
@@ -651,7 +593,6 @@ async def asr_relay(client: WebSocket) -> None:
 
     import websockets
 
-    # Refuse BEFORE accepting: a wrong or missing token never gets a socket.
     if not app_token_ok(client.headers.get("x-safeguard-token")):
         await client.close(code=1008)
         return
@@ -679,7 +620,7 @@ async def asr_relay(client: WebSocket) -> None:
                         audio_bytes += len(message["bytes"])
                         await upstream.send(message["bytes"])
                     elif message.get("text") is not None:
-                        await upstream.send(message["text"])  # e.g. {"type": "endStream"}
+                        await upstream.send(message["text"])
 
             async def meta_to_phone() -> None:
                 nonlocal events
@@ -704,14 +645,10 @@ async def asr_relay(client: WebSocket) -> None:
         except Exception:  # noqa: BLE001
             pass
     finally:
-        # Counts only: audio and transcripts are never logged here.
         logger.info(
             "asr session ended seconds=%.1f audio_bytes=%d events=%d",
             (datetime.now(timezone.utc) - started).total_seconds(), audio_bytes, events,
         )
-
-
-# --- Phase 6: contacts, incidents, live viewer ----------------------------------
 
 
 class InviteRequest(BaseModel):
@@ -723,7 +660,6 @@ def invite_contact(
     body: InviteRequest,
     x_safeguard_token: str | None = Header(default=None),
 ) -> dict:
-    """Adds a contact and returns the Telegram invite link (Start once)."""
     require_app_token(x_safeguard_token)
     try:
         record = get_contact_store().invite(body.name)
@@ -758,8 +694,6 @@ def delete_contact(
     code: str,
     x_safeguard_token: str | None = Header(default=None),
 ) -> dict:
-    """Deletes one linked contact. Idempotent: an unknown code deletes
-    nothing and still returns 200."""
     require_app_token(x_safeguard_token)
     if not _CODE_RE.match(code):
         raise HTTPException(status_code=422, detail="bad invite code")
@@ -775,11 +709,8 @@ class IncidentStartRequest(BaseModel):
     lang: str = Field(default="en", pattern="^(en|hi)$")
     lat: float | None = None
     lon: float | None = None
-    # "live": a stream the person chose to share; nobody is messaged.
     mode: str = Field(default="sos", pattern="^(sos|live)$")
-    # The person's standing live link (see /live/channel); keeps the URL stable.
     channel_token: str | None = Field(default=None, max_length=64)
-    # The guardian watching over this person (optional).
     guardian_code: str | None = Field(default=None, max_length=24)
 
 
@@ -818,7 +749,6 @@ def _notifier_for(dry_run: bool):
 
 
 def _send_to_codes(codes, text, dry_run, url_button=None, pin=None) -> list:
-    """Sends one message to linked contacts. Returns per-contact delivery."""
     store = get_contact_store()
     notifier = _notifier_for(dry_run)
     delivery = []
@@ -845,7 +775,6 @@ def _send_to_codes(codes, text, dry_run, url_button=None, pin=None) -> list:
 
 
 def _alert_guardian(incident, text: str, live: str, pin) -> dict:
-    """The guardian who linked Telegram gets the same alert as the contacts."""
     chat = get_guardians().chat_id(incident.guardian_code)
     if chat is None:
         return {"code": "guardian", "name": "Guardian", "status": "skipped", "detail": "not linked"}
@@ -887,8 +816,6 @@ def incident_start(
     )
     live = live_url_for(incident.share_token)
     if not fresh:
-        # One alert burst per incident: repeats return the same incident.
-        # The preview echoes the would-be text for the request's own flag.
         if body.test:
             preview = test_text(wearer, live, lang=body.lang)
         else:
@@ -906,7 +833,6 @@ def incident_start(
         store.add_point(incident.id, body.lat, body.lon)
         pin = (body.lat, body.lon)
     if body.mode == "live":
-        # The person shares this link themselves; no automatic messages.
         store.save()
         return {
             "id": incident.id,
@@ -993,7 +919,6 @@ def incident_cab(
     body: CabRequest,
     x_safeguard_token: str | None = Header(default=None),
 ) -> dict:
-    """Shares DEMO cab details with the incident's contacts (no real cab)."""
     require_app_token(x_safeguard_token)
     incident = get_incidents().get(incident_id)
     if incident is None:
@@ -1023,7 +948,6 @@ def _live_incident_or_404(share_token: str):
 
 
 def _idle_channel(share_token: str):
-    """The standing link's owner, when nothing is streaming right now."""
     return get_channels().by_token(share_token)
 
 
@@ -1031,8 +955,6 @@ _SEGMENT_NAME_RE = re.compile(r"^(video|audio)-(\d{5})\.(mp4|m4a)$")
 
 
 def _live_segments(incident, files=None) -> list:
-    """Old-style separate parts. `files` lets a caller that already listed
-    the storage reuse it (one listing per request, not three)."""
     if files is None:
         files = get_evidence().segments(incident.session)
     if not files:
@@ -1075,7 +997,6 @@ def _hls_playlist_response(incident, url_for):
 
 
 def _hls_info(incident, entries=None) -> dict | None:
-    """What the pages need to choose the continuous player."""
     if entries is None:
         entries = _hls_entries(incident)
     has_init, segments = hls.collect(entries)
@@ -1096,7 +1017,6 @@ def live_playlist(share_token: str):
 
 @app.get("/live/{share_token}", response_class=HTMLResponse)
 def live_page(share_token: str) -> str:
-    # Share token only — no app token. A wrong token is a plain 404.
     if get_incidents().get_by_token(share_token) is None and _idle_channel(share_token) is None:
         raise HTTPException(status_code=404, detail="no such live page")
     return render_viewer_page(share_token)
@@ -1132,7 +1052,6 @@ def live_state(share_token: str) -> dict:
 
 @app.get("/live/{share_token}/segments/{name}")
 def live_segment(share_token: str, name: str, request: Request):
-    """Serves one segment file — but only from this token's own session."""
     incident = _live_incident_or_404(share_token)
     media = hls.media_type(name)
     if media is None:
@@ -1145,15 +1064,8 @@ def live_segment(share_token: str, name: str, request: Request):
     return served
 
 
-
-# --- Accounts (Supabase) ---------------------------------------------------------
-# Sign-up / sign-in are relayed here so the Supabase keys never reach the
-# phone. Passwords go straight to Supabase Auth and are never stored or
-# logged; the profile (name, phone, language, consent) is a row in
-# `profiles`. Every route also needs the app token.
-
 _auth_limiter = RateLimiter(SETTINGS.auth_rate_per_min)
-_accounts_override: SupabaseAccounts | None = None  # tests inject a fake
+_accounts_override: SupabaseAccounts | None = None
 
 
 def get_accounts() -> SupabaseAccounts:
@@ -1206,9 +1118,7 @@ class SignupRequest(BaseModel):
     name: str = Field(min_length=1, max_length=60)
     phone: str | None = Field(default=None, max_length=24)
     language: str = Field(default="en", pattern="^(en|hi)$")
-    # The wearer agreed to the privacy notice (what is stored and why).
     consent: bool = False
-    # The code of the guardian who watches over her recordings (optional).
     guardian_code: str | None = Field(default=None, max_length=24)
 
 
@@ -1229,7 +1139,6 @@ class ProfileUpdate(BaseModel):
 
 
 def _checked_guardian_code(raw: str | None) -> str | None:
-    """Normalised code, None when blank; 422 when malformed or unknown."""
     if raw is None or not raw.strip():
         return None
     code = normalize_code(raw)
@@ -1273,8 +1182,6 @@ def auth_signup(
     return {
         "user": _profile_out(row, user),
         "session": session.as_dict() if session else None,
-        # Supabase projects with email confirmation on return no session
-        # until the link in the email is opened.
         "needs_confirmation": session is None,
     }
 
@@ -1365,7 +1272,7 @@ def me_put(
 
 
 _AVATAR_MAX_BYTES = 600_000
-_avatar_override = None  # tests inject a store
+_avatar_override = None
 
 
 def _avatars():
@@ -1382,7 +1289,6 @@ async def me_avatar_put(
     x_safeguard_token: str | None = Header(default=None),
     authorization: str | None = Header(default=None),
 ) -> dict:
-    """The profile picture: a small JPEG as the request body. Optional."""
     accounts = _auth_guard(x_safeguard_token)
     user = _current_user(accounts, authorization)
     data = await request.body()
@@ -1439,28 +1345,21 @@ def me_delete(
         try:
             _avatars().delete(user["id"])
         except StorageUnavailable:
-            pass  # the account is gone; a leftover picture is unreachable
+            pass
     except AccountsError as exc:
         raise _fail(exc) from exc
     return {"deleted": True}
 
 
-# --- Standing live link and guardians ----------------------------------------------
-# The standing link is created on the person's approval (Settings) and stays
-# the same for every live stream and SOS. Guardians open /guardian with a
-# code and see a READ-ONLY list of the recordings of the people who entered
-# it. There is no write route behind a guardian code.
-
 _guardian_register_limiter = RateLimiter(6, 3600.0)
 _guardian_fail_limiters: dict[str, RateLimiter] = {}
 _guardian_ok_limiter = RateLimiter(240)
 _MEDIA_SECRET = secrets.token_bytes(32)
-_MEDIA_TTL_S = 6 * 3600  # a live playlist is refetched for as long as someone watches
+_MEDIA_TTL_S = 6 * 3600
 _DEVICE_ID_RE = re.compile(r"^[A-Za-z0-9-]{8,64}$")
 
 
 def _client_ip(request: Request) -> str:
-    # Behind the Cloudflare tunnel every request arrives from localhost.
     return (
         request.headers.get("cf-connecting-ip")
         or (request.client.host if request.client else "")
@@ -1501,9 +1400,6 @@ def guardian_page() -> str:
 
 @app.post("/guardian/register")
 def guardian_register(request: Request) -> dict:
-    """A guardian asks for a code of their own to give to the person they
-    watch over. Open to anyone (the guardian has no app), so it is tightly
-    rate-limited; a code alone shows nothing until someone enters it."""
     if not _guardian_register_limiter.allow():
         raise HTTPException(status_code=429, detail="too many codes requested")
     return {"code": get_guardians().create()}
@@ -1511,7 +1407,6 @@ def guardian_register(request: Request) -> dict:
 
 @app.get("/guardian/check/{code}")
 def guardian_check(code: str, x_safeguard_token: str | None = Header(default=None)) -> dict:
-    """The app asks whether a code exists before saving it."""
     require_app_token(x_safeguard_token)
     return {"valid": get_guardians().exists(code)}
 
@@ -1567,7 +1462,6 @@ def _guardian_summary(incident, files=None) -> dict:
 def guardian_alerts(
     request: Request, x_guardian_code: str | None = Header(default=None)
 ) -> dict:
-    """Whether this guardian gets Telegram alerts, and the link to turn them on."""
     code = _guardian_from_header(request, x_guardian_code)
     bot = SETTINGS.telegram_bot
     enabled = SETTINGS.notify_mode == "telegram" and bool(bot)
@@ -1631,11 +1525,8 @@ def guardian_media(incident_id: str, name: str, request: Request, exp: int = 0, 
 
 @app.get("/keepalive")
 def keepalive() -> dict:
-    """Touches the Supabase project (a Storage read and a tiny database
-    query) so a free project is never idle for a week and paused. Called on
-    a schedule (see deploy/CLOUD_RUN.md). Reveals nothing."""
     if SETTINGS.storage_backend == "supabase" and SETTINGS.accounts_enabled:
-        get_guardians()  # reads the state bucket
+        get_guardians()
         try:
             httpx.get(
                 f"{SETTINGS.supabase_url}/rest/v1/profiles",

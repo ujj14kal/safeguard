@@ -1,7 +1,5 @@
 import SwiftUI
 
-/// Step 5: code phrases. Shows the defaults, allows editing with
-/// validation, and practices by listening. Saves live while valid.
 struct SetupPhrasesStep: View {
     @StateObject private var model = ProtectViewModel.shared
     @State private var safe = ""
@@ -79,8 +77,6 @@ struct SetupPhrasesStep: View {
         }
     }
 
-    /// Valid edits save immediately (matching a built-in variant keeps all
-    /// variants by storing nothing); invalid edits never save.
     private func revalidate() {
         let failures = failures()
         valid = failures.isEmpty
@@ -94,8 +90,6 @@ struct SetupPhrasesStep: View {
     }
 }
 
-/// Practice step, shared by setup and Settings: listens and reports what
-/// it heard. Never acts — the view model short-circuits while practicing.
 struct PhrasePracticeView: View {
     @StateObject private var model = ProtectViewModel.shared
     @State private var practicing = false
@@ -134,7 +128,6 @@ struct PhrasePracticeView: View {
             && SetupPermissions.status(of: .speech) == .granted
     }
 
-    /// Pre-localised: shown as a label and read inside an announcement.
     private var heardText: String {
         switch model.practiceHeard {
         case .none:

@@ -1,13 +1,9 @@
 import UIKit
 
-/// Turns a chosen photo into a small JPEG (the server keeps one per
-/// account, at most about 600 kB).
 public enum AvatarImage {
     public static let maxSide: CGFloat = 512
     public static let maxBytes = 450_000
 
-    /// Centre-cropped square, at most `maxSide` px, quality lowered until
-    /// it fits. Nil only if the image cannot be encoded at all.
     public static func jpeg(from image: UIImage) -> Data? {
         let side = min(image.size.width, image.size.height)
         guard side > 0 else { return nil }
@@ -32,7 +28,6 @@ public enum AvatarImage {
         return square.jpegData(compressionQuality: 0.2)
     }
 
-    /// "AR" for "Asha Rao"; "?" for an empty name.
     public static func initials(_ name: String) -> String {
         let letters = name.split(separator: " ").prefix(2).compactMap { $0.first }
         return letters.isEmpty ? "?" : String(letters).uppercased()

@@ -1,7 +1,5 @@
 import Foundation
 
-/// Rolling per-stage timing for the detection pipeline, so "least
-/// latency" is measured on the real phone, not guessed. Thread-safe.
 public final class LatencyMeter: @unchecked Sendable {
     public static let shared = LatencyMeter()
 
@@ -28,7 +26,6 @@ public final class LatencyMeter: @unchecked Sendable {
         samples[stage] = list
     }
 
-    /// Times `work` and records it under `stage`.
     @discardableResult
     public func measure<T>(_ stage: String, _ work: () throws -> T) rethrows -> T {
         let start = ProcessInfo.processInfo.systemUptime
@@ -52,7 +49,6 @@ public final class LatencyMeter: @unchecked Sendable {
         samples = [:]
     }
 
-    /// "persons 18 ms • mediapipe 12 ms (p95 20)" for the debug overlay.
     public func summary(stages: [String]) -> String {
         stages.compactMap { stage in
             guard let s = stats(stage) else { return nil }

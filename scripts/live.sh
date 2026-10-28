@@ -1,12 +1,4 @@
 #!/usr/bin/env bash
-# Live stream in one command: a free Cloudflare quick tunnel (no account)
-# plus the backend, with PUBLIC_BASE_URL set to the tunnel so the live link
-# in every alert opens on any phone, on any network.
-#
-# Needs: `brew install cloudflared`, backend/.venv, and your keys in the
-# environment or in a git-ignored .env at the repo root (META_MODEL_API_KEY,
-# SAFEGUARD_APP_TOKEN, TELEGRAM_BOT_TOKEN). Ctrl+C stops both.
-# Usage: ./scripts/live.sh
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -16,7 +8,6 @@ if ! command -v cloudflared >/dev/null 2>&1; then
 fi
 if [ -f .env ]; then
   set -a
-  # shellcheck disable=SC1091
   . ./.env
   set +a
 fi

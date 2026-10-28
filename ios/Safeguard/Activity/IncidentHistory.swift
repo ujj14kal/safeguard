@@ -1,23 +1,16 @@
 import Foundation
 
-/// One finished SOS, as the Activity tab shows it. Local only: the JSON
-/// file lives in the app's Documents folder and is never uploaded. No
-/// transcripts, no appearance, nothing about other people — counts, names
-/// the wearer typed, outcomes and links only.
 public struct IncidentHistoryEntry: Sendable, Equatable, Codable {
     public var id: UUID
     public var startedAt: Date
     public var endedAt: Date
-    /// noReply, unsafePhrase, distressWord, shouting or flag.
     public var cause: String
-    /// Track raw value -> done/failed + reason, e.g. "failed: no route".
     public var trackOutcomes: [String: String]
     public var contactsAlerted: Int
     public var contactNames: [String]
     public var evidenceSaved: Int
     public var evidenceWaiting: Int
     public var liveURL: String?
-    /// Backend evidence session, for "delete all my data". Never shown.
     public var evidenceSessionID: String?
 
     public init(
@@ -45,7 +38,6 @@ public struct IncidentHistoryEntry: Sendable, Equatable, Codable {
     }
 }
 
-/// Local newest-first store. Purges entries older than 30 days on load.
 public struct IncidentHistory: Sendable, Equatable {
     public static let retentionDays = 30
     public static let filename = "IncidentHistory.json"
@@ -69,13 +61,10 @@ public struct IncidentHistory: Sendable, Equatable {
         entries = []
     }
 
-    /// Drops entries ended more than 30 days before `now`.
     public mutating func purge(olderThan now: Date = Date()) {
         let cutoff = now.addingTimeInterval(TimeInterval(-Self.retentionDays * 86400))
         entries.removeAll { $0.endedAt < cutoff }
     }
-
-    // MARK: - Persistence
 
     public static func fileURL(
         documents: URL = FileManager.default.urls(

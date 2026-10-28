@@ -1,4 +1,3 @@
-"""Tests for POST /verify: fallback path, rate limit, timeout, strict JSON."""
 
 import base64
 import json
@@ -94,8 +93,6 @@ def test_muse_timeout_maps_to_503(client, monkeypatch):
 
 
 def test_stationary_verdict_passthrough(client, mock_muse):
-    # The known ego-motion false alert (walking toward someone standing
-    # still): /verify must faithfully return "stationary, not a threat".
     response = client.post("/verify", json=valid_request())
     body = response.json()
     assert body["threat_level"] == "low"

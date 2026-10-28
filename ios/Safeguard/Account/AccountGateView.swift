@@ -1,7 +1,5 @@
 import SwiftUI
 
-/// Shown on launch until the person has an account. Creating one (or
-/// signing in) is compulsory; the profile photo inside is optional.
 struct AccountGateView: View {
     var body: some View {
         ScrollView {

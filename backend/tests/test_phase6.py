@@ -1,4 +1,3 @@
-"""Phase 6 endpoints: contacts, incidents, live viewer, app-token auth."""
 
 import json
 
@@ -82,9 +81,6 @@ def notify_lines(tmp_path):
     return [json.loads(line) for line in path.read_text().splitlines()]
 
 
-# --- contacts ---------------------------------------------------------------
-
-
 def test_invite_returns_code_and_link(stores):
     body = invite(stores)
     assert body["name"] == "Meera"
@@ -101,9 +97,6 @@ def test_invite_limit_and_status(stores):
     assert stores.get("/contacts/unknown").status_code == 404
     link_code(codes[0])
     assert stores.get(f"/contacts/{codes[0]}").json()["linked"] is True
-
-
-# --- incidents --------------------------------------------------------------
 
 
 def test_start_alerts_linked_and_skips_waiting(stores, tmp_path):
@@ -125,7 +118,7 @@ def test_start_alerts_linked_and_skips_waiting(stores, tmp_path):
     assert by_code[waiting["code"]]["status"] == "skipped"
     assert by_code["ghost"]["status"] == "skipped"
     lines = notify_lines(tmp_path)
-    assert len(lines) == 1  # the linked contact only
+    assert len(lines) == 1
     assert "Aarav" in lines[0]["text"] and body["live_url"] in lines[0]["text"]
 
 
@@ -275,7 +268,7 @@ def test_real_mode_sends_through_telegram(stores, tmp_path, monkeypatch):
         json=start_body(contact_codes=[code], dry_run=False, lat=1.0, lon=2.0),
     ).json()
     assert body["delivery"][0]["status"] == "sent"
-    assert len(calls) == 2  # text + pin
+    assert len(calls) == 2
     assert calls[0]["url"].endswith("/sendMessage")
     assert fake_bot_token in calls[0]["url"]
     assert calls[1]["url"].endswith("/sendLocation")
@@ -289,9 +282,6 @@ def test_real_mode_without_config_falls_back_to_dry_run(stores):
         "/incident/start", json=start_body(contact_codes=[code], dry_run=False)
     ).json()
     assert body["delivery"][0]["status"] == "dry-run"
-
-
-# --- live viewer ------------------------------------------------------------
 
 
 def seed_session(tmp_path, session, files):
@@ -314,7 +304,6 @@ def test_viewer_page_and_state(stores, tmp_path):
     assert page.status_code == 200
     assert "leaflet@1.9.4" in page.text
     assert "10-15 s behind" in page.text
-    # /live/<token> has no trailing slash: fetches must not be relative.
     assert 'fetch(BASE + "/state"' in page.text
     assert 'fetch("state"' not in page.text
     lowered = page.text.lower()
@@ -337,7 +326,6 @@ def test_viewer_token_is_scoped(stores, tmp_path):
     first = stores.post("/incident/start", json=start_body()).json()
     second = stores.post("/incident/start", json=start_body(session="sos-zzzzzzzz")).json()
     seed_session(tmp_path, "sos-zzzzzzzz", {"video-00000.mp4": b"other"})
-    # Token A cannot read session B: the file is simply not there for A.
     assert (
         stores.get(f"/live/{first['share_token']}/segments/video-00000.mp4").status_code
         == 404
@@ -354,8 +342,6 @@ def test_viewer_token_is_scoped(stores, tmp_path):
 def test_viewer_rejects_path_tricks(stores):
     incident = stores.post("/incident/start", json=start_body()).json()
     token = incident["share_token"]
-    # (A bare ".." never reaches the server: HTTP clients normalize it to
-    # the page URL. Everything below does reach the handler and must 404.)
     for name in [
         "video-00000.mp3",
         "audio-00000.mp4",
@@ -368,9 +354,6 @@ def test_viewer_rejects_path_tricks(stores):
         404,
         405,
     )
-
-
-# --- app token auth ---------------------------------------------------------
 
 
 @pytest.fixture
@@ -451,7 +434,6 @@ def test_verify_endpoints_need_the_token(locked):
     assert locked.post("/verify", json=frames).status_code == 401
     speech = {"snippet": "hello", "on_device": {}}
     assert locked.post("/verify-speech", json=speech).status_code == 401
-    # With the header, auth passes (503 = Muse unreachable in tests, not 401).
     assert (
         locked.post("/verify", json=frames, headers=auth_headers()).status_code == 503
     )

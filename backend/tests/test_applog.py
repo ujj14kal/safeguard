@@ -1,4 +1,3 @@
-"""POST/GET /applog: the debug event log the app writes while testing."""
 
 import json
 

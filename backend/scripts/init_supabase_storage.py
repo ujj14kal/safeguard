@@ -1,8 +1,3 @@
-"""Creates the two private Storage buckets the hosted backend uses
-(safeguard-state and safeguard-evidence). Safe to run again.
-
-    cd backend && set -a && . ../.env && set +a && .venv/bin/python scripts/init_supabase_storage.py
-"""
 
 import os
 import sys

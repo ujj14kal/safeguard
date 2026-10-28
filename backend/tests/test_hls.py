@@ -1,4 +1,3 @@
-"""Continuous recording: fragmented-MP4 pieces become one HLS stream."""
 
 import os
 import time
@@ -21,8 +20,6 @@ def entry(name, size=100, mtime=1000.0):
 def names(*seqs, dur=2000):
     return [entry("init.mp4")] + [entry(hls.segment_name(s, dur)) for s in seqs]
 
-
-# --- the pure playlist ------------------------------------------------------
 
 def test_segment_names_round_trip():
     assert hls.segment_name(7, 2000) == "seg-00007-2000.m4s"
@@ -74,8 +71,6 @@ def test_media_types():
     assert hls.media_type("evil.sh") is None
 
 
-# --- the API -----------------------------------------------------------------
-
 @pytest.fixture()
 def api(tmp_path, monkeypatch):
     monkeypatch.setattr(main, "_contact_store", ContactStore(path=str(tmp_path / "c.json")))
@@ -117,7 +112,7 @@ def test_upload_names_init_and_segments_from_validated_fields(api):
 
 
 def test_upload_rejects_bad_durations_and_extensions(api):
-    assert upload(api, "seg", seq=1, ext="m4s").status_code == 422          # no duration
+    assert upload(api, "seg", seq=1, ext="m4s").status_code == 422
     assert upload(api, "seg", seq=1, ext="m4s", dur=5).status_code == 422
     assert upload(api, "seg", seq=1, ext="m4s", dur=999999).status_code == 422
     assert upload(api, "seg", seq=1, ext="mp4", dur=2000).status_code == 422
@@ -157,7 +152,7 @@ def test_a_phone_that_went_quiet_is_closed_for_viewers(api):
     for path in (api.ev / "sos-hlstest01").iterdir():
         os.utime(path, (old, old))
     text = api.get(f"/live/{inc['share_token']}/stream.m3u8").text
-    assert "VOD" in text and "#EXT-X-ENDLIST" in text      # no waiting for ever
+    assert "VOD" in text and "#EXT-X-ENDLIST" in text
     assert api.get(f"/live/{inc['share_token']}/state").json()["status"] == "active"
 
 
@@ -179,7 +174,6 @@ def test_guardian_gets_one_signed_playlist_with_signed_pieces(api):
     assert piece and all("sig=" in line for line in piece)
     for line in piece:
         assert api.get(line).status_code == 200
-    # unsigned or tampered playlist is refused
     assert api.get(url.split("?")[0]).status_code == 403
     assert api.get(url.split("sig=")[0] + "sig=" + "0" * 40).status_code == 403
 

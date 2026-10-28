@@ -1,6 +1,3 @@
-"""Phase 7 deletion endpoints: DELETE /evidence/{session} and
-DELETE /contacts/{code}. Both need the app token, validate ids, and are
-idempotent."""
 
 import pytest
 from fastapi.testclient import TestClient
@@ -119,8 +116,6 @@ def test_delete_evidence_rejects_bad_sessions(client):
 
 
 def test_delete_evidence_cannot_escape_root(client, tmp_path):
-    # A traversal that passed validation would land outside the evidence
-    # root; nothing outside may ever be touched.
     outside = tmp_path / "outside.txt"
     outside.write_text("keep")
     client.delete(

@@ -1,9 +1,6 @@
 import Foundation
 import SwiftUI
 
-/// The person's standing live link and guardian code, as Settings shows
-/// them. The link is created only after the person approves it; it stays
-/// the same for every live stream and every SOS, so it can be shared once.
 @MainActor
 public final class LiveLinkStore: ObservableObject {
     public static let shared = LiveLinkStore()
@@ -27,19 +24,14 @@ public final class LiveLinkStore: ObservableObject {
         guardianCode = defaults.string(forKey: GuardianCode.key)
     }
 
-    /// Sent with every incident so the family link stays stable.
     public var token: String? { defaults.string(forKey: Self.tokenKey) }
 
-    /// A random id for this phone, so the backend can hand back the same
-    /// link again. Not tied to the person, a device, or an account.
     public var deviceID: String {
         if let existing = defaults.string(forKey: Self.deviceKey) { return existing }
         let fresh = UUID().uuidString
         defaults.set(fresh, forKey: Self.deviceKey)
         return fresh
     }
-
-    // MARK: Live link
 
     @discardableResult
     public func createLink(wearerName: String) async -> Bool {
@@ -58,9 +50,6 @@ public final class LiveLinkStore: ObservableObject {
         }
     }
 
-    /// Re-reads the link from the server: same token, current address. The
-    /// address changes when the backend's public address does (a quick
-    /// tunnel restarts with a new one), so the saved copy can go stale.
     public func refreshLink(wearerName: String) async {
         guard url != nil, !isBusy else { return }
         if let made = try? await client.createChannel(deviceID: deviceID, wearerName: wearerName) {
@@ -70,8 +59,6 @@ public final class LiveLinkStore: ObservableObject {
         }
     }
 
-    /// Revokes the link on the server and forgets it here. The old URL
-    /// stops working at once.
     @discardableResult
     public func deleteLink() async -> Bool {
         isBusy = true
@@ -87,14 +74,11 @@ public final class LiveLinkStore: ObservableObject {
         return true
     }
 
-    /// Local forget only (used by "Delete all my data" after revoking).
     public func forgetLink() {
         defaults.removeObject(forKey: Self.urlKey)
         defaults.removeObject(forKey: Self.tokenKey)
         url = nil
     }
-
-    // MARK: Guardian
 
     @discardableResult
     public func setGuardian(code raw: String) async -> Bool {

@@ -57,19 +57,19 @@ final class LocationFixPolicyTests: XCTestCase {
 
     func testRerouteWhenAccuracyBecomesPreciseAndPositionShifts() {
         let origin = sample(900, lat: 28.6139, lon: 77.2090)
-        let current = sample(25, lat: 28.6139, lon: 77.2105) // ~150 m east
+        let current = sample(25, lat: 28.6139, lon: 77.2105)
         XCTAssertTrue(LocationFixPolicy.shouldReroute(from: origin, to: current))
     }
 
     func testNoRerouteForJitter() {
         let origin = sample(20)
-        let current = sample(18, lat: 28.61395, lon: 77.20905) // a few metres
+        let current = sample(18, lat: 28.61395, lon: 77.20905)
         XCTAssertFalse(LocationFixPolicy.shouldReroute(from: origin, to: current))
     }
 
     func testRerouteWhenWalkedFar() {
         let origin = sample(20)
-        let current = sample(20, lat: 28.6165) // ~290 m north
+        let current = sample(20, lat: 28.6165)
         XCTAssertTrue(LocationFixPolicy.shouldReroute(from: origin, to: current))
     }
 
@@ -77,7 +77,7 @@ final class LocationFixPolicyTests: XCTestCase {
         let a = sample(10, lat: 28.6139, lon: 77.2090)
         let b = sample(10, lat: 28.6139, lon: 77.2190)
         let metres = a.distance(to: b)
-        XCTAssertEqual(metres, 977, accuracy: 25) // 0.01 deg lon at 28.6N
+        XCTAssertEqual(metres, 977, accuracy: 25)
     }
 
     func testAccuracyText() {

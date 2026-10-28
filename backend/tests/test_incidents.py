@@ -1,4 +1,3 @@
-"""Incident store: one burst per session, token entropy, trail cap."""
 
 from app import incidents
 from app.incidents import IncidentStore

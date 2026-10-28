@@ -2,9 +2,6 @@ import CoreGraphics
 import ImageIO
 import XCTest
 
-/// The app icon and launch assets are generated from the supplied logo by
-/// scripts/make-brand-assets.py. These tests keep the generated files, the
-/// asset catalog and the launch-screen wiring honest.
 final class BrandAssetsTests: XCTestCase {
     private var iosRoot: URL {
         URL(fileURLWithPath: #filePath)
@@ -20,7 +17,6 @@ final class BrandAssetsTests: XCTestCase {
         return try XCTUnwrap(CGImageSourceCreateImageAtIndex(source, 0, nil))
     }
 
-    /// RGBA bytes of an image, drawn over opaque white.
     private func pixels(of image: CGImage) throws -> [UInt8] {
         var data = [UInt8](repeating: 255, count: image.width * image.height * 4)
         let context = try XCTUnwrap(CGContext(
@@ -39,7 +35,6 @@ final class BrandAssetsTests: XCTestCase {
         let icon = try loadImage(url)
         XCTAssertEqual(icon.width, 1024)
         XCTAssertEqual(icon.height, 1024)
-        // App Store icons must have no alpha channel.
         let alpha = icon.alphaInfo
         XCTAssertTrue(
             alpha == .none || alpha == .noneSkipLast || alpha == .noneSkipFirst,
@@ -58,7 +53,6 @@ final class BrandAssetsTests: XCTestCase {
             return (255 - Int(bytes[i])) + (255 - Int(bytes[i + 1])) + (255 - Int(bytes[i + 2])) > 120
         }
 
-        // Corners are pure white (no off-white box around the logo).
         for (x, y) in [(0, 0), (width - 1, 0), (0, height - 1), (width - 1, height - 1)] {
             let i = (y * width + x) * 4
             XCTAssertEqual([bytes[i], bytes[i + 1], bytes[i + 2]], [255, 255, 255])
@@ -73,8 +67,6 @@ final class BrandAssetsTests: XCTestCase {
         }
         let heightFraction = Double(maxY - minY + 1) / Double(height)
         let widthFraction = Double(maxX - minX + 1) / Double(width)
-        // The supplied logo filled only ~58% of its height. Enlarged, but with a
-        // margin: iOS rounds the icon corners.
         XCTAssertGreaterThanOrEqual(heightFraction, 0.78, "shield should be enlarged")
         XCTAssertLessThanOrEqual(heightFraction, 0.90, "keep a margin for the rounded mask")
         XCTAssertLessThanOrEqual(widthFraction, 0.80)
@@ -85,7 +77,6 @@ final class BrandAssetsTests: XCTestCase {
     }
 
     func testAppIconUsesTheBrandPurple() throws {
-        // #6F3A7C, a bit lighter than the supplied logo's #582560.
         let icon = try loadImage(catalog.appendingPathComponent("AppIcon.appiconset/AppIcon.png"))
         let bytes = try pixels(of: icon)
         var sums = [Double](repeating: 0, count: 3)
@@ -115,8 +106,6 @@ final class BrandAssetsTests: XCTestCase {
         let dir = catalog.appendingPathComponent("LaunchLogo.imageset")
         let at2x = try loadImage(dir.appendingPathComponent("LaunchLogo@2x.png"))
         let at3x = try loadImage(dir.appendingPathComponent("LaunchLogo@3x.png"))
-        // 220 pt tall at both scales, so the launch screen and the splash view
-        // draw the logo at the same size on every device.
         XCTAssertEqual(at2x.height, 440)
         XCTAssertEqual(at3x.height, 660)
         XCTAssertEqual(Double(at2x.width) / 2, Double(at3x.width) / 3, accuracy: 1.0)

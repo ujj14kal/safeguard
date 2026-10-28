@@ -1,15 +1,11 @@
 import AVFoundation
 
-/// Speaks the check-in question. The delegate callback reports exactly once
-/// per `speakAsk` call — on start, finish, or cancel, whichever comes first —
-/// so the machine's 10 s clock always runs even if audio is interrupted.
 protocol CheckInSpeaking: AnyObject {
     var isSpeaking: Bool { get }
     func speakAsk(
         phrase: String, volume: Float,
         onStarted: @escaping () -> Void, onStopped: @escaping () -> Void
     )
-    /// One-shot message (confirmations, status, help). Same callback rules.
     func speak(text: String, volume: Float, onStopped: @escaping () -> Void)
     func stop()
 }
@@ -30,7 +26,7 @@ final class CheckInSpeaker: NSObject, CheckInSpeaking, AVSpeechSynthesizerDelega
         phrase: String, volume: Float,
         onStarted: @escaping () -> Void, onStopped: @escaping () -> Void
     ) {
-        fireStarted() // never leak previous callbacks
+        fireStarted()
         fireStopped()
         self.onStarted = onStarted
         self.onStopped = onStopped
@@ -44,8 +40,6 @@ final class CheckInSpeaker: NSObject, CheckInSpeaking, AVSpeechSynthesizerDelega
         synthesizer.speak(utterance(string: text, volume: volume))
     }
 
-    /// Hindi voice when the app runs in Hindi (nil on English keeps the
-    /// system default). A missing Hindi voice falls back silently.
     private func utterance(string: String, volume: Float) -> AVSpeechUtterance {
         let utterance = AVSpeechUtterance(string: string)
         utterance.volume = volume

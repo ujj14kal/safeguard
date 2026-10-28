@@ -1,102 +1,53 @@
 import Foundation
 
-/// Parsed Muse verdict level. Unknown strings from the backend never reach
-/// the machine: the view model drops them (a strict contract beats a guess).
 public enum MuseVerdictLevel: String, Sendable, Equatable {
     case low, medium, high
 }
 
-/// Where a suspicion came from. A Muse `low` cancels movement-only
-/// suspicion, never speech- or Muse-backed suspicion.
 public enum SuspicionSource: Sendable, Equatable, Hashable {
     case movement, muse, speech
 }
 
-/// How Unsafe was reached (drives the SOS wording, Phase 6 escalates).
 public enum UnsafeCause: Sendable, Equatable {
-    /// The 10 s question timer ran out with no answer.
     case noReply
-    /// The wearer said the unsafe code phrase.
     case unsafePhrase
-    /// A distress word ("bachao", "help") started the auto-SOS countdown and
-    /// nobody cancelled it.
     case distressWord
 }
 
-/// The wearer's reply during a check-in. `.tap` is the non-verbal answer:
-/// a double tap (or the on-screen button). Volume-button capture needs
-/// private API, so it is deliberately not implemented.
 public enum UserReply: Sendable, Equatable {
     case safePhrase
     case unsafePhrase
     case tap
 }
 
-/// Safety states. `.listening` is the observable suspicion phase: the silent
-/// "stay quiet" window (Part C) that precedes the spoken question.
 public enum SafetyState: Sendable, Equatable {
     case idle, monitoring, listening, asking, safe, unsafe
-    /// A distress word was heard: the auto-SOS starts when the countdown
-    /// ends unless the wearer cancels it.
     case countdown
 }
 
-/// Every threshold, window and phrase for the safety state machine.
-/// Times are seconds; the machine takes explicit timestamps so tests drive
-/// it without waiting.
 public struct SafetyConfig: Sendable {
     public init() {}
 
-    // MARK: - Check-in timing
-
-    /// Seconds the wearer has to answer once the spoken question STARTS
-    /// (not when Asking is entered — TTS may lag).
     public var askTimeoutSeconds: TimeInterval = 10
-    /// Quiet period after Safe before movement/speech may nag again.
-    /// A Muse `high` verdict bypasses it.
     public var cooldownSeconds: TimeInterval = 60
-    /// Seconds the wearer has to confirm a voice "stop protecting".
     public var stopConfirmSeconds: TimeInterval = 5
 
-    // MARK: - Listening window (Part C)
-
-    /// Silent window after suspicion before the spoken question. A
-    /// recommendation-length pause, never a requirement.
     public var listeningWindowSeconds: TimeInterval = 6
-    /// On-device score at or above this skips the window: waiting is unsafe.
     public var listeningSkipScore: Double = 0.80
-    /// Calm on-screen cue shown during the window (VoiceOver reads it once).
     public var listeningCueText = String(localized: "Stay quiet for a moment, listening to your surroundings")
 
-    // MARK: - Auto-SOS (distress words)
-
-    /// Seconds the wearer has to cancel the auto-SOS after a distress word.
     public var autoSosSeconds: TimeInterval = 5
-    /// After a cancel, the same words are ignored this long, so the
-    /// tail of the same sentence cannot restart the countdown.
     public var distressCooldownSeconds: TimeInterval = 10
-    /// Words that start protection and the countdown. Whole words, spelling
-    /// tolerant (bachao / bachaao). Edit freely.
     public var distressWords = [
         "help", "help me", "bachao", "bacho", "bachaao", "madad", "madad karo",
         "save me", "somebody help", "please help", "leave me", "chhodo mujhe",
         "बचाओ", "बचाओ बचाओ", "मदद", "मदद करो", "छोड़ो मुझे",
     ]
 
-    // MARK: - Speech
-
-    /// Spoken question. Said quietly through the speaker.
     public var askPhrase = "Are you safe?"
-    /// Speech volume 0...1 for the question (quiet, not silent).
     public var askVolume: Float = 0.5
-    /// Speech severity at or above this triggers a check-in. Speech NEVER
-    /// moves directly to Unsafe.
     public var speechStrongThreshold: Double = 0.7
 
-    // MARK: - Code phrases (configurable; matched on close variants)
-
-    // Hindi and Hinglish variants sit beside the English ones: the Hindi
-    // recogniser may write either script ("calculator kholo", "कैलकुलेटर खोलो").
     public var safePhrases = [
         "open calculator", "calculator kholo", "calculator khol do",
         "ओपन कैलकुलेटर", "कैलकुलेटर खोलो", "कैलकुलेटर खोल दो", "कैलकुलेटर खोलिए",
@@ -108,18 +59,10 @@ public struct SafetyConfig: Sendable {
     ]
 }
 
-/// Pure, timestamp-based safety state machine.
-///
-/// Inputs: scorer alerts, Muse verdicts, speech severity, user replies and
-/// timer ticks. It never touches audio, haptics or the network: entering
-/// Asking sets `askSpeechDue`, and the view model speaks, then reports back
-/// via `noteAskSpeechStarted` so the 10 s clock starts with the audio.
 public struct SafetyStateMachine: Sendable {
     public private(set) var state: SafetyState = .idle
     public private(set) var suspicionSources: Set<SuspicionSource> = []
     public private(set) var unsafeCause: UnsafeCause?
-    /// True exactly when Asking was just entered and the question is not
-    /// yet spoken. The view model consumes it with `takeAskSpeechDue`.
     public private(set) var askSpeechDue = false
 
     private let config: SafetyConfig
@@ -128,14 +71,11 @@ public struct SafetyStateMachine: Sendable {
     private var countdownUntil: TimeInterval?
     private var distressIgnoredUntil: TimeInterval = -.infinity
 
-    /// End of the post-Safe quiet period (nil when not in Safe).
     public private(set) var cooldownUntil: TimeInterval?
 
     public init(config: SafetyConfig = SafetyConfig()) {
         self.config = config
     }
-
-    // MARK: - Session
 
     public mutating func startProtecting(at time: TimeInterval) {
         guard state == .idle else { return }
@@ -149,10 +89,6 @@ public struct SafetyStateMachine: Sendable {
         state = .idle
     }
 
-    // MARK: - Inputs
-
-    /// A distress word was heard. Starts the auto-SOS countdown from any
-    /// protecting state (even with no incident, and through a Safe cooldown).
     public mutating func noteDistressWord(at time: TimeInterval) {
         guard time >= distressIgnoredUntil else { return }
         switch state {
@@ -168,13 +104,11 @@ public struct SafetyStateMachine: Sendable {
         }
     }
 
-    /// Seconds left before the auto-SOS fires, or nil outside the countdown.
     public func countdownRemaining(at time: TimeInterval) -> TimeInterval? {
         guard state == .countdown, let until = countdownUntil else { return nil }
         return max(0, until - time)
     }
 
-    /// Cancels a running countdown ("I'm OK"): back to monitoring.
     public mutating func cancelCountdown(at time: TimeInterval) {
         guard state == .countdown else { return }
         countdownUntil = nil
@@ -183,7 +117,6 @@ public struct SafetyStateMachine: Sendable {
         state = .monitoring
     }
 
-    /// An on-device scorer alert (score at or above threshold).
     public mutating func noteMovementAlert(score: Double, at time: TimeInterval) {
         switch state {
         case .monitoring:
@@ -202,10 +135,6 @@ public struct SafetyStateMachine: Sendable {
     public mutating func noteMuseVerdict(_ level: MuseVerdictLevel, at time: TimeInterval) {
         switch level {
         case .low:
-            // Cancels movement-only suspicion: the known false alert is a
-            // still person scoring ~0.74 on-device while Muse says low.
-            // Never cancels speech/Muse-backed suspicion, and never yanks
-            // an in-progress question away.
             if state == .listening, suspicionSources == [.movement] {
                 suspicionSources = []
                 listeningUntil = nil
@@ -224,7 +153,6 @@ public struct SafetyStateMachine: Sendable {
             case .asking:
                 suspicionSources.insert(.muse)
             case .safe where level == .high:
-                // A high verdict breaks the cooldown; anything else waits.
                 suspicionSources = [.muse]
                 cooldownUntil = nil
                 enterAsking()
@@ -234,8 +162,6 @@ public struct SafetyStateMachine: Sendable {
         }
     }
 
-    /// Speech severity 0...1 from the conversation listener. Strong speech
-    /// triggers the check-in path; it NEVER goes directly to Unsafe.
     public mutating func noteSpeech(severity: Double, at time: TimeInterval) {
         guard severity >= config.speechStrongThreshold else { return }
         switch state {
@@ -252,8 +178,6 @@ public struct SafetyStateMachine: Sendable {
     public mutating func noteReply(_ reply: UserReply, at time: TimeInterval) {
         switch reply {
         case .unsafePhrase:
-            // Works at ANY time while protecting — even with no incident —
-            // and goes straight to Unsafe.
             switch state {
             case .monitoring, .listening, .asking, .safe, .countdown:
                 enterUnsafe(cause: .unsafePhrase)
@@ -266,16 +190,13 @@ public struct SafetyStateMachine: Sendable {
             } else if state == .countdown {
                 cancelCountdown(at: time)
             } else if state == .unsafe {
-                // Phase 6 end flow: the safe phrase is a deliberate SOS end.
                 endUnsafe(at: time)
             }
         case .tap:
             switch state {
             case .listening:
-                // Ends the window early; the question is still asked.
                 enterAsking()
             case .asking:
-                // Non-verbal "I'm OK".
                 enterSafe(at: time)
             case .countdown:
                 cancelCountdown(at: time)
@@ -285,14 +206,11 @@ public struct SafetyStateMachine: Sendable {
         }
     }
 
-    /// The spoken question started playing: the 10 s clock starts NOW.
-    /// The view model calls this even if TTS fails, so the clock always runs.
     public mutating func noteAskSpeechStarted(at time: TimeInterval) {
         guard state == .asking, askDeadline == nil else { return }
         askDeadline = time + config.askTimeoutSeconds
     }
 
-    /// Advance timers. Call regularly (the 1 s UI tick is plenty).
     public mutating func tick(at time: TimeInterval) {
         switch state {
         case .listening:
@@ -300,8 +218,6 @@ public struct SafetyStateMachine: Sendable {
                 enterAsking()
             }
         case .asking:
-            // No deadline until the question starts playing: the wearer
-            // gets the full 10 s from the audio, not from the state change.
             if let deadline = askDeadline, time >= deadline {
                 enterUnsafe(cause: .noReply)
             }
@@ -320,14 +236,11 @@ public struct SafetyStateMachine: Sendable {
         }
     }
 
-    /// Consumes the pending spoken question (one TTS call per Asking entry).
     public mutating func takeAskSpeechDue() -> Bool {
         let due = askSpeechDue
         askSpeechDue = false
         return due
     }
-
-    // MARK: - Private
 
     private mutating func enterSuspicionOrAsking(skip: Bool, at time: TimeInterval) {
         if skip {
@@ -345,8 +258,6 @@ public struct SafetyStateMachine: Sendable {
         askSpeechDue = true
     }
 
-    /// Deliberate SOS end (hold-to-End button or safe phrase): Unsafe →
-    /// Safe with the usual cooldown. No-op anywhere else.
     public mutating func endUnsafe(at time: TimeInterval) {
         guard state == .unsafe else { return }
         enterSafe(at: time)
@@ -382,9 +293,6 @@ public struct SafetyStateMachine: Sendable {
     }
 }
 
-/// Spots distress words in a transcript (whole words, spelling tolerant).
-/// Wake-worded voice commands are NOT distress: "Safeguard, help" lists the
-/// commands. The view model checks commands first.
 public struct DistressMatcher: Sendable {
     private let phrases: [[String]]
 
@@ -406,11 +314,6 @@ public struct DistressMatcher: Sendable {
     }
 }
 
-/// Matches code phrases with close variants: case-insensitive, punctuation
-/// ignored, and the phrase may sit inside a longer sentence
-/// ("please open calculator now"). Matching is whole-word, so "open
-/// calculators" does NOT match. Unsafe is checked first: if a transcript
-/// somehow contains both, Unsafe wins.
 public struct CodePhraseMatcher: Sendable {
     private let safe: [[String]]
     private let unsafe: [[String]]
@@ -419,7 +322,6 @@ public struct CodePhraseMatcher: Sendable {
         self.init(safePhrases: config.safePhrases, unsafePhrases: config.unsafePhrases)
     }
 
-    /// Matches against explicit phrase lists (the wearer's customs).
     public init(safePhrases: [String], unsafePhrases: [String]) {
         self.safe = safePhrases.map(Self.words(in:))
         self.unsafe = unsafePhrases.map(Self.words(in:))

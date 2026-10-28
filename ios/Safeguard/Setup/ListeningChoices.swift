@@ -1,7 +1,5 @@
 import SwiftUI
 
-/// The six listening switches, with the one-sentence plain-language
-/// explanation each. One source, used word-for-word by setup and Settings.
 enum ListeningChoices {
     struct Choice: Identifiable {
         var id: String { key }
@@ -50,13 +48,11 @@ enum ListeningChoices {
         ),
     ]
 
-    /// How many of the six are currently on (Done screen summary).
     static func enabledCount() -> Int {
         all.filter { UserDefaults.standard.bool(forKey: $0.key) }.count
     }
 }
 
-/// One listening switch bound straight to its UserDefaults key.
 struct ListeningToggle: View {
     let choice: ListeningChoices.Choice
     @AppStorage var enabled: Bool

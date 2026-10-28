@@ -1,7 +1,5 @@
 import Foundation
 
-/// The four SOS escalation tracks. They start together and fail
-/// independently: one track failing never stops the others.
 public enum EscalationTrack: String, Sendable, CaseIterable {
     case route
     case contacts
@@ -29,8 +27,6 @@ public enum TrackStatus: Sendable, Equatable {
     case failed(reason: String)
 }
 
-/// Retry waits between attempts (seconds). Transient failures retry with
-/// backoff; when the waits run out the track fails terminally.
 public struct EscalationRetryPolicy: Sendable {
     public var delays: [TimeInterval]
 
@@ -38,17 +34,12 @@ public struct EscalationRetryPolicy: Sendable {
         self.delays = delays
     }
 
-    /// Seconds to wait before retry attempt `attempt` (1-based), or nil
-    /// when the attempts are used up.
     public func delay(beforeRetry attempt: Int) -> TimeInterval? {
         guard attempt >= 1, attempt <= delays.count else { return nil }
         return delays[attempt - 1]
     }
 }
 
-/// Pure escalation state: which tracks run, which finished, which failed,
-/// and when each retry is due. Timestamps are explicit (the view model
-/// passes system uptime), so tests drive time without waiting.
 public struct EscalationCoordinator: Sendable {
     public private(set) var statuses: [EscalationTrack: TrackStatus]
     public private(set) var started = false
@@ -69,14 +60,11 @@ public struct EscalationCoordinator: Sendable {
         statuses[track] ?? .pending
     }
 
-    /// 1-based attempt count (1 = the first run). The chip shows
-    /// "Retrying (n)" once a retry has been scheduled.
     public func attempts(of track: EscalationTrack) -> Int {
         if let count = attempts[track] { return count }
         return started ? 1 : 0
     }
 
-    /// Terminal failure reason, when the track failed for good.
     public func reason(of track: EscalationTrack) -> String? {
         if case .failed(let reason) = status(of: track) {
             return reason
@@ -84,7 +72,6 @@ public struct EscalationCoordinator: Sendable {
         return nil
     }
 
-    /// Starts all four tracks together. Later calls are no-ops.
     public mutating func start() {
         guard !started else { return }
         started = true
@@ -94,16 +81,12 @@ public struct EscalationCoordinator: Sendable {
         }
     }
 
-    /// Marks one track finished. Other tracks are untouched.
     public mutating func complete(_ track: EscalationTrack) {
         guard started, !ended, status(of: track) == .running else { return }
         statuses[track] = .done
         retryAt[track] = nil
     }
 
-    /// Records one failed attempt: schedules a retry with backoff, or fails
-    /// the track terminally when the waits run out. Never touches the
-    /// other tracks.
     public mutating func fail(_ track: EscalationTrack, reason: String, at time: TimeInterval) {
         guard started, !ended, status(of: track) == .running else { return }
         let attempt = attempts[track] ?? 1
@@ -116,9 +99,6 @@ public struct EscalationCoordinator: Sendable {
         }
     }
 
-    /// Tracks whose retry wait has passed (each returned once, until its
-    /// next `fail` re-arms it). The caller retries the work, then calls
-    /// `complete` or `fail` again.
     public mutating func dueRetries(at time: TimeInterval) -> [EscalationTrack] {
         guard started, !ended else { return [] }
         var due: [EscalationTrack] = []
@@ -133,8 +113,6 @@ public struct EscalationCoordinator: Sendable {
         return due
     }
 
-    /// Ends the SOS: running and pending tracks stop as "SOS ended"
-    /// (honest — they did not finish), done/failed stay as they were.
     public mutating func end() {
         guard started, !ended else { return }
         ended = true

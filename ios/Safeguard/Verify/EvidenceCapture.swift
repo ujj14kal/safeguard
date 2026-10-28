@@ -2,10 +2,6 @@ import AVFoundation
 import CoreMedia
 import Foundation
 
-/// What records an SOS: the continuous stream (video and sound in one
-/// recording) by default, with the older separate-parts recorder as a safety
-/// net. If the stream writer breaks mid-SOS, recording carries on in parts
-/// for the rest of the session, so evidence is never lost to the new format.
 public final class EvidenceCapture: @unchecked Sendable {
     public enum Mode: Equatable, Sendable { case stream, parts }
 
@@ -67,7 +63,6 @@ public final class EvidenceCapture: @unchecked Sendable {
         }
     }
 
-    /// Uploads whatever an earlier recording could not send (both formats).
     public func retryPending() {
         stream.retryPending()
         parts.retryPending()
@@ -80,8 +75,6 @@ public final class EvidenceCapture: @unchecked Sendable {
         }
         stream.stop()
         guard let callback, let session, !parts.isRecording else { return }
-        // Same session id: the guardian page shows the parts of whichever
-        // format the server holds for it.
         parts.start(sessionID: session, onProgress: callback)
     }
 }

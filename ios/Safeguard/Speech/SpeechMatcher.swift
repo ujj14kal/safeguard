@@ -1,12 +1,8 @@
 import Foundation
 
-/// What the matcher found. The range points into the caller's window text —
-/// no matched text is copied out or kept beyond the window.
 public struct SpeechMatch: Sendable, Equatable {
     public var category: SpeechCategory
-    /// 0...1 after quotation/negation guards.
     public var severity: Double
-    /// Word index of the first matched word in the scanned transcript.
     public var wordIndex: Int
 
     public init(category: SpeechCategory, severity: Double, wordIndex: Int) {
@@ -16,13 +12,9 @@ public struct SpeechMatch: Sendable, Equatable {
     }
 }
 
-/// On-device threat/harassment/coercion matcher over transcript text. Pure:
-/// whole-word, case-insensitive, with quotation, negation and benign-frame
-/// guards. Returns the strongest match, if any.
 public struct SpeechMatcher: Sendable {
     public let config: SpeechConfig
 
-    /// Patterns tokenised and keyed once, not on every match call.
     private struct Compiled {
         var pattern: SpeechPattern
         var keys: [String]
@@ -37,9 +29,6 @@ public struct SpeechMatcher: Sendable {
         }
     }
 
-    /// Maps a /verify-speech severity onto the 0...1 machine input.
-    /// Backend `low` lands below the strong threshold (a downgrade, not a
-    /// trigger); unknown strings map to 0 — dropped, never trusted.
     public static func backendSeverity(_ level: String) -> Double {
         switch level {
         case "high": 0.9
@@ -81,8 +70,6 @@ public struct SpeechMatcher: Sendable {
                 if pattern.category == .anger || pattern.category == .abuse
                     || pattern.category == .proposition
                 {
-                    // Distinct spoken words, not pattern hits: "kamina" must
-                    // not count three times for three spellings in the list.
                     hostileStarts.insert(start)
                 }
                 if best == nil || candidate.severity > best!.severity {
@@ -90,7 +77,6 @@ public struct SpeechMatcher: Sendable {
                 }
             }
         }
-        // Sustained cussing/anger: one word is a nudge, a run is hostility.
         if hostileStarts.count >= config.repeatedAngerCount,
            (best?.severity ?? 0) < config.repeatedAngerSeverity
         {
@@ -102,9 +88,6 @@ public struct SpeechMatcher: Sendable {
         return best
     }
 
-    // MARK: - Guards
-
-    /// Word ranges covered by benign frames ("killing time").
     private func benignWordRanges(in words: [String]) -> [Range<Int>] {
         var ranges: [Range<Int>] = []
         for frame in config.benignPhrases {
@@ -119,23 +102,16 @@ public struct SpeechMatcher: Sendable {
         return ranges
     }
 
-    /// Same word boundaries as `SpeechText.words` (letters, marks, digits),
-    /// so Devanagari words are walked correctly.
     private func isWordCharacter(_ c: Character) -> Bool {
         c.unicodeScalars.allSatisfy { CharacterSet.alphanumerics.contains($0) }
     }
 
-    /// True when the matched word sits inside double quotes. Single quotes
-    /// are skipped: apostrophes ("don't") would false-positive.
     private func isQuoted(_ rawTranscript: String, wordIndex: Int, words: [String]) -> Bool {
         let transcript = SpeechText.normalised(rawTranscript)
-        // Map the word index back to a string offset by re-walking the
-        // transcript with the same tokenization the matcher used.
         var seen = 0
         var index = transcript.startIndex
         var matchOffset: String.Index?
         while index < transcript.endIndex {
-            // Skip separators.
             while index < transcript.endIndex,
                   !isWordCharacter(transcript[index])
             {
@@ -161,14 +137,10 @@ public struct SpeechMatcher: Sendable {
         return quotesBefore % 2 == 1 && quotesAfter >= 1
     }
 
-    /// True when a negation phrase ends within `negationDistance` words
-    /// before the match.
     private func isNegated(_ words: [String], matchStart: Int) -> Bool {
         for raw in config.negationPhrases {
             let phrase = Self.words(in: raw)
             guard !phrase.isEmpty else { continue }
-            // The negation must END at most `negationDistance` words before
-            // the match starts.
             let lower = max(phrase.count, matchStart - config.negationDistance)
             guard lower <= matchStart else { continue }
             for end in lower...matchStart {
@@ -202,10 +174,6 @@ public struct SpeechMatcher: Sendable {
     }
 }
 
-/// Edge-triggered /verify-speech gate: fires on strong severities, at most
-/// once per `minInterval`, so a continuous rant sends one snippet and only
-/// refires with fresh speech. The view model builds it with
-/// `SafetyConfig.speechStrongThreshold` so "strong" has one definition.
 public struct SpeechVerifyGate: Sendable {
     private let triggerSeverity: Double
     private let minInterval: TimeInterval

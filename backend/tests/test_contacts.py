@@ -1,4 +1,3 @@
-"""Contact store + getUpdates linking (no network, no webhook)."""
 
 import json
 

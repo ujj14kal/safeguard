@@ -1,7 +1,5 @@
 import CoreGraphics
 
-/// Minimal 2D body pose: the joints the facing heuristic needs.
-/// Coordinates are normalized Vision coordinates (origin lower-left).
 public struct BodyPose: Sendable, Equatable {
     public struct Keypoint: Sendable, Equatable {
         public var point: CGPoint
@@ -33,9 +31,6 @@ public struct BodyPose: Sendable, Equatable {
         self.rightShoulder = rightShoulder
     }
 
-    /// 0...1 facing-toward-user score. Needs a visible face (nose + eyes) and
-    /// a frontal torso (wide shoulder spread). Profile or back-of-head views
-    /// score near 0: without a visible face there is no facing evidence.
     public func facingScore(using config: ThreatConfig) -> Double {
         let nose = Double(nose?.confidence ?? 0)
         let eyes = Double(leftEye?.confidence ?? 0) + Double(rightEye?.confidence ?? 0)
@@ -48,7 +43,6 @@ public struct BodyPose: Sendable, Equatable {
         return min(1, face) * gate
     }
 
-    /// Tight box around the known keypoints, for pose-to-detection matching.
     public func keypointBox() -> CGRect? {
         let points = [nose, leftEye, rightEye, leftShoulder, rightShoulder]
             .compactMap { $0?.point }
@@ -58,7 +52,6 @@ public struct BodyPose: Sendable, Equatable {
         }
     }
 
-    /// Mid-shoulder point, used as a fallback association anchor.
     public func midShoulder() -> CGPoint? {
         guard let left = leftShoulder?.point, let right = rightShoulder?.point else {
             return nil
@@ -67,9 +60,7 @@ public struct BodyPose: Sendable, Equatable {
     }
 }
 
-/// One hand seen near a person: its box and how far the person is reaching.
 public struct HandCue: Sendable, Equatable {
-    /// Normalized Vision box around the visible hand joints.
     public var box: CGRect
 
     public init(box: CGRect) {
@@ -77,17 +68,10 @@ public struct HandCue: Sendable, Equatable {
     }
 }
 
-/// Gesture and expression cues from hand pose and face landmarks. Behaviour
-/// only: a hand box and a mouth-open ratio, never identity or appearance.
 public struct GestureCues: Sendable, Equatable {
     public var hands: [HandCue]
-    /// Inner-lip height over width (0 closed, ~0.5+ wide open: shouting,
-    /// yelling). Nil when no face landmarks were found for this person.
     public var mouthOpen: Double?
-    /// Classified gestures (middle finger, fist, open palm...), from the
-    /// MediaPipe engine when it is running.
     public var gestures: [HandGestureCue]
-    /// The face's current expression (angry, happy, sad...), same source.
     public var expression: ExpressionCue?
 
     public init(

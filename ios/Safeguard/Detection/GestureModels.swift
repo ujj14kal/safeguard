@@ -2,7 +2,6 @@ import CoreGraphics
 import CoreVideo
 import Foundation
 
-/// Hand gestures the app cares about. Behaviour only: no identity.
 public enum HandGestureKind: String, Sendable, Equatable, CaseIterable {
     case middleFinger
     case fist
@@ -14,11 +13,9 @@ public enum HandGestureKind: String, Sendable, Equatable, CaseIterable {
     case other
 }
 
-/// One classified hand: what it is doing, how sure, and where it is.
 public struct HandGestureCue: Sendable, Equatable {
     public var kind: HandGestureKind
     public var score: Double
-    /// Normalized Vision box (origin lower-left) around the hand.
     public var box: CGRect
 
     public init(kind: HandGestureKind, score: Double, box: CGRect) {
@@ -27,7 +24,6 @@ public struct HandGestureCue: Sendable, Equatable {
         self.box = box
     }
 
-    /// Gestures that read as hostile when aimed at the wearer.
     public var isHostile: Bool { kind == .middleFinger }
 }
 
@@ -39,9 +35,6 @@ public enum ExpressionKind: String, Sendable, Equatable, CaseIterable {
     case surprised
 }
 
-/// A facial expression read from face blendshapes (movement of brows,
-/// mouth, eyes). A hint about the moment, never proof of intent: it adds a
-/// small weight to the score and never starts an SOS on its own.
 public struct ExpressionCue: Sendable, Equatable {
     public var kind: ExpressionKind
     public var score: Double
@@ -52,18 +45,12 @@ public struct ExpressionCue: Sendable, Equatable {
     }
 }
 
-// MARK: - Finger pose from 21 hand points
-
-/// Which fingers are stretched out. Pure geometry on the 21 hand points
-/// (MediaPipe / Vision order: wrist, then four joints per finger).
 public struct FingerStates: Sendable, Equatable {
     public var thumb: Bool
     public var index: Bool
     public var middle: Bool
     public var ring: Bool
     public var pinky: Bool
-    /// 0...1: how clearly the middle finger stands above the other three
-    /// (a hesitant, half-bent finger scores low).
     public var middleDominance: Double
 
     public var extendedCount: Int {
@@ -72,7 +59,6 @@ public struct FingerStates: Sendable, Equatable {
 }
 
 public enum FingerPose {
-    /// MediaPipe landmark indices.
     enum Joint {
         static let wrist = 0
         static let thumb = (cmc: 1, mcp: 2, ip: 3, tip: 4)
@@ -82,8 +68,6 @@ public enum FingerPose {
         static let pinky = (mcp: 17, pip: 18, dip: 19, tip: 20)
     }
 
-    /// A finger counts as extended when its tip is clearly farther from the
-    /// wrist than its middle joint. `ratio` > 1 leaves room for noise.
     public static let extensionRatio: Double = 1.18
 
     public static func states(from points: [CGPoint]) -> FingerStates? {
@@ -101,7 +85,6 @@ public enum FingerPose {
         let (middle, middleRatio) = extended(Joint.middle)
         let (ring, ringRatio) = extended(Joint.ring)
         let (pinky, pinkyRatio) = extended(Joint.pinky)
-        // Thumb: tip far from the index base versus its own joint.
         let thumbReach = d(Joint.thumb.tip, Joint.index.mcp)
         let thumbBase = max(d(Joint.thumb.ip, Joint.index.mcp), 1e-6)
         let thumb = thumbReach / thumbBase >= 1.15
@@ -115,10 +98,7 @@ public enum FingerPose {
     }
 }
 
-// MARK: - Gesture classifier
-
 public enum HandGestureClassifier {
-    /// Canned labels from MediaPipe's Gesture Recognizer.
     static func kind(forCanned label: String?) -> HandGestureKind? {
         switch label {
         case "Closed_Fist": return .fist
@@ -132,10 +112,6 @@ public enum HandGestureClassifier {
         }
     }
 
-    /// Our own geometry wins over the canned label for the middle finger,
-    /// which the canned model does not know (it would say fist or
-    /// pointing). Everything else trusts the canned label when it is
-    /// confident, and falls back to the finger rules when it is not.
     public static func classify(
         points: [CGPoint], cannedLabel: String?, cannedScore: Double, box: CGRect
     ) -> HandGestureCue? {
@@ -143,7 +119,6 @@ public enum HandGestureClassifier {
         if fingers.middle, !fingers.index, !fingers.ring, !fingers.pinky,
            fingers.middleDominance >= 0.25
         {
-            // Clear dominance and a tucked thumb read as intentional.
             let score = 0.55 + 0.45 * fingers.middleDominance
             return HandGestureCue(kind: .middleFinger, score: score, box: box)
         }
@@ -164,13 +139,9 @@ public enum HandGestureClassifier {
     }
 }
 
-// MARK: - Expression classifier
-
 public enum ExpressionClassifier {
     public static let minimumScore: Double = 0.35
 
-    /// Blendshape scores (0...1, ARKit-style names) to an expression.
-    /// Weights are starting guesses to tune on real clips, not truths.
     public static func classify(blendshapes b: [String: Float]) -> ExpressionCue {
         func v(_ name: String) -> Double { Double(b[name] ?? 0) }
         func pair(_ base: String) -> Double { (v(base + "Left") + v(base + "Right")) / 2 }
@@ -201,9 +172,6 @@ public enum ExpressionClassifier {
     private static func clamp(_ x: Double) -> Double { max(0, min(1, x)) }
 }
 
-/// Everything the classifiers saw in one frame, whether or not a person
-/// box owns it (a hand or face close to the camera often has no person
-/// detection). Drives logging, the overlay line and the gesture counter.
 public struct FrameCues: Sendable, Equatable {
     public var gestures: [HandGestureCue]
     public var expression: ExpressionCue?
@@ -215,12 +183,10 @@ public struct FrameCues: Sendable, Equatable {
 
     public var isEmpty: Bool { gestures.isEmpty && expression == nil }
 
-    /// The most sure hostile gesture this frame, if any.
     public func hostile(minScore: Double) -> HandGestureCue? {
         gestures.filter { $0.isHostile && $0.score >= minScore }.max { $0.score < $1.score }
     }
 
-    /// "middle finger 0.91 • angry 0.62" (overlay text).
     public var summary: String {
         var parts = gestures.filter { $0.kind != .other }.map {
             String(format: "%@ %.2f", $0.kind.rawValue, $0.score)
@@ -232,20 +198,15 @@ public struct FrameCues: Sendable, Equatable {
     }
 }
 
-// MARK: - Cue engine seam
-
-/// One hand as MediaPipe saw it, in PIXEL units with y pointing UP (the
-/// same orientation Vision boxes use), plus the canned gesture label.
 struct MPHand {
     var points: [CGPoint]
-    var box: CGRect          // normalized Vision coordinates (origin lower-left)
+    var box: CGRect
     var cannedLabel: String?
     var cannedScore: Double
 }
 
-/// One face: its normalized box, expression blendshapes and mouth opening.
 struct MPFace {
-    var box: CGRect          // normalized Vision coordinates
+    var box: CGRect
     var blendshapes: [String: Float]
     var mouthOpen: Double?
 }
@@ -255,13 +216,10 @@ struct MPFrame {
     var faces: [MPFace]
 }
 
-/// Anything that turns a camera frame into hands and faces. The app plugs
-/// in MediaPipe at launch; tests and the Simulator run without one.
 protocol CueEngine: AnyObject {
     func process(_ pixelBuffer: CVPixelBuffer) -> MPFrame?
 }
 
 enum CueEngineFactory {
-    /// Set once at app launch (SafeguardApp). Nil result = Vision cues.
     nonisolated(unsafe) static var make: () -> CueEngine? = { nil }
 }

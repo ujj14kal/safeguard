@@ -1,8 +1,5 @@
 import XCTest
 
-/// WCAG contrast for the token pairs actually used. Reads the hexes from
-/// DS, so any future token edit that breaks contrast fails here. The math
-/// itself is pinned by the black/white known answer (21:1).
 final class ThemeContrastTests: XCTestCase {
     private func luminance(_ hex: UInt32) -> Double {
         let channels = [Double((hex >> 16) & 0xFF) / 255,
@@ -24,7 +21,6 @@ final class ThemeContrastTests: XCTestCase {
     }
 
     func testTextPairs() {
-        // Text needs 4.5:1: accent on background/surface, white on button.
         XCTAssertGreaterThanOrEqual(
             ratio(DS.Colors.accentHex, DS.Colors.backgroundHex), 4.5
         )
@@ -37,7 +33,6 @@ final class ThemeContrastTests: XCTestCase {
     }
 
     func testIconAndBorderPairs() {
-        // Icons and borders need 3:1 (status colours + accent on surfaces).
         for pair in [(DS.Colors.dangerHex, DS.Colors.backgroundHex),
                      (DS.Colors.warningHex, DS.Colors.backgroundHex),
                      (DS.Colors.okHex, DS.Colors.backgroundHex),
@@ -51,15 +46,12 @@ final class ThemeContrastTests: XCTestCase {
     }
 
     func testBoxColoursMatchLevels() {
-        // The HUD box colours are the brief's exact hexes (lilac/yellow/red).
         XCTAssertEqual(DS.Colors.accentHex, 0xB98DD1)
         XCTAssertEqual(DS.Colors.warningHex, 0xFFD23F)
         XCTAssertEqual(DS.Colors.dangerHex, 0xFF4D4D)
     }
 
     func testSetupStatusTextPairs() {
-        // Phase 7: warning (denied impacts, unlinked) and ok (linked,
-        // granted, agreed) are body text on the dark background: 4.5:1.
         XCTAssertGreaterThanOrEqual(
             ratio(DS.Colors.warningHex, DS.Colors.backgroundHex), 4.5
         )
@@ -69,9 +61,6 @@ final class ThemeContrastTests: XCTestCase {
     }
 
     func testSOSScrimPairs() {
-        // White headlines on the red SOS scrim: large text needs 3:1.
-        // Small text (chips, delivery, links) sits on the chip bed,
-        // pinned exactly by testSOSChipBedPairs below.
         XCTAssertGreaterThanOrEqual(
             ratio(0xFFFFFF, DS.Colors.dangerHex), 3.0
         )
@@ -81,12 +70,6 @@ final class ThemeContrastTests: XCTestCase {
     }
 
     func testSOSChipBedPairs() {
-        // The chip bed is black at chipBedOpacity over the danger scrim.
-        // The scrim itself is danger at scrimOpacity over the live camera;
-        // at 88% it is danger-dominated, so the test blends over the
-        // danger token (even a full-white frame beneath still passes at
-        // ~7.8:1 for white). White, Sent and Dry-run are small text on
-        // that bed: 4.5:1. Reads DS, so token edits re-verify.
         let bed = blendBlack(over: DS.Colors.dangerHex, opacity: DS.SOS.chipBedOpacity)
         let pairs: [(UInt32, String)] = [
             (0xFFFFFF, "chip white"),
@@ -98,7 +81,6 @@ final class ThemeContrastTests: XCTestCase {
         }
     }
 
-    /// Source-over blend of black at `opacity` over an sRGB hex.
     private func blendBlack(over background: UInt32, opacity: Double) -> UInt32 {
         let channels = [
             Double((background >> 16) & 0xFF),

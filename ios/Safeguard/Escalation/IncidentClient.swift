@@ -1,6 +1,5 @@
 import Foundation
 
-/// One contact's delivery outcome from /incident/start (or /end, /cab).
 public struct IncidentDelivery: Sendable, Equatable, Decodable {
     public var code: String
     public var name: String?
@@ -8,26 +7,20 @@ public struct IncidentDelivery: Sendable, Equatable, Decodable {
     public var detail: String?
 }
 
-/// Parsed /incident/start response.
 public struct IncidentStartResult: Sendable, Equatable {
     public var id: String
     public var shareToken: String
     public var liveURL: String
     public var delivery: [IncidentDelivery]
     public var fresh: Bool
-    /// Exact alert text contacts received (setup dry-run shows it).
     public var previewText: String
 }
 
-/// Parsed contact status from GET /contacts/{code}.
 public struct LinkedContactStatus: Sendable, Equatable {
     public var name: String
     public var linked: Bool
 }
 
-/// SOS escalation calls: contacts, incidents, cab. Every request carries
-/// the app token when the build has one. Errors reuse VerifierError, so
-/// the failure explainer covers incidents too.
 public struct IncidentClient: Sendable {
     private let config: @Sendable () -> VerifierConfig
     private let session: URLSession
@@ -74,9 +67,6 @@ public struct IncidentClient: Sendable {
         var preview_text: String?
     }
 
-    /// Starts the SOS incident (alerts linked contacts). `dryRun` defaults
-    /// true: the Settings "Send real alerts" switch (OFF by default, with a
-    /// confirm dialog) is what turns it off.
     public func startIncident(
         sessionID: String,
         wearerName: String,
@@ -135,7 +125,6 @@ public struct IncidentClient: Sendable {
         var already_ended: Bool
     }
 
-    /// Ends the SOS ("SOS ended" goes out once, server-side).
     @discardableResult
     public func endIncident(_ incidentID: String) async throws -> Bool {
         let (data, response) = try await session.data(
@@ -149,7 +138,6 @@ public struct IncidentClient: Sendable {
         var sent: Int
     }
 
-    /// Shares DEMO cab details with the incident's contacts.
     @discardableResult
     public func shareCab(
         incidentID: String, driver: String, plate: String, etaMinutes: Int
@@ -191,7 +179,6 @@ public struct IncidentClient: Sendable {
         var deleted: Bool
     }
 
-    /// "Delete all my data": removes one evidence session server-side.
     @discardableResult
     public func deleteEvidence(sessionID: String) async throws -> Bool {
         let (data, response) = try await session.data(for: delete("evidence/\(sessionID)"))
@@ -199,7 +186,6 @@ public struct IncidentClient: Sendable {
         return parsed.deleted
     }
 
-    /// "Delete all my data": removes one linked contact server-side.
     @discardableResult
     public func deleteContact(code: String) async throws -> Bool {
         let (data, response) = try await session.data(for: delete("contacts/\(code)"))
@@ -207,14 +193,11 @@ public struct IncidentClient: Sendable {
         return parsed.deleted
     }
 
-    // MARK: - Standing live link and guardian
-
     private struct ChannelBody: Decodable {
         var token: String
         var live_url: String
     }
 
-    /// Creates (or returns) this phone's standing live link.
     public func createChannel(deviceID: String, wearerName: String) async throws -> (token: String, url: String) {
         let (data, response) = try await session.data(
             for: post("live/channel", json: ["device_id": deviceID, "wearer_name": wearerName])
@@ -238,14 +221,11 @@ public struct IncidentClient: Sendable {
         var valid: Bool
     }
 
-    /// Does this guardian code exist? (Asked before it is saved.)
     public func guardianCodeExists(_ code: String) async throws -> Bool {
         let (data, response) = try await session.data(for: get("guardian/check/\(code)"))
         let parsed: ValidBody = try decode(data, response: response)
         return parsed.valid
     }
-
-    // MARK: - Private
 
     private func check(data _: Data, response: URLResponse) throws {
         guard let http = response as? HTTPURLResponse else {

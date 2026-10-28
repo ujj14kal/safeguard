@@ -1,10 +1,3 @@
-"""Outbound contact alerts for SOS escalation.
-
-Two notifiers behind one interface: `DryRunNotifier` (default — writes
-every would-be message to a local JSONL file and sends nothing) and
-`TelegramNotifier` (Telegram Bot API over httpx). `SmsNotifier` and
-`WhatsAppNotifier` are roadmap (see README); add them here later.
-"""
 
 import json
 import logging
@@ -23,7 +16,6 @@ TELEGRAM_API = "https://api.telegram.org"
 @dataclass
 class NotifyResult:
     ok: bool
-    # "sent" | "dry-run" | "failed" | "skipped"
     status: str
     detail: str = ""
 
@@ -33,7 +25,6 @@ class NotifyConfigError(Exception):
 
 
 class Notifier:
-    """Interface every channel implements (Telegram now, SMS/WhatsApp later)."""
 
     name = "base"
 
@@ -45,7 +36,6 @@ class Notifier:
 
 
 class DryRunNotifier(Notifier):
-    """Default: log the full would-be message locally, send nothing."""
 
     name = "dry-run"
 
@@ -88,8 +78,6 @@ class DryRunNotifier(Notifier):
 
 
 class TelegramNotifier(Notifier):
-    """Real Telegram delivery. The bot token comes only from the settings
-    (environment); it is never logged."""
 
     name = "telegram"
 
@@ -139,24 +127,16 @@ class TelegramNotifier(Notifier):
 
 
 def make_notifier(settings) -> Notifier:
-    """Dry-run unless the mode is telegram (which needs a bot token)."""
     if settings.notify_mode == "telegram":
         return TelegramNotifier(settings.telegram_bot_token)
     return DryRunNotifier(settings.notify_log_path)
 
-
-# Message builders. Privacy rule: wearer name + links only — never
-# transcripts, appearance, or anything about other people.
 
 def maps_link(lat: float, lon: float) -> str:
     return f"https://maps.google.com/?q={lat:.5f},{lon:.5f}"
 
 
 def ride_link(lat: float, lon: float) -> str:
-    """Uber universal link for a CONTACT: their pickup is wherever they are
-    (`my_location`), the drop-off is the wearer's position, so one tap opens
-    Uber ready to send a cab to her. Opens in the Uber app or the web page;
-    no API key. Uber's deep links have no field for a note to the driver."""
     query = urlencode({
         "action": "setPickup",
         "pickup": "my_location",
@@ -167,9 +147,6 @@ def ride_link(lat: float, lon: float) -> str:
     return f"https://m.uber.com/ul/?{query}"
 
 
-# Contact alerts go out in the wearer's app language ("en" or "hi").
-# Hindi strings are machine-written: a native speaker should review them
-# before real use (see DECISIONS.md).
 def alert_text(
     wearer_name: str, live_url: str, maps_url=None, lang: str = "en", ride_url=None
 ) -> str:

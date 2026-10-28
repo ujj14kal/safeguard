@@ -1,7 +1,5 @@
 import SwiftUI
 
-/// Signature status ring. Breathes gently while protecting; colour, symbol and
-/// text always change together (never colour alone). Honours Reduce Motion.
 struct ShieldRingView: View {
     let state: ProtectionState
     var proximity: Proximity = .clear
@@ -10,9 +8,6 @@ struct ShieldRingView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var breathing = false
 
-    /// While protecting, the ring shows proximity (teal/yellow/red); other
-    /// states keep their own treatment. Red `tooClose` is a warning triangle,
-    /// never the SOS circle.
     private var ringColor: Color {
         if state.isProtecting {
             switch proximity {

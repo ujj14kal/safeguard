@@ -2,22 +2,8 @@ import AVFoundation
 import CoreMedia
 import Foundation
 
-/// Records video and audio in short segments while an SOS runs and uploads
-/// each closed segment at once, so evidence is already off the phone if the
-/// phone is taken. Segments are 8 s; files are deleted after a successful
-/// upload and kept (and retried later) if the backend cannot be reached.
-///
-/// Video comes from the camera frames the app already receives; audio from
-/// the single microphone tap the listener owns. Nothing is recorded unless
-/// `start` was called, which only an SOS does.
 public final class EvidenceRecorder: @unchecked Sendable {
-    /// Short parts reach the guardian sooner: a 4 s part is on the server
-    /// about 4 s after it was filmed (it was 8 s).
     public static let segmentSeconds: TimeInterval = 4
-    /// Evidence needs to be watchable, not cinema: 15 frames a second at
-    /// about 960 px wide and 0.9 Mbit/s makes a 4 s part about 450 kB (it
-    /// was 30 fps at full size and 2 Mbit/s, about 2 MB per 8 s), so each
-    /// part uploads in a fraction of a second on an ordinary connection.
     public static let frameInterval: TimeInterval = 1.0 / 15
     public static let videoBitRate = 900_000
     public static let maxVideoWidth = 960
@@ -29,7 +15,6 @@ public final class EvidenceRecorder: @unchecked Sendable {
     private var progress = EvidenceProgress()
     private var onProgress: (@Sendable (EvidenceProgress) -> Void)?
 
-    // Video segment state (queue-confined).
     private var writer: AVAssetWriter?
     private var videoInput: AVAssetWriterInput?
     private var adaptor: AVAssetWriterInputPixelBufferAdaptor?
@@ -38,7 +23,6 @@ public final class EvidenceRecorder: @unchecked Sendable {
     private var videoURL: URL?
     private var lastVideoFrameTime: CMTime?
 
-    // Audio segment state (queue-confined).
     private var audioFile: AVAudioFile?
     private var audioURL: URL?
     private var audioSeq = 0
@@ -76,7 +60,6 @@ public final class EvidenceRecorder: @unchecked Sendable {
         }
     }
 
-    /// Closes the open segments, uploads them, and stops recording.
     public func stop() {
         activeLock.withLock { active = false }
         queue.async {
@@ -86,13 +69,10 @@ public final class EvidenceRecorder: @unchecked Sendable {
         }
     }
 
-    // MARK: - Input
-
     public func appendVideo(_ pixelBuffer: CVPixelBuffer, at time: CMTime) {
         guard isRecording else { return }
         queue.async {
             guard self.sessionID != nil else { return }
-            // Thin the camera's 30 fps to 15: half the data, half the work.
             if let last = self.lastVideoFrameTime,
                CMTimeGetSeconds(CMTimeSubtract(time, last)) < Self.frameInterval * 0.9
             {
@@ -126,8 +106,6 @@ public final class EvidenceRecorder: @unchecked Sendable {
         }
     }
 
-    // MARK: - Segments
-
     private func folder(for session: String) -> URL {
         root.appendingPathComponent(session, isDirectory: true)
     }
@@ -150,8 +128,6 @@ public final class EvidenceRecorder: @unchecked Sendable {
             AVVideoCompressionPropertiesKey: [
                 AVVideoAverageBitRateKey: Self.videoBitRate,
                 AVVideoProfileLevelKey: AVVideoProfileLevelH264MainAutoLevel,
-                // No B-frames and a keyframe every 2 s: encodes and
-                // finishes quickly, and every part plays on its own.
                 AVVideoAllowFrameReorderingKey: false,
                 AVVideoMaxKeyFrameIntervalKey: 30,
                 AVVideoExpectedSourceFrameRateKey: 15,
@@ -172,7 +148,6 @@ public final class EvidenceRecorder: @unchecked Sendable {
         videoURL = url
     }
 
-    /// Fits the camera size inside `maxVideoWidth`, even numbers only (H.264).
     static func outputSize(width: Int, height: Int) -> (width: Int, height: Int) {
         guard width > maxVideoWidth else { return (width & ~1, height & ~1) }
         let scale = Double(maxVideoWidth) / Double(width)
@@ -219,13 +194,12 @@ public final class EvidenceRecorder: @unchecked Sendable {
         guard audioFile != nil, let url = audioURL, let session = sessionID else { return }
         let seq = audioSeq
         audioSeq += 1
-        audioFile = nil // closing the file finalizes it
+        audioFile = nil
         audioURL = nil
         audioSegmentStartedAt = nil
         finished(url: url, session: session, kind: .audio, seq: seq)
     }
 
-    /// A segment is closed on disk: count it and upload it.
     private func finished(url: URL, session: String, kind: EvidenceKind, seq: Int) {
         progress.segments += 1
         onProgress?(progress)
@@ -245,10 +219,6 @@ public final class EvidenceRecorder: @unchecked Sendable {
         }
     }
 
-    // MARK: - Leftovers
-
-    /// Uploads segments a previous SOS could not send (no connection, app
-    /// closed mid-upload). Call at launch and when an SOS starts.
     public func retryPending() {
         queue.async {
             let fm = FileManager.default

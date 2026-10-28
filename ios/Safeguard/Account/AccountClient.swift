@@ -1,7 +1,5 @@
 import Foundation
 
-/// The backend calls the account screens need. A protocol so the store is
-/// tested with a fake and no network.
 public protocol AccountService: Sendable {
     func signUp(
         name: String, email: String, password: String, phone: String?, language: String,
@@ -15,7 +13,6 @@ public protocol AccountService: Sendable {
     ) async throws -> AccountProfile
     func signOut(accessToken: String) async
     func deleteAccount(accessToken: String) async throws
-    /// The optional profile picture (JPEG); nil when none was set.
     func avatar(accessToken: String) async throws -> Data?
     func setAvatar(accessToken: String, jpeg: Data) async throws
     func removeAvatar(accessToken: String) async throws
@@ -27,8 +24,6 @@ extension AccountService {
     public func removeAvatar(accessToken: String) async throws {}
 }
 
-/// Talks to this app's own backend (never to Supabase directly: the keys
-/// stay on the server). Every request carries the app token.
 public struct AccountClient: AccountService {
     private let config: @Sendable () -> VerifierConfig
     private let session: URLSession
@@ -40,8 +35,6 @@ public struct AccountClient: AccountService {
         self.config = config
         self.session = session
     }
-
-    // MARK: Wire types
 
     struct UserBody: Decodable {
         var id: String
@@ -66,8 +59,6 @@ public struct AccountClient: AccountService {
     struct RefreshBody: Decodable {
         var session: SessionBody
     }
-
-    // MARK: Calls
 
     public func signUp(
         name: String, email: String, password: String, phone: String?, language: String,
@@ -134,8 +125,6 @@ public struct AccountClient: AccountService {
         _ = try await send(request("me/avatar", method: "DELETE", bearer: accessToken))
     }
 
-    // MARK: Plumbing
-
     private func auth(_ path: String, body: [String: Any]) async throws -> AccountAuthResult {
         let data = try await send(request(path, method: "POST", json: body))
         let parsed = try decode(AuthBody.self, data)
@@ -187,8 +176,6 @@ public struct AccountClient: AccountService {
         }
     }
 
-    /// Server text for the few cases the person can act on; calm generic
-    /// words for the rest (never a raw status code or stack).
     static func readable(_ data: Data, status: Int) -> String {
         struct Detail: Decodable { var detail: String? }
         let detail = (try? JSONDecoder().decode(Detail.self, from: data))?.detail ?? ""

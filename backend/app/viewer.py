@@ -1,11 +1,3 @@
-"""Family live viewer: one self-contained page per share token.
-
-Leaflet + OpenStreetMap from a pinned CDN; everything else inline. The
-video is segment-based (8 s parts), so the page says "about 10-15 s
-behind" and never "real-time". It always plays the newest parts and skips
-ones it fell behind on, so a family member sees what is happening now, not
-the beginning of the recording.
-"""
 
 import json
 
@@ -103,8 +95,6 @@ _PAGE = """<!DOCTYPE html>
 <script src="__HLS_JS__"></script>
 <script>
 const TOKEN = __TOKEN__;
-// The page lives at /live/<token> (no trailing slash), so relative URLs
-// would resolve to /live/state. Build them from the page path instead.
 const BASE = location.pathname.replace(/\\/+$/, "");
 let map = null, marker = null, circle = null, trailLine = null;
 let seen = {}, videoQueue = [], audioQueue = [], lastFixAt = 0, lastOk = 0;
@@ -115,8 +105,6 @@ function showError(text) {
   box.textContent = text;
 }
 
-// Live behaviour: keep only the newest parts so the viewer never plays the
-// recording from its beginning while the wearer is somewhere else now.
 function trim(queue, keep) {
   while (queue.length > keep) queue.shift();
 }
@@ -136,9 +124,6 @@ function setupPlayer(id, queue) {
 const videoEl = setupPlayer("video", videoQueue);
 const audioEl = setupPlayer("audio", audioQueue);
 
-// Continuous recording: video and sound in one stream (HLS). Safari plays
-// it natively; other browsers use hls.js. Until the phone sends that format
-// the page falls back to the separate parts below.
 let usingHls = false, hlsPlayer = null;
 function startContinuous() {
   if (usingHls) return true;
@@ -237,7 +222,6 @@ async function refresh() {
     seen[seg.name] = true;
     (seg.kind === "video" ? videoQueue : audioQueue).push(BASE + "/" + seg.url);
   }
-  // Skip what we fell behind on: keep the two newest parts of each.
   trim(videoQueue, 2);
   trim(audioQueue, 2);
   playNext(videoEl, videoQueue);
@@ -466,7 +450,6 @@ async function openIncident(id) {
   $("playAll").onclick = () => { current = 0; playIndex(); };
 }
 
-// One continuous recording, video and sound together (HLS).
 function playContinuous(info) {
   const video = $("player");
   if (video.canPlayType("application/vnd.apple.mpegurl")) {

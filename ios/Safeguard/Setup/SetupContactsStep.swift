@@ -1,7 +1,5 @@
 import SwiftUI
 
-/// Step 4: trusted contacts. At least 2 must tick "this person agreed".
-/// Works on the real contact store, so closing mid-setup loses nothing.
 struct SetupContactsStep: View {
     @StateObject private var model = ProtectViewModel.shared
     @State private var newName = ""
@@ -139,7 +137,6 @@ struct SetupContactsStep: View {
     }
 }
 
-/// Invite share sheet (setup's own copy: the contacts tab has its own).
 private struct SetupInviteSheet: View {
     let link: URL
     let done: () -> Void

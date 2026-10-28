@@ -2,31 +2,21 @@ import AVFoundation
 import CoreMedia
 import CoreVideo
 
-/// A timestamped video frame held in memory only. Frames are never stored.
-/// Retaining the frame keeps the pixel buffer alive, so consumers may hand it
-/// to another queue — but convert promptly to free memory.
-/// Thread-safety: frames are handed to exactly one consumer queue and only
-/// read there (Vision + Core Image reads); never mutated after creation.
 struct SafeguardFrame: @unchecked Sendable {
     let pixelBuffer: CVPixelBuffer
     let timestamp: CMTime
 }
 
 protocol FrameSourceDelegate: AnyObject {
-    /// Called on the source's internal background queue. Hop to main for UI.
     func frameSource(_ source: any FrameSource, didOutput frame: SafeguardFrame)
     func frameSource(_ source: any FrameSource, didFailWith error: Error)
 }
 
-/// Produces timestamped frames for the detection pipeline.
-/// Implementations: PhoneCameraSource, VideoFileSource (Replay), GlassesSource (stub).
 protocol FrameSource: AnyObject {
     var delegate: (any FrameSourceDelegate)? { get set }
     var isRunning: Bool { get }
     var displayName: String { get }
 
-    /// Validates synchronously where possible (e.g. missing file) and throws.
-    /// Failures discovered during async setup or streaming arrive via didFailWith.
     func start() throws
     func stop()
 }

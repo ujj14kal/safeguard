@@ -1,10 +1,7 @@
 import CoreGraphics
 import XCTest
 
-/// HUD mapping + status: aspect-fill boxes (incl. the full-screen portrait
-/// case), per-track colours, and pill priority. No UI host needed.
 final class BoxMappingTests: XCTestCase {
-    // MARK: - Aspect-fill mapping
 
     func testFullFrameFillsView() {
         let rect = AspectFillMapper.boxRect(
@@ -19,8 +16,6 @@ final class BoxMappingTests: XCTestCase {
     }
 
     func testFullScreenPortraitSize() {
-        // Portrait buffer 720x1280 on a 393x852 full-screen view: scale by
-        // height (852/1280), crop 43.125 pt off each side.
         let rect = AspectFillMapper.boxRect(
             CGRect(x: 0, y: 0, width: 1, height: 1),
             frame: CGSize(width: 720, height: 1280),
@@ -33,8 +28,6 @@ final class BoxMappingTests: XCTestCase {
     }
 
     func testVisionYFlipsToTopLeft() {
-        // A person in the TOP third (Vision y 0.65...0.95, origin
-        // lower-left) lands in the TOP third of the screen.
         let rect = AspectFillMapper.boxRect(
             CGRect(x: 0.4, y: 0.65, width: 0.2, height: 0.30),
             frame: CGSize(width: 720, height: 1280),
@@ -63,8 +56,6 @@ final class BoxMappingTests: XCTestCase {
         )
     }
 
-    // MARK: - Per-track levels
-
     func testBoxLevelThresholds() {
         let config = ThreatConfig()
         XCTAssertEqual(
@@ -84,8 +75,6 @@ final class BoxMappingTests: XCTestCase {
             PersonBoxLevel.level(alert: true, height: 0.05, config: config), .tooClose
         )
     }
-
-    // MARK: - Pill priority
 
     func testPillBaseStates() {
         XCTAssertEqual(
@@ -107,7 +96,6 @@ final class BoxMappingTests: XCTestCase {
     }
 
     func testPillPriorityOrder() {
-        // Asking > safe > window > alert > proximity > listening > base.
         XCTAssertEqual(
             HudStatus.resolve(
                 asking: true, safe: true, listeningWindow: true, alert: true,

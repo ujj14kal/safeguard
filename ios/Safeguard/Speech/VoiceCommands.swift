@@ -1,7 +1,5 @@
 import Foundation
 
-/// Hands-free commands. Every one has an on-screen equivalent; the parser
-/// is pure and fully tested, the view model executes.
 public enum VoiceCommand: Sendable, Equatable {
     case stopProtecting
     case status
@@ -13,12 +11,6 @@ public enum VoiceCommand: Sendable, Equatable {
     case shareLocation
 }
 
-/// Wake word ("safeguard", "safe guard", "save guard") must LEAD the
-/// transcript; the remainder matches a command phrase as a whole-word
-/// subsequence, so polite wrapping ("please ... now") still parses while
-/// "undim" never matches "dim". Anything else — no wake word, wake word
-/// mid-sentence, unknown words — returns nil and the transcript falls
-/// through to the threat matcher.
 public struct VoiceCommandParser: Sendable {
     public init() {}
 
@@ -43,8 +35,6 @@ public struct VoiceCommandParser: Sendable {
         return nil
     }
 
-    /// Whole-word subsequence: "undim" must not match "dim", while "please
-    /// dim the screen now" still matches "dim the screen".
     private static func containsPhrase(_ words: [String], phrase: String) -> Bool {
         let want = phrase.split(separator: " ").map(String.init)
         guard !want.isEmpty, words.count >= want.count else { return false }
@@ -88,8 +78,6 @@ public struct VoiceCommandParser: Sendable {
     }
 }
 
-/// "Stop protecting" needs a spoken "yes" within a few seconds: stopping
-/// protection by accident (a misheard podcast) must be hard.
 public struct StopConfirmation: Sendable {
     public private(set) var pendingUntil: TimeInterval?
     private let windowSeconds: TimeInterval
@@ -120,8 +108,6 @@ public struct StopConfirmation: Sendable {
         case expired
     }
 
-    /// A direct answer (no wake word): yes-words confirm, no-words deny,
-    /// anything else keeps waiting until the window lapses.
     public mutating func answer(_ transcript: String, at time: TimeInterval) -> Result {
         guard let until = pendingUntil else { return .expired }
         if time > until {
@@ -129,10 +115,6 @@ public struct StopConfirmation: Sendable {
             return .expired
         }
         let words = Set(SpeechText.words(in: transcript))
-        // Deny first: uncertainty keeps protection on ("do not confirm"
-        // must not confirm). Words only — "don't" tokenizes to don+t, so
-        // "not" carries the negations ("do not stop", "not sure" → deny,
-        // which is the safe direction).
         if !words.intersection(["no", "nope", "nah", "cancel", "not", "nahi", "nahin", "नहीं", "मत", "रुको"]).isEmpty {
             pendingUntil = nil
             return .denied
@@ -146,13 +128,9 @@ public struct StopConfirmation: Sendable {
 }
 
 extension Notification.Name {
-    /// Voice command "open settings": ContentView switches to the tab.
     public static let safeguardOpenSettings = Notification.Name("SafeguardOpenSettings")
-    /// Voice command "go back": ContentView returns to Protect.
     public static let safeguardGoBack = Notification.Name("SafeguardGoBack")
-    /// Settings "Run setup again": ContentView re-opens the setup flow.
     public static let safeguardRunSetup = Notification.Name("SafeguardRunSetup")
-    /// Settings "Emergency contacts": ContentView switches to the tab.
     public static let safeguardOpenContacts = Notification.Name("SafeguardOpenContacts")
     public static let safeguardOpenActivity = Notification.Name("SafeguardOpenActivity")
     public static let safeguardOpenDashboard = Notification.Name("SafeguardOpenDashboard")

@@ -1,7 +1,5 @@
 import XCTest
 
-/// /verify-speech client: text-only request shape, strict response parsing,
-/// failure mapping. Reuses the URLProtocol stub: no network, no keys.
 final class VerifySpeechTests: XCTestCase {
     private func stubSession(
         status: Int = 200, body: String = """
@@ -32,7 +30,6 @@ final class VerifySpeechTests: XCTestCase {
         let capture = MockURLProtocol.Capture()
         MockURLProtocol.handler = { request in
             capture.request = request
-            // URLSession may stream the body instead of setting httpBody.
             if let body = request.httpBody {
                 capture.body = body
             } else if let stream = request.httpBodyStream {

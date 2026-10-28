@@ -1,8 +1,6 @@
 import SwiftUI
 import UIKit
 
-/// Step 3: the four permissions, each asked with its reason first. A
-/// denial never blocks setup; it shows what will not work instead.
 struct SetupPermissionsStep: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.openURL) private var openURL
@@ -21,7 +19,7 @@ struct SetupPermissionsStep: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .onAppear(perform: refresh)
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { refresh() } // re-check after Settings
+            if phase == .active { refresh() }
         }
     }
 
@@ -96,7 +94,6 @@ struct SetupPermissionsStep: View {
     }
 }
 
-/// Step 6: the six listening switches, same wording as Settings.
 struct SetupListeningStep: View {
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.medium) {

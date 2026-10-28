@@ -1,7 +1,5 @@
 import XCTest
 
-/// Rolling transcript window: old text drops out, snippets centre the
-/// trigger sentence, and the whole pipeline writes nothing to disk.
 final class TranscriptWindowTests: XCTestCase {
     func testAppendsAndJoins() {
         var window = TranscriptWindow(windowSeconds: 20)
@@ -35,7 +33,6 @@ final class TranscriptWindowTests: XCTestCase {
     func testSnippetCentresTriggerSentence() {
         var window = TranscriptWindow(windowSeconds: 20)
         window.append("Nice weather today. Come with me now! See you later.", at: 0)
-        // Words: Nice(0) weather(1) today(2) Come(3) with(4) me(5) now(6) ...
         let snippet = window.snippet(matchWordIndex: 4, maxChars: 400)
         XCTAssertTrue(snippet.contains("Come with me now!"), snippet)
     }
@@ -56,9 +53,6 @@ final class TranscriptWindowTests: XCTestCase {
     }
 
     func testPipelineWritesNothingToDisk() {
-        // Privacy rule: raw audio is never stored, transcripts live only in
-        // the in-memory window. Drive the whole on-device path and prove no
-        // file appears anywhere the app can write.
         let manager = FileManager.default
         let roots = [manager.temporaryDirectory]
             + manager.urls(for: .cachesDirectory, in: .userDomainMask)
@@ -89,7 +83,6 @@ final class TranscriptWindowTests: XCTestCase {
     }
 }
 
-/// Listener lifecycle: gapless restarts, TTS pausing, honest deaf states.
 final class ListeningSessionTests: XCTestCase {
     func testStartStop() {
         var session = ListeningSession()
@@ -145,8 +138,6 @@ final class ListeningSessionTests: XCTestCase {
     }
 }
 
-/// Partials make the code phrases fast; the gate keeps them to one action
-/// per utterance.
 final class PartialReplyGateTests: XCTestCase {
     func testPhraseActsOnceAcrossGrowingPartials() {
         var gate = PartialReplyGate()
@@ -159,7 +150,6 @@ final class PartialReplyGateTests: XCTestCase {
         var gate = PartialReplyGate()
         _ = gate.consume(.safePhrase)
         XCTAssertEqual(gate.finishUtterance(), .safePhrase)
-        // New utterance: the same phrase acts again.
         XCTAssertEqual(gate.consume(.safePhrase), .safePhrase)
     }
 

@@ -1,10 +1,6 @@
 import Foundation
 import SwiftUI
 
-/// The signed-in state of this phone. Tokens live in the Keychain, the
-/// cached profile (for Settings) in UserDefaults; the source of truth is
-/// the backend. The app works without an account: this store only adds
-/// the profile and its backup.
 @MainActor
 public final class AccountStore: ObservableObject {
     public static let shared = AccountStore()
@@ -15,10 +11,7 @@ public final class AccountStore: ObservableObject {
     @Published public private(set) var profile: AccountProfile?
     @Published public private(set) var isBusy = false
     @Published public var errorMessage: String?
-    /// Set after a sign-up that needs the email link opened first.
     @Published public private(set) var needsConfirmation = false
-    /// True after the last attempt failed because the server could not be
-    /// reached (the sign-in screen then offers to continue offline).
     @Published public private(set) var serverUnreachable = false
 
     private let service: AccountService
@@ -26,8 +19,6 @@ public final class AccountStore: ObservableObject {
     private let defaults: UserDefaults
     private let avatarCache: URL
 
-    /// The profile picture (JPEG bytes), nil when the person set none.
-    /// Kept on the server with the account; a copy is cached here.
     @Published public private(set) var avatarData: Data?
 
     public init(
@@ -52,8 +43,6 @@ public final class AccountStore: ObservableObject {
     }
 
     public var isSignedIn: Bool { profile != nil }
-
-    // MARK: Sign up / in / out
 
     @discardableResult
     public func signUp(
@@ -93,9 +82,6 @@ public final class AccountStore: ObservableObject {
         }
     }
 
-    /// Lets the app be used when the server cannot be reached (bad network
-    /// at a demo, say). A profile that lives on this phone only; signing in
-    /// later from Settings backs it up.
     @discardableResult
     public func continueOffline(name: String) -> Bool {
         guard SetupMachine.nameValid(name) else {
@@ -121,7 +107,6 @@ public final class AccountStore: ObservableObject {
         clearLocal()
     }
 
-    /// Deletes the account on the server, then everything local.
     @discardableResult
     public func deleteAccount() async -> Bool {
         guard let token = await validAccessToken() else {
@@ -133,8 +118,6 @@ public final class AccountStore: ObservableObject {
         return done
     }
 
-    /// Forgets the account on this phone only (used by "Delete all my
-    /// data", which separately asks the server to delete the account).
     public func clearLocal() {
         secrets.remove(Self.sessionKey)
         defaults.removeObject(forKey: Self.profileKey)
@@ -144,8 +127,6 @@ public final class AccountStore: ObservableObject {
         needsConfirmation = false
         serverUnreachable = false
     }
-
-    // MARK: Profile
 
     @discardableResult
     public func updateProfile(name: String?, phone: String?, language: String? = nil) async -> Bool {
@@ -169,8 +150,6 @@ public final class AccountStore: ObservableObject {
         }
     }
 
-    /// Pulls the latest profile (name edits made elsewhere); a dead
-    /// session signs this phone out quietly.
     public func refreshProfile() async {
         guard isSignedIn, let token = await validAccessToken() else { return }
         if let fresh = try? await service.profile(accessToken: token) {
@@ -180,16 +159,12 @@ public final class AccountStore: ObservableObject {
         await loadAvatar()
     }
 
-    /// Fetches the picture from the server (a new phone, or a change made
-    /// elsewhere). A failed fetch keeps whatever is cached.
     public func loadAvatar() async {
         guard isSignedIn, let token = await validAccessToken() else { return }
         guard let fetched = try? await service.avatar(accessToken: token) else { return }
         cacheAvatar(fetched)
     }
 
-    /// Saves a new picture (optional feature): shrunk to a small JPEG,
-    /// stored on the server, cached here.
     @discardableResult
     public func setAvatar(_ image: UIImage) async -> Bool {
         guard let jpeg = AvatarImage.jpeg(from: image) else {
@@ -222,7 +197,6 @@ public final class AccountStore: ObservableObject {
         }
     }
 
-    /// A usable access token, refreshing it when it is about to expire.
     public func validAccessToken() async -> String? {
         guard let session = loadSession() else { return nil }
         if !session.isExpired() { return session.accessToken }
@@ -238,15 +212,12 @@ public final class AccountStore: ObservableObject {
         }
     }
 
-    // MARK: Internals
-
     private func accept(_ result: AccountAuthResult) {
         needsConfirmation = result.needsConfirmation
         if let session = result.session {
             save(session)
             profile = result.profile
             persist(result.profile)
-            // The name the alerts use follows the account.
             defaults.set(result.profile.name, forKey: "wearerName")
         }
     }
@@ -261,7 +232,6 @@ public final class AccountStore: ObservableObject {
             return true
         } catch let error as AccountError {
             errorMessage = error.message
-            // No HTTP status means the request never got an answer.
             serverUnreachable = error.status == nil || error.status == 503
             return false
         } catch {

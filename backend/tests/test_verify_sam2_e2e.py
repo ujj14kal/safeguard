@@ -1,14 +1,3 @@
-"""End-to-end /verify with a REAL SAM 2 checkpoint (slow, CPU).
-
-Runs only when torch is importable and SAM2_CHECKPOINT_PATH + SAM2_MODE=sam2
-are set, e.g.:
-
-    SAM2_CHECKPOINT_PATH=/tmp/sam2spike/sam2.1_hiera_tiny.pt SAM2_MODE=sam2 \
-        /tmp/sam2spike/.venv/bin/python -m pytest backend/tests/test_verify_sam2_e2e.py
-
-Muse is still mocked (no keys in tests): this proves the SAM 2 wiring,
-geometry extraction, and the sam2+muse path label.
-"""
 
 import base64
 import json
@@ -23,7 +12,6 @@ pytestmark = pytest.mark.skipif(
     reason="needs SAM2_CHECKPOINT_PATH and SAM2_MODE=sam2",
 )
 
-# 128x128 gradient JPEG with a dark blob (generated once with PIL; fake data).
 BLOB_JPEG_B64 = (
     "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcU"
     "FhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgo"

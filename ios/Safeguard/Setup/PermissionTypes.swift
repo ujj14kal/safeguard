@@ -1,6 +1,5 @@
 import Foundation
 
-/// The four setup permissions, each asked with its reason first.
 enum SetupPermission: String, CaseIterable, Identifiable {
     case camera
     case microphone
@@ -9,7 +8,6 @@ enum SetupPermission: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
-    /// Pre-localised: used both as a label and inside formatted strings.
     var title: String {
         switch self {
         case .camera: String(localized: "Camera")
@@ -32,7 +30,6 @@ enum SetupPermission: String, CaseIterable, Identifiable {
         }
     }
 
-    /// Honest warning chip when denied.
     var missingImpact: String {
         switch self {
         case .camera: String(localized: "Without the camera, Safeguard cannot watch for threats.")

@@ -1,4 +1,3 @@
-"""Standing live link, guardian codes and the read-only guardian API."""
 
 import time
 
@@ -59,8 +58,6 @@ def new_code(api):
     return api.post("/guardian/register").json()["code"]
 
 
-# --- codes ---------------------------------------------------------------
-
 def test_code_format_and_normalising():
     code = make_guardian_code()
     assert len(code) == 14 and code.count("-") == 2
@@ -88,8 +85,6 @@ def test_check_needs_the_app_token(api, monkeypatch):
     monkeypatch.setattr(main, "SETTINGS", Settings(app_token="t" * 12, public_base_url="https://demo.test"))
     assert api.get("/guardian/check/AAAA-BBBB-CCCC").status_code == 401
 
-
-# --- guardian view -------------------------------------------------------
 
 def test_guardian_sees_only_incidents_with_their_code(api):
     mine, other = new_code(api), new_code(api)
@@ -127,9 +122,9 @@ def test_media_links_are_signed_and_scoped(api):
     url = api.get(f"/guardian/api/incidents/{inc['id']}", headers={"X-Guardian-Code": code}).json()["segments"][0]["url"]
     assert api.get(url).status_code == 200
     assert api.get(url.split("sig=")[0] + "sig=" + "0" * 40).status_code == 403
-    assert api.get(url.replace("exp=", "exp=1")).status_code == 403  # tampered expiry
+    assert api.get(url.replace("exp=", "exp=1")).status_code == 403
     path = url.split("?")[0]
-    assert api.get(path).status_code == 403                           # no signature at all
+    assert api.get(path).status_code == 403
     expired = f"{path}?exp={int(time.time()) - 5}&sig={main._media_sig(inc['id'], 'video-00000.mp4', int(time.time()) - 5)}"
     assert api.get(expired).status_code == 403
 
@@ -166,8 +161,6 @@ def test_guardian_page_is_public_html(api):
     assert page.status_code == 200 and "Safeguard guardian" in page.text
     assert "X-Guardian-Code" in page.text
 
-
-# --- standing live link --------------------------------------------------
 
 def test_channel_is_stable_per_device_and_revocable(api):
     first = api.post("/live/channel", json={"device_id": DEVICE, "wearer_name": "Asha"}).json()
@@ -211,7 +204,7 @@ def test_expiring_one_incident_keeps_the_channel_token_for_the_newer_one():
     store.end(old.id)
     now[0] += 30
     new, _ = store.start("sos-new00001", "A", [], share_token="shared-token-xyz")
-    now[0] += 100  # old one expired, new one active
+    now[0] += 100
     store.save()
     assert store.get_by_token("shared-token-xyz") is new
 
@@ -231,7 +224,6 @@ def test_guardian_links_telegram_and_gets_the_sos_alert(api, monkeypatch):
     assert info["available"] and not info["linked"]
     assert info["link"] == f"https://t.me/TestBot?start=g_{code}"
 
-    # The guardian presses Start in Telegram.
     update = {"update_id": 5, "message": {"text": f"/start g_{code}", "chat": {"id": 777}}}
     linked, _ = link_from_updates({"result": [update]}, main.get_contact_store(), main.get_guardians())
     assert linked and api.get("/guardian/api/alerts", headers=headers).json()["linked"]

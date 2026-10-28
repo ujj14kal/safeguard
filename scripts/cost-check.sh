@@ -1,17 +1,4 @@
 #!/usr/bin/env bash
-# Month-to-date cost check for the Cloud Run backend. Run it before and after
-# every deploy (deploy-cloud-run.sh runs it for you), and whenever you wonder.
-#
-#   ./scripts/cost-check.sh [gcp-project-id] [service]
-#
-# It reads Cloud Monitoring (free) for the service's billable instance time and
-# request count, compares them with Cloud Run's monthly free allowance, and
-# prints a rough dollar figure for what is OVER the free allowance. Rates and
-# allowances are from Google's public pricing as I remember it (CPU $0.000024
-# per vCPU-second and memory $0.0000025 per GiB-second beyond 180,000 and
-# 360,000 free), so treat the dollars as an estimate and confirm in the
-# billing console. It cannot see other products or other apps that share the
-# billing account's free allowance.
 set -euo pipefail
 
 PROJECT="${1:-safeguard-512917}"
@@ -65,6 +52,5 @@ elif dollars == 0:
     print("  OK: inside the free allowance.")
 PY
 
-# Container images pile up on every deploy.
 SIZE_MB="$(gcloud artifacts repositories list --project "$PROJECT" --format='value(sizeBytes)' 2>/dev/null | head -1 | python3 -c 'import sys; v=sys.stdin.read().strip(); print(round(float(v or 0)))' 2>/dev/null || echo "?")"
 echo "  container images:    ${SIZE_MB} MB stored (free: 500 MB)"

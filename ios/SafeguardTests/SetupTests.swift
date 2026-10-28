@@ -1,6 +1,5 @@
 import XCTest
 
-/// Release builds are safe by default; DEBUG keeps the developer set.
 final class DefaultsTests: XCTestCase {
     func testReleaseSetOnlyDistressWordsOn() {
         XCTAssertEqual(
@@ -34,8 +33,6 @@ final class DefaultsTests: XCTestCase {
     }
 
     func testOwnedKeysCoverKnownState() {
-        // The wipe list must name every key the app writes; spot-check the
-        // load-bearing ones (the wipe test below runs the whole list).
         let keys = Set(Defaults.ownedKeys)
         for key in [
             "wearerName", "sosContactsJSON", "setupComplete", "setupStep",
@@ -48,7 +45,6 @@ final class DefaultsTests: XCTestCase {
     }
 }
 
-/// Setup flow: navigation, gating, validation, resume.
 final class SetupMachineTests: XCTestCase {
     func testNavigationClampsAtBothEnds() {
         var machine = SetupMachine()
@@ -71,7 +67,6 @@ final class SetupMachineTests: XCTestCase {
     }
 
     func testAccountStepNeverBlocksSetup() {
-        // Accounts are optional: the step can always be passed.
         XCTAssertTrue(SetupMachine.canAdvance(from: .account))
     }
 
@@ -107,7 +102,6 @@ final class SetupMachineTests: XCTestCase {
     }
 
     func testStepRawValueRoundTripsForResume() {
-        // Resume persists the raw step; every step must survive the trip.
         for step in SetupStep.allCases {
             XCTAssertEqual(SetupStep(rawValue: step.rawValue), step)
         }
@@ -115,7 +109,6 @@ final class SetupMachineTests: XCTestCase {
     }
 }
 
-/// Code-phrase editing rules.
 final class CodePhraseValidationTests: XCTestCase {
     func testValidPairPasses() {
         XCTAssertEqual(
@@ -178,7 +171,6 @@ final class CodePhraseValidationTests: XCTestCase {
     }
 
     func testSafeContainingUnsafeDefaultCollides() {
-        // Unsafe is matched first, so this safe phrase could never fire.
         XCTAssertEqual(
             CodePhraseValidation.validate(
                 safe: "please open app store now", unsafe: "open calculator"
@@ -188,7 +180,6 @@ final class CodePhraseValidationTests: XCTestCase {
     }
 
     func testUnsafeContainingSafeDefaultIsAllowed() {
-        // Unsafe wins anyway, so this pair works as labelled.
         XCTAssertEqual(
             CodePhraseValidation.validate(
                 safe: "open notes app", unsafe: "please open calculator now"
@@ -198,7 +189,6 @@ final class CodePhraseValidationTests: XCTestCase {
     }
 
     func testMatchingIsCaseInsensitive() {
-        // "Help Me" still collides with the distress word "help me".
         XCTAssertEqual(
             CodePhraseValidation.validate(safe: "Help Me", unsafe: "open app store"),
             [.isDistressWord]
@@ -206,7 +196,6 @@ final class CodePhraseValidationTests: XCTestCase {
     }
 }
 
-/// Local incident history: order, detail, delete, purge, no transcripts.
 final class IncidentHistoryTests: XCTestCase {
     private func entry(daysAgo: Double, cause: String = "distressWord") -> IncidentHistoryEntry {
         let start = Date().addingTimeInterval(-daysAgo * 86400)
@@ -254,7 +243,6 @@ final class IncidentHistoryTests: XCTestCase {
     }
 
     func testNoTranscriptFields() throws {
-        // The JSON shape must never gain transcript/appearance keys.
         let data = try JSONEncoder().encode(entry(daysAgo: 1))
         let json = try XCTUnwrap(
             JSONSerialization.jsonObject(with: data) as? [String: Any]
@@ -282,7 +270,6 @@ final class IncidentHistoryTests: XCTestCase {
     }
 }
 
-/// Delete-all removes every owned key and file.
 final class DataWipeTests: XCTestCase {
     func testWipeLocalRemovesEverything() throws {
         let suite = "wipe-test-\(UUID().uuidString)"

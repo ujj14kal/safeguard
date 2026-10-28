@@ -1,17 +1,12 @@
 import CoreGraphics
 
-/// A person tracked across frames with a stable ID.
 public struct Track: Sendable, Equatable {
     public let id: Int
     public var box: CGRect
     public var confidence: Float
-    /// Frames this track has been matched to a detection.
     public var age: Int
-    /// Consecutive frames without a matching detection (coasting).
     public var missed: Int
-    /// Latest matched pose (kept while coasting; may be nil).
     public var pose: BodyPose?
-    /// Latest hand/face cues (nil when none were seen this frame).
     public var cues: GestureCues?
 
     public init(
@@ -29,7 +24,6 @@ public struct Track: Sendable, Equatable {
     }
 }
 
-/// Intersection-over-union of two normalized boxes. 0 when disjoint or degenerate.
 public func intersectionOverUnion(_ a: CGRect, _ b: CGRect) -> Double {
     let inter = a.intersection(b)
     guard !inter.isNull else { return 0 }
@@ -40,9 +34,6 @@ public func intersectionOverUnion(_ a: CGRect, _ b: CGRect) -> Double {
     return interArea / union
 }
 
-/// Greedy IoU tracker: matches detections to tracks by descending IoU,
-/// coasts unmatched tracks for `maxMissedFrames`, then drops them.
-/// Not thread-safe: call from one serial queue.
 public final class IoUTracker {
     public var iouThreshold: Double
     public var maxMissedFrames: Int
@@ -55,9 +46,6 @@ public final class IoUTracker {
         self.maxMissedFrames = maxMissedFrames
     }
 
-    /// Match detections to tracks. Returns all live tracks (matched and
-    /// coasting) sorted by ID; a track coasts exactly `maxMissedFrames`
-    /// frames before being dropped.
     @discardableResult
     public func update(detections: [DetectedPerson]) -> [Track] {
         var pairs: [(iou: Double, track: Int, detection: Int)] = []

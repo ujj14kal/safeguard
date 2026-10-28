@@ -1,6 +1,5 @@
 import XCTest
 
-
 final class BuildURLReconcileTests: XCTestCase {
     private func suite() -> UserDefaults {
         let name = "reconcile-\(UUID().uuidString)"

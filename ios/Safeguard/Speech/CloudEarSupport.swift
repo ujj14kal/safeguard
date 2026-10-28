@@ -1,14 +1,8 @@
 import Foundation
 
-/// What the cloud speech service (Muse Voice Transcribe, relayed by the
-/// backend's /asr) sends back.
 public enum CloudEarEvent: Equatable, Sendable {
-    /// The relay connected upstream; audio may flow.
     case ready
-    /// The words so far in the current turn. Each partial REPLACES the last
-    /// (the service runs in CUMULATIVE mode).
     case partial(String)
-    /// A finished turn: the speaker paused.
     case turnComplete(String)
     case error(String)
     case other
@@ -35,8 +29,6 @@ public enum CloudEarEvent: Equatable, Sendable {
     }
 }
 
-/// Packs 16 kHz mono samples into 80 ms binary frames (1,280 samples,
-/// 2,560 bytes, little-endian), the frame size the service expects.
 public struct PCMChunker: Sendable {
     public static let samplesPerChunk = 1_280
     private var pending: [Int16] = []
@@ -59,7 +51,6 @@ public struct PCMChunker: Sendable {
     public mutating func reset() { pending.removeAll() }
 }
 
-/// Reconnect delays for the cloud connection: quick at first, then settling.
 public struct CloudEarBackoff: Sendable {
     public private(set) var attempt = 0
     public init() {}
@@ -72,11 +63,6 @@ public struct CloudEarBackoff: Sendable {
     public mutating func reset() { attempt = 0 }
 }
 
-/// When the cloud ear should be listening. Privacy first: by default the
-/// phone listens locally, and the cloud ear switches on only when something
-/// calls for accurate hearing (a person near, an alert, a flagged word, an
-/// SOS) and stays on for `holdSeconds` after the last reason. "Demo mode"
-/// keeps it on all the time so the full pipeline can be shown.
 public struct CloudEarGate: Sendable {
     public var holdSeconds: TimeInterval
     private var lastReason: TimeInterval = -.infinity
@@ -98,10 +84,6 @@ public struct CloudEarGate: Sendable {
     public mutating func reset() { lastReason = -.infinity }
 }
 
-/// Which recogniser's text may feed the conversation window and the AI
-/// judge. While the cloud ear is delivering, Apple's rougher text of the same
-/// sentence is skipped there (it still feeds code phrases, commands and
-/// distress words), so one sentence is never judged or counted twice.
 public struct TranscriptSourcePolicy: Sendable {
     public var cloudFreshSeconds: TimeInterval = 8
     private var lastCloud: TimeInterval = -.infinity
@@ -115,14 +97,12 @@ public struct TranscriptSourcePolicy: Sendable {
     }
 }
 
-/// Which recogniser produced a piece of text.
 public enum TranscriptSource: String, Sendable {
     case apple
     case cloud
 }
 
 public enum CloudEarURL {
-    /// The relay URL: the backend's address with the websocket scheme.
     public static func relay(from base: URL) -> URL? {
         guard var components = URLComponents(
             url: base.appendingPathComponent("asr"), resolvingAgainstBaseURL: false

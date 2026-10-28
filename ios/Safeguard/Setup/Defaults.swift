@@ -1,11 +1,5 @@
 import Foundation
 
-/// One home for every Settings default. Release builds are safe by
-/// default: every listening switch OFF except distress words (the on-device
-/// code phrases need no switch at all — they work with everything off).
-/// DEBUG keeps today's developer defaults so demos keep working.
-/// `values(debug:)` is the pure seam the tests pin; `current` picks by
-/// build configuration.
 public struct DefaultSet: Sendable, Equatable {
     public var listenerOptIn: Bool
     public var aiJudgeEnabled: Bool
@@ -31,14 +25,12 @@ public struct DefaultSet: Sendable, Equatable {
         self.debugLogEnabled = debugLogEnabled
     }
 
-    /// The release set, pinned by tests: only distress words on.
     public static let release = DefaultSet(
         listenerOptIn: false, aiJudgeEnabled: false, cloudEarEnabled: false,
         cloudEarAlwaysOn: false, distressWordsEnabled: true,
         shoutingTriggersSOS: false, recordOnSOS: false, debugLogEnabled: false
     )
 
-    /// Today's developer set (listener still opt-in, everything else on).
     public static let debug = DefaultSet(
         listenerOptIn: false, aiJudgeEnabled: true, cloudEarEnabled: true,
         cloudEarAlwaysOn: true, distressWordsEnabled: true,
@@ -59,9 +51,6 @@ public enum Defaults {
         #endif
     }
 
-    /// The detection overlay (gesture and expression labels, per-stage
-    /// timings) is ON in DEBUG builds so a developer sees what the vision
-    /// layer sees; OFF in release.
     public static var debugOverlayDefault: Bool {
         #if DEBUG
             true
@@ -70,10 +59,6 @@ public enum Defaults {
         #endif
     }
 
-    /// Start protecting when the app opens (camera already allowed, setup
-    /// done). A developer convenience in DEBUG; off in release because a
-    /// camera that starts by itself must be the wearer's own choice
-    /// (Settings → Listening → Start protecting when the app opens).
     public static var autoStartProtectingDefault: Bool {
         #if DEBUG
             true
@@ -82,10 +67,6 @@ public enum Defaults {
         #endif
     }
 
-    // MARK: - Owned UserDefaults keys
-
-    /// Every UserDefaults key the app writes. "Delete all my data" removes
-    /// exactly these; the test pins the list so new keys cannot be missed.
     public static let ownedKeys = [
         "onboardingSeen",
         "setupComplete",

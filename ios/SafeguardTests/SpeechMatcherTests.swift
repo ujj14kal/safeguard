@@ -1,13 +1,8 @@
 import AVFoundation
 import XCTest
 
-/// On-device speech matcher: threats flagged with the right category,
-/// ordinary talk (including substring traps) ignored, quotation/negation/
-/// benign-frame guards, and the /verify-speech edge gate. No audio, no keys.
 final class SpeechMatcherTests: XCTestCase {
     private let matcher = SpeechMatcher()
-
-    // MARK: - Flags
 
     func testExplicitThreat() {
         let found = matcher.match("I will kill you if you move")
@@ -33,7 +28,6 @@ final class SpeechMatcherTests: XCTestCase {
 
     func testAbuse() {
         let found = matcher.match("Shut up, nobody will help you")
-        // Strongest wins: the nobody-phrase outranks "shut up".
         XCTAssertEqual(found?.category, .abuse)
         XCTAssertEqual(found?.severity ?? 0, 0.85, accuracy: 1e-9)
     }
@@ -58,13 +52,11 @@ final class SpeechMatcherTests: XCTestCase {
         XCTAssertEqual(found?.wordIndex, 2)
     }
 
-    // MARK: - Ordinary talk stays silent
-
     func testOrdinaryConversationIgnored() {
         for line in [
             "What time is dinner tonight?",
             "I love this song, turn it up",
-            "The manager staged an image review", // image/manage/stage traps
+            "The manager staged an image review",
             "Did you manage to image the stage?",
             "Let's follow the recipe step by step",
         ] {
@@ -73,8 +65,6 @@ final class SpeechMatcherTests: XCTestCase {
     }
 
     func testBenignInvitationMatchesAndReliesOnBackend() {
-        // "Come with me to the shops" matches on-device; Muse's context +
-        // directed_at_wearer downgrades it. An accepted, documented gap.
         XCTAssertEqual(
             matcher.match("Come with me to the shops tomorrow?")?.category, .coercion
         )
@@ -83,7 +73,7 @@ final class SpeechMatcherTests: XCTestCase {
     func testWholeWordsOnly() {
         XCTAssertNil(matcher.match("shutup"))
         XCTAssertNil(matcher.match("killer whales are beautiful"))
-        XCTAssertNil(matcher.match("open calculators")) // code-phrase-shaped, not speech
+        XCTAssertNil(matcher.match("open calculators"))
     }
 
     func testEmptyTranscript() {
@@ -92,9 +82,6 @@ final class SpeechMatcherTests: XCTestCase {
     }
 
     func testOwnSpokenTextsMatchNothing() {
-        // The app never pauses the mic for TTS (the unsafe phrase must work
-        // at ANY time), so our own spoken texts must match no pattern and
-        // no code phrase — TTS echo can never trigger us.
         let safety = SafetyConfig()
         let phrases = CodePhraseMatcher(config: safety)
         XCTAssertNil(matcher.match(safety.askPhrase))
@@ -103,8 +90,6 @@ final class SpeechMatcherTests: XCTestCase {
         XCTAssertNil(phrases.match(safety.listeningCueText))
     }
 
-    // MARK: - Guards
-
     func testQuotationDiscounts() {
         let found = matcher.match("She said \"come with me\" loudly")
         XCTAssertEqual(found?.category, .coercion)
@@ -112,7 +97,6 @@ final class SpeechMatcherTests: XCTestCase {
     }
 
     func testQuotationNeedsBothMarks() {
-        // One stray quote is punctuation, not reported speech.
         let found = matcher.match("She said come with me\" loudly")
         XCTAssertEqual(found?.severity ?? 0, 0.9, accuracy: 1e-9)
     }
@@ -124,7 +108,6 @@ final class SpeechMatcherTests: XCTestCase {
     }
 
     func testDistressNeverNegationDiscounted() {
-        // "Don't touch me" is the wearer in danger, not a negated threat.
         for line in ["Don't touch me!", "Do not hurt me, please"] {
             let found = matcher.match(line)
             XCTAssertEqual(found?.category, .distress, line)
@@ -137,7 +120,6 @@ final class SpeechMatcherTests: XCTestCase {
     }
 
     func testBenignFrameMechanism() {
-        // Synthetic overlap proving containment-cancelling works.
         var config = SpeechConfig()
         config.patterns = [SpeechPattern(phrase: "battery", category: .abuse, severity: 1.0)]
         XCTAssertNil(SpeechMatcher(config: config).match("dead battery"))
@@ -160,8 +142,6 @@ final class SpeechMatcherTests: XCTestCase {
     }
 }
 
-/// /verify-speech edge gate: fires on strong speech, at most once per
-/// interval, so a continuous rant sends one snippet.
 final class SpeechVerifyGateTests: XCTestCase {
     func testFiresOnStrong() {
         var gate = SpeechVerifyGate(triggerSeverity: 0.7, minInterval: 30)
@@ -190,7 +170,6 @@ final class SpeechVerifyGateTests: XCTestCase {
     }
 }
 
-/// Hindi, Hinglish and cuss-word/anger tracking.
 final class HindiSpeechTests: XCTestCase {
     private let matcher = SpeechMatcher()
 
@@ -212,7 +191,6 @@ final class HindiSpeechTests: XCTestCase {
     }
 
     func testNuktaAndChandrabinduSpellingsMatch() {
-        // Recognisers write the same words with and without nukta/chandrabindu.
         XCTAssertNotNil(matcher.match("आवाज मत करना"))
         XCTAssertNotNil(matcher.match("आवाज़ मत करना"))
         XCTAssertNotNil(matcher.match("कहां जा रही है"))
@@ -288,7 +266,6 @@ final class HindiSpeechTests: XCTestCase {
     }
 }
 
-/// Bigger vocabulary, spelling tolerance and silent rating.
 final class VocabularyAndRatingTests: XCTestCase {
     private let matcher = SpeechMatcher()
 
@@ -347,7 +324,6 @@ final class VocabularyAndRatingTests: XCTestCase {
     }
 }
 
-/// The wearer walking toward a still person must not look like an approach.
 final class EgoMotionTests: XCTestCase {
     private let config = ThreatConfig()
 
@@ -527,7 +503,6 @@ final class HearingTests: XCTestCase {
     }
 
     func testHigherSensitivityHearsQuieterSpeech() {
-        // A faint voice at RMS 0.003 (about -50 dBFS).
         var normal = AutoGain(sensitivity: .normal)
         var high = AutoGain(sensitivity: .high)
         var max = AutoGain(sensitivity: .max)
@@ -565,12 +540,9 @@ final class HearingTests: XCTestCase {
 
     func testShoutNeedsSustainedLoudSound() {
         var d = LoudnessDetector()
-        // A single loud clap.
         XCTAssertFalse(d.feed(levelDB: -5, at: 0))
         XCTAssertFalse(d.feed(levelDB: -40, at: 0.05))
-        // A second of ordinary talking.
         for i in 0..<40 { XCTAssertFalse(d.feed(levelDB: -28, at: 1 + Double(i) * 0.025)) }
-        // Sustained shouting.
         var fired = false
         for i in 0..<60 where d.feed(levelDB: -10, at: 3 + Double(i) * 0.025) { fired = true }
         XCTAssertTrue(fired)
@@ -653,8 +625,6 @@ final class CloudEarSupportTests: XCTestCase {
         for i in 0..<4800 { buffer.floatChannelData![0][i] = sinf(Float(i) * 0.1) * 0.5 }
         let resampler = PCM16Resampler()
         var all: [Int16] = []
-        // A streaming converter holds back a few samples at first, so judge
-        // a second of audio, not a single buffer.
         for _ in 0..<10 { all += try XCTUnwrap(resampler.convert(buffer)) }
         XCTAssertEqual(Double(all.count), 16_000, accuracy: 400, "1 s at 16 kHz")
         XCTAssertGreaterThan(all.map { abs(Int($0)) }.max() ?? 0, 5000, "level is preserved")

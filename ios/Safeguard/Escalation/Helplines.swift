@@ -1,8 +1,5 @@
 import Foundation
 
-/// Indian emergency and women's helplines, and the Apple Maps searches for
-/// help nearby. The app never dials by itself: these only open the phone
-/// or Maps when the person taps.
 public enum Helplines {
     public struct Line: Equatable, Sendable {
         public let number: String
@@ -24,7 +21,6 @@ public enum Helplines {
         case hospital = "hospital"
     }
 
-    /// Opens Apple Maps with a search around the person's current location.
     public static func mapsURL(for place: Place) -> URL? {
         var components = URLComponents(string: "https://maps.apple.com/")
         components?.queryItems = [URLQueryItem(name: "q", value: place.rawValue)]

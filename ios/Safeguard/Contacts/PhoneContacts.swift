@@ -1,9 +1,6 @@
 import Contacts
 import Foundation
 
-/// One person from this phone's address book (name + first number).
-/// Read only to let the wearer pick trusted contacts; it stays on the
-/// phone.
 public struct PhoneContact: Identifiable, Equatable, Sendable {
     public let id: String
     public var name: String
@@ -16,10 +13,7 @@ public struct PhoneContact: Identifiable, Equatable, Sendable {
     }
 }
 
-/// Pure list helpers (search + order), pinned by tests.
 public enum PhoneContactList {
-    /// Contacts matching `query` in name or number, A to Z. Blank query
-    /// returns everyone.
     public static func filter(_ contacts: [PhoneContact], query: String) -> [PhoneContact] {
         let text = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         let digits = text.filter(\.isNumber)
@@ -35,8 +29,6 @@ public enum PhoneContactList {
     }
 }
 
-/// Address-book access. Asked with a reason first (the view shows it),
-/// never at launch.
 enum PhoneContactsAccess {
     static func status() -> PermissionStatus {
         switch CNContactStore.authorizationStatus(for: .contacts) {
@@ -56,7 +48,6 @@ enum PhoneContactsAccess {
         }
     }
 
-    /// Every contact that has a name, off the main thread.
     static func fetch() async -> [PhoneContact] {
         await Task.detached(priority: .userInitiated) {
             let store = CNContactStore()

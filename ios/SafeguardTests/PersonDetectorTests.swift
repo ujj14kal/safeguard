@@ -1,9 +1,6 @@
 import CoreVideo
 import XCTest
 
-/// Detector plumbing on synthetic frames (blank/strictly no-person input must
-/// yield no detections and never throw). Positive-path detection needs real
-/// footage and is covered by the Phase 8 replay tuning, not here.
 final class PersonDetectorTests: XCTestCase {
     func testBlankBlackImageFindsNobody() throws {
         let detector = PersonDetector()

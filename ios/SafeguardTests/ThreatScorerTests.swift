@@ -1,9 +1,6 @@
 import CoreGraphics
 import XCTest
 
-/// End-to-end behaviour scenarios through tracker + extractor + scorer on
-/// synthetic 5 Hz ticks: following, fast approach and cornering must alert;
-/// a normal crowd (and a passerby) must not.
 final class ThreatScorerTests: XCTestCase {
     private func frontalPose() -> BodyPose {
         BodyPose(
@@ -32,7 +29,6 @@ final class ThreatScorerTests: XCTestCase {
         )
     }
 
-    /// Drive ticks through a fresh pipeline; returns the final live scores.
     private func run(
         ticks: [(time: Double, people: [DetectedPerson])],
         config: ThreatConfig = ThreatConfig()
@@ -135,12 +131,7 @@ final class ThreatScorerTests: XCTestCase {
         XCTAssertTrue(reasons.contains("facing you"))
     }
 
-    // MARK: - Guards found by probing real-world cases
-
     func testStationaryFacingPersonDoesNotAlert() {
-        // A stranger standing still in front of you, alone, facing you, for 8 s,
-        // with ordinary box jitter. Presence-only features used to score
-        // 0.49-0.50 against the 0.50 threshold. It must now clear by a margin.
         let config = ThreatConfig()
         var ticks: [(Double, [DetectedPerson])] = []
         for step in 0..<40 {
@@ -154,8 +145,6 @@ final class ThreatScorerTests: XCTestCase {
     }
 
     func testNewPersonAppearingDoesNotAlertDuringFirstSecond() {
-        // Probe case: someone steps into the middle of view. Every prefix up
-        // to the minimum history must stay quiet.
         let config = ThreatConfig()
         for count in 2...5 {
             var ticks: [(Double, [DetectedPerson])] = []
@@ -178,12 +167,10 @@ final class ThreatScorerTests: XCTestCase {
         XCTAssertLessThanOrEqual(scorer.score(presenceOnly).value, config.staticScoreCap)
         XCTAssertFalse(scorer.score(presenceOnly).alert)
 
-        // Same features plus reappearing: the cap no longer applies.
         var reappeared = presenceOnly
         reappeared.reappearing = true
         XCTAssertGreaterThan(scorer.score(reappeared).value, config.staticScoreCap)
 
-        // Same features plus a real closing-in signal: not capped, and it alerts.
         var closing = presenceOnly
         closing.trend = 0.4
         closing.speed = 0.4
@@ -197,8 +184,6 @@ final class ThreatScorerTests: XCTestCase {
         XCTAssertGreaterThan(config.motionMin, 0)
         XCTAssertGreaterThanOrEqual(config.minTrendSamples, 2)
     }
-
-    // MARK: - Speech signal (additive; silent speech changes nothing)
 
     func testSilentSpeechLeavesValueIdentical() {
         let scorer = ThreatScorer()
@@ -219,7 +204,6 @@ final class ThreatScorerTests: XCTestCase {
     }
 
     func testSpeechPushesMovementOverThreshold() {
-        // Trend 1.0 scores 0.20 alone; full speech adds 0.30 -> 0.50 alert.
         let scored = ThreatScorer().score(PersonFeatures(trend: 1.0, speech: 1.0))
         XCTAssertEqual(scored.value, 0.5, accuracy: 1e-9)
         XCTAssertTrue(scored.alert)

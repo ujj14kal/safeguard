@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// Dashboard card: set "I'll be safe by…", or tap "I'm safe" when there.
 struct SafeArrivalCard: View {
     @StateObject private var store = SafeArrivalStore.shared
     @State private var minutes = 30

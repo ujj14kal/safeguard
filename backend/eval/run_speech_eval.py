@@ -1,10 +1,3 @@
-"""Scores the speech judge on labelled sentences.
-
-  python eval/run_speech_eval.py [--effort low] [--limit N]   (key from the environment)
-
-Reports unsafe-vs-safe accuracy (what the app acts on), a three-way confusion
-matrix, the misses, and latency. Uses the same prompt and client as the app.
-"""
 
 import argparse
 import json

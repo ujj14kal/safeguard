@@ -1,8 +1,5 @@
 import SwiftUI
 
-/// First-run setup: full-screen, blocking, resumable. The machine owns the
-/// step order and gating; this view owns the widgets. Closing mid-flow
-/// resumes at the same step; Settings can re-open it without deleting data.
 struct SetupFlowView: View {
     @AppStorage("setupStep") private var savedStep = SetupStep.welcome.rawValue
     @AppStorage("setupComplete") private var setupComplete = false
@@ -110,7 +107,6 @@ struct SetupFlowView: View {
 
     private func advance() {
         if machine.step == .account {
-            // Signing up filled the name; carry it to the next screen.
             name = model.wearerName
         }
         if machine.step == .name {
@@ -127,7 +123,6 @@ struct SetupFlowView: View {
     }
 }
 
-/// Step 1: what Safeguard does — and does NOT do.
 struct SetupWelcomeStep: View {
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.medium) {
@@ -158,7 +153,6 @@ struct SetupWelcomeStep: View {
     }
 }
 
-/// Step 2: the wearer's name for contact alerts.
 struct SetupNameStep: View {
     @Binding var name: String
 
@@ -183,7 +177,6 @@ struct SetupNameStep: View {
     }
 }
 
-/// Step 8: summary of what is on, off, and warned about.
 struct SetupDoneStep: View {
     @StateObject private var model = ProtectViewModel.shared
 

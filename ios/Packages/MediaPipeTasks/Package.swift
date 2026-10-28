@@ -1,11 +1,4 @@
 // swift-tools-version: 5.8
-//
-// A thin local wrapper around Google's prebuilt MediaPipe Tasks Vision
-// frameworks (Apache-2.0). It pins the exact xcframework zips (URL and
-// checksum, copied from google-ai-edge/mediapipe's own Package.swift) so
-// the build downloads about 100 MB of binaries instead of cloning the
-// whole MediaPipe repository. To update, copy the three url/checksum pairs
-// from https://github.com/google-ai-edge/mediapipe/blob/master/Package.swift
 import PackageDescription
 
 let package = Package(
@@ -41,11 +34,8 @@ let package = Package(
                 "MediaPipeTasksVision",
             ],
             linkerSettings: [
-                // -all_load keeps the C++ calculator registrations that the
-                // Apple linker would otherwise strip (same as upstream).
                 .unsafeFlags(["-Xlinker", "-all_load"]),
                 .linkedLibrary("c++"),
-                // The common binary contains a sqlite-backed vector store.
                 .linkedLibrary("sqlite3"),
                 .linkedFramework("Accelerate"),
                 .linkedFramework("AVFoundation"),

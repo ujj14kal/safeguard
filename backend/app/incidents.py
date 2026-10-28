@@ -1,11 +1,3 @@
-"""SOS incidents: share tokens, one alert burst, location trail.
-
-Incidents are kept in memory AND saved to a JSON file, so a backend restart
-in the middle of an SOS does not break the family's live link. Share links
-expire: an active incident's link stops working after `max_active_s`, and an
-ended incident's link `ttl_after_end_s` after it ended. The 500-point trail
-cap bounds memory per incident.
-"""
 
 import json
 import logging
@@ -45,11 +37,7 @@ class Incident:
     ended_at: float = 0
     alerted: bool = False
     end_sent: bool = False
-    # "sos" (alerts contacts) or "live" (a stream the person chose to share:
-    # nobody is messaged automatically).
     mode: str = "sos"
-    # Guardian code of the person watching over this wearer (normalised),
-    # or "". Incidents with one are kept longer so the guardian can review.
     guardian_code: str = ""
 
     def latest(self):
@@ -82,7 +70,6 @@ class IncidentStore:
         self._last_save = 0.0
         self._load()
 
-    # -- expiry ---------------------------------------------------------
 
     def expired(self, incident) -> bool:
         now = self._clock()
@@ -91,12 +78,11 @@ class IncidentStore:
             return now - incident.ended_at > keep
         return now - incident.created_at > self._max_active_s
 
-    # -- persistence ----------------------------------------------------
 
     def _load(self):
         if self._file is None:
             return
-        text = self._file.read()  # StorageUnavailable propagates
+        text = self._file.read()
         if text is None:
             return
         try:
@@ -120,8 +106,6 @@ class IncidentStore:
         self._by_token[incident.share_token] = incident
 
     def save(self, force=True):
-        """Writes all unexpired incidents. Location points call this with
-        force=False, which saves at most every few seconds."""
         if self._file is None:
             return
         now = self._clock()
@@ -156,9 +140,6 @@ class IncidentStore:
         self, session, wearer_name, contact_codes, test=False, dry_run=True, lang="en",
         share_token=None, mode="sos", guardian_code="",
     ):
-        """Creates an incident — unless this session already has an active
-        one, in which case the existing incident is returned and NO new
-        alert burst goes out. Returns (incident, fresh)."""
         existing = self._by_session.get(session)
         if existing is not None and existing.status == "active" and not self.expired(existing):
             return existing, False
@@ -183,7 +164,6 @@ class IncidentStore:
         return self._by_id.get(incident_id)
 
     def for_guardian(self, guardian_code):
-        """This guardian's unexpired incidents, newest first."""
         found = [
             incident for incident in self._by_id.values()
             if incident.guardian_code == guardian_code and not self.expired(incident)

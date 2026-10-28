@@ -1,7 +1,5 @@
 @preconcurrency import AVFoundation
 
-/// World-facing phone camera source. First-person use: phone in a chest or
-/// collar mount. Frames are BGRA pixel buffers delivered on a capture queue.
 final class PhoneCameraSource: NSObject, FrameSource {
     weak var delegate: (any FrameSourceDelegate)?
     var isRunning: Bool { session.isRunning }
@@ -14,7 +12,6 @@ final class PhoneCameraSource: NSObject, FrameSource {
 
     deinit { removeObservers() }
 
-    /// Exposed so SwiftUI can attach an AVCaptureVideoPreviewLayer.
     var captureSession: AVCaptureSession { session }
 
     static func requestPermission() async -> Bool {
@@ -63,9 +60,6 @@ final class PhoneCameraSource: NSObject, FrameSource {
         }
         session.addOutput(output)
 
-        // Deliver upright portrait buffers. Without this the back camera hands
-        // Vision landscape buffers even though the app is portrait-only, and
-        // detection would see people sideways. (The preview layer hides this.)
         if let connection = output.connection(with: .video),
            connection.isVideoRotationAngleSupported(90)
         {
@@ -83,9 +77,6 @@ final class PhoneCameraSource: NSObject, FrameSource {
         queue.async { session.stopRunning() }
     }
 
-    /// Protection must never look active when the camera is not delivering
-    /// frames: report runtime errors and interruptions (call, other app) so the
-    /// model stops and tells the user.
     private func addObservers() {
         removeObservers()
         let center = NotificationCenter.default

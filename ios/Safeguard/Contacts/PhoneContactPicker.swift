@@ -1,11 +1,7 @@
 import SwiftUI
 import UIKit
 
-/// Pick trusted contacts from this phone's address book. Access is asked
-/// here, with the reason shown first; the chosen person is saved (name and
-/// number, on this phone only) and an invite is created for them.
 struct PhoneContactPicker: View {
-    /// Called with the person and whether the wearer confirmed they agreed.
     let onPick: (PhoneContact, Bool) async -> Void
     let isAdded: (PhoneContact) -> Bool
 
@@ -39,7 +35,6 @@ struct PhoneContactPicker: View {
         }
         .task { if access == .granted { await load() } }
         .onChange(of: scenePhase) { _, phase in
-            // Back from Settings: re-check.
             if phase == .active {
                 let now = PhoneContactsAccess.status()
                 if now != access {
@@ -49,8 +44,6 @@ struct PhoneContactPicker: View {
             }
         }
     }
-
-    // MARK: States
 
     private var intro: some View {
         VStack(spacing: DS.Spacing.large) {
@@ -170,8 +163,6 @@ struct PhoneContactPicker: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel(added ? Text(format: "%@, already added", contact.name) : Text(verbatim: contact.name))
     }
-
-    // MARK: Actions
 
     private func load() async {
         loading = true
