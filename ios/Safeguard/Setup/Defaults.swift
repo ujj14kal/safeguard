@@ -59,13 +59,7 @@ public enum Defaults {
         #endif
     }
 
-    public static var autoStartProtectingDefault: Bool {
-        #if DEBUG
-            true
-        #else
-            false
-        #endif
-    }
+    public static let autoStartProtectingDefault = false
 
     public static let ownedKeys = [
         "onboardingSeen",
@@ -84,7 +78,7 @@ public enum Defaults {
         "shoutingTriggersSOS",
         "recordOnSOS",
         "debugLogEnabled",
-        "autoStartProtecting",
+        "autoStartProtectingOptIn",
         "listenSensitivity",
         "gesturesTriggerSOS",
         "guardianCode",

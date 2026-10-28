@@ -173,6 +173,8 @@ Meta's Muse models are the judgment layer. Fast, private checks run on the devic
 | Alerts | Telegram bot by webhook | Contact and guardian alerts with a live link, nearest-contact ranking |
 | Live and guardian pages | Server-rendered web pages, hls.js, Leaflet, signed media links | Live view, playback, trail map, evidence log |
 
+*Why Telegram?* This demo was built to keep the running cost at zero, so alerts go out through a Telegram bot, which is free. WhatsApp or SMS would be the ideal channel for a real deployment, because every contact already has them; the alert code is isolated in one module so the channel can be swapped without touching detection or recording.
+
 ```mermaid
 flowchart LR
   G[Meta glasses: eyes, ears, voice] <-->|sync| P[Phone: hub]

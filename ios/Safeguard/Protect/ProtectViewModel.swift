@@ -216,6 +216,7 @@ final class ProtectViewModel: ObservableObject {
     }
 
     func startCamera() async {
+        guard !isStarting, state == .idle else { return }
         errorMessage = nil
         isStarting = true
         guard await PhoneCameraSource.requestPermission() else {

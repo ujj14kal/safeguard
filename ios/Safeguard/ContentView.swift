@@ -9,7 +9,7 @@ struct ContentView: View {
     @StateObject private var account = AccountStore.shared
     @StateObject private var safeArrival = SafeArrivalStore.shared
     @StateObject private var protection = ProtectViewModel.shared
-    @AppStorage("autoStartProtecting") private var autoStart = Defaults.autoStartProtectingDefault
+    @AppStorage("autoStartProtectingOptIn") private var autoStart = Defaults.autoStartProtectingDefault
     @State private var autoStartTried = false
     @Environment(\.scenePhase) private var scenePhase
     private let tick = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
@@ -80,7 +80,7 @@ struct ContentView: View {
         else { return }
         autoStartTried = true
         try? await Task.sleep(for: .milliseconds(3900))
-        guard !protection.isProtecting else { return }
+        guard !protection.isProtecting, scenePhase == .active else { return }
         await protection.startCamera()
     }
 

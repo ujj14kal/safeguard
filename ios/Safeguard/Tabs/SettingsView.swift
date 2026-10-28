@@ -9,7 +9,7 @@ struct SettingsView: View {
     @AppStorage(ListenSensitivity.key) private var listenSensitivity = ListenSensitivity.defaultLevel.rawValue
     @State private var showingAccount = false
     @State private var confirmDeleteAccount = false
-    @AppStorage("autoStartProtecting") private var autoStartProtecting = Defaults.autoStartProtectingDefault
+    @AppStorage("autoStartProtectingOptIn") private var autoStartProtecting = Defaults.autoStartProtectingDefault
     @AppStorage(VerifierConfig.backendURLDefaultsKey) private var backendURL = ""
     @AppStorage("speechLanguage") private var speechLanguage = "auto"
     @AppStorage("cloudEarAlwaysOn") private var cloudEarAlwaysOn = Defaults.current.cloudEarAlwaysOn
