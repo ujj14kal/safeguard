@@ -6,7 +6,7 @@ public struct UnwantedGestureCounter: Sendable {
         case exceeded(total: Int)
     }
 
-    public var minFrames = 3
+    public var minFrames = 2
     public var gapSeconds: TimeInterval = 1.0
     public var windowSeconds: TimeInterval = 120
     public var limit = 5

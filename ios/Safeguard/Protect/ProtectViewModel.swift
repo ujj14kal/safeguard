@@ -349,7 +349,10 @@ final class ProtectViewModel: ObservableObject {
         guard isProtecting else { return }
         cueLine = cues.summary
         for gesture in cues.gestures where gesture.kind != .other {
-            logCue("gesture", kind: gesture.kind.rawValue, score: gesture.score, at: time, every: 1.5)
+            logCue(
+                "gesture", kind: gesture.kind.rawValue, score: gesture.score, at: time,
+                every: gesture.isHostile ? 0.2 : 1.5
+            )
         }
         if let expression = cues.expression, expression.kind != .neutral, expression.score >= 0.45 {
             logCue("expression", kind: expression.kind.rawValue, score: expression.score, at: time, every: 2)

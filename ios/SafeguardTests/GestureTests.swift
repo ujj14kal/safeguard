@@ -210,7 +210,7 @@ final class UnwantedGestureCounterTests: XCTestCase {
 
     func testTooFewFramesDoNotCount() {
         var c = UnwantedGestureCounter()
-        XCTAssertEqual(episode(&c, start: 0, frames: 2), [])
+        XCTAssertEqual(episode(&c, start: 0, frames: 1), [])
         XCTAssertEqual(c.total, 0)
     }
 
