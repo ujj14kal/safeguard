@@ -234,11 +234,6 @@ def _km_text(km: float, lang: str) -> str:
 
 
 def nearest_notes(contacts, pin, lang="en", now=None, max_age_s=12 * 3600) -> dict:
-    """One line per linked contact saying how close they are to the wearer.
-
-    Only contacts who shared a location recently count. The nearest is told
-    so; the others are told how far the nearest is and how far they are.
-    """
     if pin is None:
         return {}
     now = now if now is not None else datetime.now(timezone.utc).timestamp()

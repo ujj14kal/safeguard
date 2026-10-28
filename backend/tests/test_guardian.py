@@ -321,3 +321,142 @@ def test_sos_alert_includes_the_nearest_note(api):
     texts = {l["chat_id"]: l["text"] for l in lines if l["kind"] == "text"}
     assert "You appear to be the nearest contact" in texts[1]
     assert "The nearest contact is about" in texts[2]
+
+
+SHOT = b"\xff\xd8\xff\xe0" + b"j" * 64 + b"\xff\xd9"
+
+
+def _item(type_, text, rating="possible", t=None, **extra):
+    return {"type": type_, "text": text, "rating": rating, "t": t or time.time(), **extra}
+
+
+def _post_items(api, incident_id, items):
+    return api.post(f"/incident/{incident_id}/items", json={"items": items})
+
+
+def test_names_are_rated_possible_or_strongly_possible():
+    from app.muse import clean_names
+
+    names = clean_names([
+        {"name": "Rahul", "confidence": 0.9},
+        {"name": "meera", "confidence": 0.4},
+        {"name": "rahul", "confidence": 0.5},
+        {"name": "B4d!", "confidence": 0.9},
+        {"name": "Priya", "confidence": "high"},
+        "nonsense",
+    ])
+    assert names == [
+        {"name": "Rahul", "rating": "strongly possible"},
+        {"name": "Meera", "rating": "possible"},
+    ]
+    assert clean_names(None) == []
+
+
+def test_speech_verdict_carries_names_through_the_endpoint(api, monkeypatch):
+    import json as _json
+
+    verdict = {
+        "severity": "low", "categories": [], "directed_at_wearer": False, "reason": "Casual talk.",
+        "names": [{"name": "Asha", "confidence": 0.8}],
+    }
+    class R:
+        status_code = 200
+        text = _json.dumps({"choices": [{"message": {"content": _json.dumps(verdict)}}]})
+    monkeypatch.setattr("app.muse.httpx.post", lambda *a, **k: R())
+    monkeypatch.setattr(main._muse_client, "api_key", "k" * 8)
+    out = api.post("/verify-speech", json={"snippet": "hey Asha wait"}).json()
+    assert out["names"] == [{"name": "Asha", "rating": "strongly possible"}]
+
+
+def test_items_merge_and_the_guardian_sees_them_with_screenshots(api):
+    code = new_code(api)
+    res = start(api, guardian_code=code)
+    iid = res["id"]
+    seed(api, "sos-abcdef12", {"shot-00001.jpg": SHOT})
+    now = time.time()
+    out = _post_items(api, iid, [
+        _item("plate", "mh 12 ab 1234", t=now - 30),
+        _item("name", "Rahul", "strongly possible", t=now - 20, source="Rahul, wait"),
+        _item("gesture", "Obscene hand gesture", "strongly possible", t=now - 10, shot="shot-00001.jpg"),
+        _item("name", "<script>", t=now),
+    ])
+    assert out.status_code == 200 and out.json()["stored"] == 3
+    again = _post_items(api, iid, [_item("plate", "MH12 AB1234", "strongly possible", t=now - 5)])
+    assert again.json()["total"] == 3
+    detail = api.get(f"/guardian/api/incidents/{iid}", headers={"X-Guardian-Code": code}).json()
+    kinds = [i["type"] for i in detail["items"]]
+    assert kinds == ["plate", "name", "gesture"]
+    gesture = detail["items"][2]
+    assert gesture["shot_url"].startswith("/guardian/media/")
+    served = api.get(gesture["shot_url"])
+    assert served.status_code == 200 and served.content == SHOT
+    assert served.headers["content-type"] == "image/jpeg"
+    plate = detail["items"][0]
+    assert plate["text"] == "MH 12 AB 1234" and plate["count"] == 2
+    assert plate["rating"] == "strongly possible", "a second sighting upgrades the rating"
+
+
+def test_item_validation_and_unknown_incident(api):
+    assert _post_items(api, "nope", [_item("plate", "MH12AB1234")]).status_code == 404
+    res = start(api, guardian_code=new_code(api))
+    bad = api.post(f"/incident/{res['id']}/items", json={"items": [{"type": "email", "text": "x", "rating": "possible", "t": 1}]})
+    assert bad.status_code == 422
+    assert api.post(f"/incident/{res['id']}/items", json={"items": [_item("gesture", "x", shot="../etc.jpg")]}).status_code == 422
+
+
+def test_guardian_can_ask_muse_about_a_screenshot(api, monkeypatch):
+    code = new_code(api)
+    iid = start(api, guardian_code=code)["id"]
+    seed(api, "sos-abcdef12", {"shot-00001.jpg": SHOT})
+    _post_items(api, iid, [_item("gesture", "Obscene hand gesture", shot="shot-00001.jpg")])
+    seen = {}
+
+    def fake_ask(image_b64, question):
+        seen["q"] = question
+        return "A raised hand gesture directed at the camera.", 1.2
+
+    monkeypatch.setattr(main._muse_client, "ask_about_image", fake_ask)
+    monkeypatch.setattr(main, "_ask_limiters", {})
+    headers = {"X-Guardian-Code": code}
+    ok = api.post(f"/guardian/api/incidents/{iid}/ask", headers=headers,
+                  json={"shot": "shot-00001.jpg", "question": "What is happening here?"})
+    assert ok.status_code == 200 and "raised hand" in ok.json()["answer"]
+    assert seen["q"] == "What is happening here?"
+    other = api.post(f"/guardian/api/incidents/{iid}/ask", headers=headers,
+                     json={"shot": "shot-00002.jpg", "question": "What is happening here?"})
+    assert other.status_code == 404
+    wrong = api.post(f"/guardian/api/incidents/{iid}/ask", headers={"X-Guardian-Code": "AAAA-AAAA-AAAA"},
+                     json={"shot": "shot-00001.jpg", "question": "What is happening here?"})
+    assert wrong.status_code == 403
+
+
+def test_ask_is_rate_limited_and_survives_muse_outages(api, monkeypatch):
+    from app.muse import MuseError
+
+    code = new_code(api)
+    iid = start(api, guardian_code=code)["id"]
+    seed(api, "sos-abcdef12", {"shot-00001.jpg": SHOT})
+    _post_items(api, iid, [_item("gesture", "Obscene hand gesture", shot="shot-00001.jpg")])
+    monkeypatch.setattr(main, "_ask_limiters", {})
+    headers = {"X-Guardian-Code": code}
+    body = {"shot": "shot-00001.jpg", "question": "What is happening here?"}
+
+    def down(image_b64, question):
+        raise MuseError("boom")
+
+    monkeypatch.setattr(main._muse_client, "ask_about_image", down)
+    assert api.post(f"/guardian/api/incidents/{iid}/ask", headers=headers, json=body).status_code == 503
+    monkeypatch.setattr(main._muse_client, "ask_about_image", lambda i, q: ("Unclear.", 0.5))
+    codes = [api.post(f"/guardian/api/incidents/{iid}/ask", headers=headers, json=body).status_code for _ in range(8)]
+    assert 429 in codes
+
+
+def test_ask_prompt_forbids_appearance_and_accusations():
+    from app.muse import ASK_SYSTEM_PROMPT, parse_answer
+
+    assert "NEVER describe or guess appearance" in ASK_SYSTEM_PROMPT
+    assert parse_answer('{"choices":[{"message":{"content":" A hand is raised. "}}]}') == "A hand is raised."
+    import pytest as _pytest
+    from app.muse import MuseError
+    with _pytest.raises(MuseError):
+        parse_answer('{"choices":[{"message":{"content":"  "}}]}')

@@ -358,3 +358,21 @@ final class DeviceRegistrarTests: XCTestCase {
         }
     }
 }
+
+final class DeviceRegistrarMemoryTests: XCTestCase {
+    private final class BrokenKeychain: SecretStore, @unchecked Sendable {
+        func read(_ key: String) -> Data? { nil }
+        func write(_ data: Data, for key: String) {}
+        func remove(_ key: String) {}
+    }
+
+    func testTokenSurvivesAKeychainThatCannotStoreIt() async {
+        let registrar = DeviceRegistrar(secrets: BrokenKeychain(), fetch: { _ in "d1.mem.token" })
+        let url = URL(string: "https://example.test")!
+        let token = await registrar.ensure(baseURL: url)
+        XCTAssertEqual(token, "d1.mem.token")
+        XCTAssertEqual(registrar.current, "d1.mem.token", "requests still carry the token")
+        _ = await registrar.renew(baseURL: url)
+        XCTAssertEqual(registrar.current, "d1.mem.token")
+    }
+}

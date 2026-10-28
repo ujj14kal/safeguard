@@ -33,7 +33,7 @@ def test_happy_path(client, monkeypatch):
     monkeypatch.setattr("app.muse.httpx.post", good_post)
     response = client.post("/verify-speech", json=speech_request())
     assert response.status_code == 200
-    assert response.json() == speech_verdict()
+    assert response.json() == {**speech_verdict(), "names": []}
 
 
 def test_snippet_reaches_muse_prompt(client, monkeypatch):

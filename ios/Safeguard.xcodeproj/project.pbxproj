@@ -7,6 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D39659D74D79F40609BE715C /* EvidenceLogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D397BBD345D2FD8DDB3472B0 /* EvidenceLogTests.swift */; };
+		D499DE39ACE986A39D5830EA /* EvidenceLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = D38D7849D29499C69544F690 /* EvidenceLog.swift */; };
+		D3B03B2CDB77DE7F5FCEB137 /* EvidenceLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = D38D7849D29499C69544F690 /* EvidenceLog.swift */; };
+		D3A3D0F0343E8F434EAF4EA1 /* PlateScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3B687A049B5B9E7791A0E8C /* PlateScanner.swift */; };
+		D4FCA66BCED8B4FE5913C6A2 /* PlateText.swift in Sources */ = {isa = PBXBuildFile; fileRef = D39AF4E20C2CA91B0C14FE02 /* PlateText.swift */; };
+		D3A5C67312796DDA72707563 /* PlateText.swift in Sources */ = {isa = PBXBuildFile; fileRef = D39AF4E20C2CA91B0C14FE02 /* PlateText.swift */; };
 		D459F5CD6907773507B3E293 /* DeviceToken.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3961D28590FE43BD3E6078B /* DeviceToken.swift */; };
 		D3780A4F0F813074557747B8 /* DeviceToken.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3961D28590FE43BD3E6078B /* DeviceToken.swift */; };
 		D497E6394908CE42D9E3C6E5 /* SafeArrival.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3D0E28C7FAF5E07E8FE7E99 /* SafeArrival.swift */; };
@@ -201,6 +207,10 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		D397BBD345D2FD8DDB3472B0 /* EvidenceLogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EvidenceLogTests.swift; sourceTree = "<group>"; };
+		D38D7849D29499C69544F690 /* EvidenceLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EvidenceLog.swift; sourceTree = "<group>"; };
+		D3B687A049B5B9E7791A0E8C /* PlateScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlateScanner.swift; sourceTree = "<group>"; };
+		D39AF4E20C2CA91B0C14FE02 /* PlateText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlateText.swift; sourceTree = "<group>"; };
 		D3961D28590FE43BD3E6078B /* DeviceToken.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceToken.swift; sourceTree = "<group>"; };
 		D38D6968BA3CF8BB09AF21AB /* SafeArrivalTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafeArrivalTests.swift; sourceTree = "<group>"; };
 		D3921C40EE6AFB671043C0CC /* SafeArrivalCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafeArrivalCard.swift; sourceTree = "<group>"; };
@@ -493,6 +503,8 @@
 		A10000000000000000000019 /* Detection */ = {
 			isa = PBXGroup;
 			children = (
+				D3B687A049B5B9E7791A0E8C /* PlateScanner.swift */,
+				D39AF4E20C2CA91B0C14FE02 /* PlateText.swift */,
 				D3AA48741B5CCBBCA91B37A8 /* UnwantedGestureCounter.swift */,
 				D3535E2B9271729BAE77DC1E /* MediaPipeCueEngine.swift */,
 				D3ACE305E7487346F8006686 /* LatencyMeter.swift */,
@@ -512,6 +524,7 @@
 		B20000000000000000000004 /* SafeguardTests */ = {
 			isa = PBXGroup;
 			children = (
+				D397BBD345D2FD8DDB3472B0 /* EvidenceLogTests.swift */,
 				D38D6968BA3CF8BB09AF21AB /* SafeArrivalTests.swift */,
 				D3B16841A4B9979C608B7715 /* HLSEvidenceTests.swift */,
 				D3A701056CD4995ADA43C998 /* VerifierClientTests.swift */,
@@ -620,6 +633,7 @@
 /* End PBXGroup section */		A1000000000000000000001A /* Verify */ = {
 			isa = PBXGroup;
 			children = (
+				D38D7849D29499C69544F690 /* EvidenceLog.swift */,
 				D309FD7CEB8085DEB8145B55 /* EvidenceCapture.swift */,
 				D312B8976E680E118AD66268 /* HLSEvidenceRecorder.swift */,
 				A1000000000000000000003C /* VerifierGate.swift */,
@@ -741,6 +755,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D3B03B2CDB77DE7F5FCEB137 /* EvidenceLog.swift in Sources */,
+				D3A3D0F0343E8F434EAF4EA1 /* PlateScanner.swift in Sources */,
+				D3A5C67312796DDA72707563 /* PlateText.swift in Sources */,
 				D3780A4F0F813074557747B8 /* DeviceToken.swift in Sources */,
 				D39469BD09733DA2546BA383 /* SafeArrivalCard.swift in Sources */,
 				D383E748C6D166B65CE5CD65 /* SafeArrival.swift in Sources */,
@@ -846,6 +863,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D39659D74D79F40609BE715C /* EvidenceLogTests.swift in Sources */,
+				D499DE39ACE986A39D5830EA /* EvidenceLog.swift in Sources */,
+				D4FCA66BCED8B4FE5913C6A2 /* PlateText.swift in Sources */,
 				D459F5CD6907773507B3E293 /* DeviceToken.swift in Sources */,
 				D497E6394908CE42D9E3C6E5 /* SafeArrival.swift in Sources */,
 				D307FA4B92131C79DC7B6CBB /* SafeArrivalTests.swift in Sources */,

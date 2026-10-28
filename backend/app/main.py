@@ -37,6 +37,7 @@ from .contacts import (
 from . import hls
 from .incidents import IncidentStore
 from .links import ChannelStore, GuardianStore, normalize_code
+from .muse import _NAME_RE as _NAME_PATTERN
 from .muse import MuseClient, MuseError
 from .notify import (
     TELEGRAM_API,
@@ -387,6 +388,7 @@ class SpeechVerifyResponse(BaseModel):
     categories: list[str]
     directed_at_wearer: bool
     reason: str
+    names: list[dict] = []
 
 
 @app.post("/verify-speech", response_model=SpeechVerifyResponse)
@@ -416,6 +418,7 @@ def verify_speech(
         categories=verdict["categories"],
         directed_at_wearer=verdict["directed_at_wearer"],
         reason=verdict["reason"],
+        names=verdict.get("names", []),
     )
 
 
@@ -471,7 +474,7 @@ def log_call(
 
 
 _SESSION_RE = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
-_EVIDENCE_KINDS = {"video": {"mp4"}, "audio": {"m4a"}, "init": {"mp4"}, "seg": {"m4s"}}
+_EVIDENCE_KINDS = {"video": {"mp4"}, "audio": {"m4a"}, "init": {"mp4"}, "seg": {"m4s"}, "shot": {"jpg"}}
 
 
 _evidence_backend: EvidenceBackend | None = None
@@ -951,6 +954,58 @@ def incident_location(
         incident_id, body.lat, body.lon, accuracy=body.accuracy, ts=body.ts
     )
     return {"stored": len(incident.points)}
+
+
+_SHOT_RE = r"^shot-\d{5}\.jpg$"
+_PLATE_RE = re.compile(r"^[A-Z0-9][A-Z0-9 ]{4,12}[A-Z0-9]$")
+
+
+class EvidenceItem(BaseModel):
+    type: str = Field(pattern="^(name|plate|gesture)$")
+    text: str = Field(min_length=1, max_length=60)
+    rating: str = Field(pattern="^(possible|strongly possible)$")
+    t: float
+    source: str | None = Field(default=None, max_length=160)
+    shot: str | None = Field(default=None, pattern=_SHOT_RE)
+    count: int = Field(default=1, ge=1, le=50)
+
+
+class EvidenceItemsBody(BaseModel):
+    items: list[EvidenceItem] = Field(max_length=40)
+
+
+def _clean_item(item: EvidenceItem) -> dict | None:
+    text = " ".join("".join(c for c in item.text if c.isprintable()).split())
+    if item.type == "plate":
+        text = text.upper()
+        if not _PLATE_RE.match(text):
+            return None
+    elif item.type == "name" and not _NAME_PATTERN.match(text):
+        return None
+    if not text:
+        return None
+    now = time.time()
+    t = item.t if now - 86400 <= item.t <= now + 300 else now
+    cleaned = {"type": item.type, "text": text, "rating": item.rating, "t": t, "count": item.count}
+    if item.source:
+        cleaned["source"] = " ".join(item.source.split())
+    if item.shot:
+        cleaned["shot"] = item.shot
+    return cleaned
+
+
+@app.post("/incident/{incident_id}/items")
+def incident_items(
+    incident_id: str,
+    body: EvidenceItemsBody,
+    x_safeguard_token: str | None = Header(default=None),
+) -> dict:
+    require_app_token(x_safeguard_token)
+    cleaned = [c for c in (_clean_item(i) for i in body.items) if c]
+    incident = get_incidents().upsert_items(incident_id, cleaned)
+    if incident is None:
+        raise HTTPException(status_code=404, detail="no such incident")
+    return {"stored": len(cleaned), "total": len(incident.items)}
 
 
 @app.post("/incident/{incident_id}/end")
@@ -1520,6 +1575,7 @@ def _guardian_summary(incident, files=None) -> dict:
             e["bytes"] for e in files if hls.is_hls_name(e["name"])
         ),
         "continuous": _hls_info(incident, files) is not None,
+        "evidence_items": len(incident.items),
     }
 
 
@@ -1563,7 +1619,52 @@ def guardian_incident(
     ]
     info = _hls_info(incident, files)
     detail["hls"] = info and {**info, "url": _signed_media_url(incident.id, PLAYLIST_NAME)}
+    present = {entry["name"] for entry in files}
+    detail["items"] = [
+        {**item, "shot_url": _signed_media_url(incident.id, item["shot"])}
+        if item.get("shot") in present else {k: v for k, v in item.items() if k != "shot"}
+        for item in incident.items
+    ]
     return detail
+
+
+_ask_limiters: dict[str, RateLimiter] = {}
+_ask_global_limiter = RateLimiter(60, 3600.0)
+
+
+class AskBody(BaseModel):
+    shot: str = Field(pattern=_SHOT_RE)
+    question: str = Field(min_length=3, max_length=300)
+
+
+@app.post("/guardian/api/incidents/{incident_id}/ask")
+def guardian_ask(
+    incident_id: str,
+    body: AskBody,
+    request: Request,
+    x_guardian_code: str | None = Header(default=None),
+) -> dict:
+    code = _guardian_from_header(request, x_guardian_code)
+    incident = get_incidents().get(incident_id)
+    if incident is None or incident.guardian_code != code:
+        raise HTTPException(status_code=404, detail="no such incident")
+    if body.shot not in {item.get("shot") for item in incident.items}:
+        raise HTTPException(status_code=404, detail="no such moment")
+    per_ip = _ask_limiters.setdefault(_client_ip(request), RateLimiter(6, 60.0))
+    if not per_ip.allow() or not _ask_global_limiter.allow():
+        raise HTTPException(status_code=429, detail="too many questions, wait a minute")
+    data = get_evidence().read(incident.session, body.shot)
+    if data is None:
+        raise HTTPException(status_code=404, detail="no such moment")
+    try:
+        answer, latency = _muse_client.ask_about_image(
+            base64.b64encode(data).decode(), " ".join(body.question.split())
+        )
+    except MuseError as exc:
+        logger.warning("Muse ask failed: %s", exc)
+        raise HTTPException(status_code=503, detail="Muse is unavailable right now")
+    logger.info("guardian ask answered ms=%d", int(latency * 1000))
+    return {"answer": answer, "latency_ms": round(latency * 1000)}
 
 
 @app.get("/guardian/media/{incident_id}/{name}")
@@ -1577,7 +1678,7 @@ def guardian_media(incident_id: str, name: str, request: Request, exp: int = 0, 
         return _hls_playlist_response(
             incident, lambda n: _signed_media_url(incident.id, n)
         )
-    media = hls.media_type(name)
+    media = "image/jpeg" if re.match(_SHOT_RE, name) else hls.media_type(name)
     if media is None:
         raise HTTPException(status_code=404, detail="no such recording")
     served = get_evidence().response(

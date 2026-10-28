@@ -58,6 +58,14 @@ public struct IncidentClient: Sendable {
         return config().authorize(request)
     }
 
+    public func postItems(incidentID: String, items: [[String: Any]]) async throws {
+        let request = try post("incident/\(incidentID)/items", json: ["items": items])
+        let (_, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+            throw VerifierError.invalidResponse("items not stored")
+        }
+    }
+
     private struct StartBody: Decodable {
         var id: String
         var share_token: String

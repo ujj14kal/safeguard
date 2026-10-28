@@ -1,14 +1,12 @@
 import Foundation
 
-/// Each install gets its own signed token from the backend on first launch,
-/// so no shared secret ships in the app or the repository. The token lives
-/// in the Keychain and is replaced automatically if the server rejects it.
 public actor DeviceRegistrar {
     public static let shared = DeviceRegistrar()
     static let key = "device.token"
 
     private let secrets: SecretStore
     private let fetch: @Sendable (URL) async -> String?
+    private let memory = MemoryToken()
     private var inFlight: Task<String?, Never>?
 
     public init(
@@ -20,15 +18,16 @@ public actor DeviceRegistrar {
     }
 
     public nonisolated var current: String? {
-        secrets.read(Self.key).flatMap { String(data: $0, encoding: .utf8) }
+        memory.value ?? secrets.read(Self.key).flatMap { String(data: $0, encoding: .utf8) }
     }
 
     @discardableResult
     public func ensure(baseURL: URL) async -> String? {
         if let existing = current { return existing }
         if let task = inFlight { return await task.value }
-        let task = Task { [fetch, secrets] () -> String? in
+        let task = Task { [fetch, secrets, memory] () -> String? in
             guard let token = await fetch(baseURL), !token.isEmpty else { return nil }
+            memory.value = token
             secrets.write(Data(token.utf8), for: Self.key)
             return token
         }
@@ -39,6 +38,7 @@ public actor DeviceRegistrar {
     }
 
     public func renew(baseURL: URL) async -> String? {
+        memory.value = nil
         secrets.remove(Self.key)
         return await ensure(baseURL: baseURL)
     }
@@ -53,5 +53,15 @@ public actor DeviceRegistrar {
         else { return nil }
         struct Body: Decodable { var token: String }
         return (try? JSONDecoder().decode(Body.self, from: data))?.token
+    }
+}
+
+private final class MemoryToken: @unchecked Sendable {
+    private let lock = NSLock()
+    private var token: String?
+
+    var value: String? {
+        get { lock.withLock { token } }
+        set { lock.withLock { token = newValue } }
     }
 }

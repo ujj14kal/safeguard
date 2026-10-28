@@ -294,6 +294,30 @@ _GUARDIAN_PAGE = """<!DOCTYPE html>
           background:#120d18; border-radius:14px; margin:10px 0; }
   .seg { display:flex; justify-content:space-between; font-size:13px; color:var(--muted);
          padding:6px 0; border-top:1px solid rgba(255,255,255,.06); }
+  .log { width:100%; border-collapse:collapse; font-size:13px; }
+  .log th { text-align:left; color:var(--muted); font-weight:600; padding:6px 6px 8px 0;
+            border-bottom:1px solid rgba(255,255,255,.1); }
+  .log td { padding:10px 6px 10px 0; vertical-align:top; border-bottom:1px solid rgba(255,255,255,.05); }
+  .log td:last-child, .log th:last-child { padding-right:0; text-align:right; }
+  .tag { display:inline-block; padding:2px 9px; border-radius:999px; font-size:11px; font-weight:700;
+         background:#2c2536; color:#cfc8dc; }
+  .tag.plate { background:#1f3a4d; color:#a9d6f5; }
+  .tag.name { background:#3b2b4d; color:#d9b8f2; }
+  .tag.gesture { background:#4d2b2b; color:#f5b8b8; }
+  .strong { background:#3d2a14; color:#ffcf8a; }
+  .thumb { width:110px; border-radius:10px; display:block; }
+  .shotbox { display:flex; gap:12px; align-items:flex-start; }
+  .shotside { flex:1; min-width:0; }
+  .src { color:var(--muted); font-size:12px; margin-top:3px; }
+  .ask { margin-top:8px; padding:10px; border-radius:12px; background:#120d18; }
+  .ask textarea { width:100%; min-height:52px; padding:10px; border-radius:10px; font-size:14px;
+                  border:1px solid rgba(255,255,255,.15); background:#0c0911; color:var(--text);
+                  font-family:inherit; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
+  .chip { padding:6px 10px; border-radius:999px; font-size:12px; margin:0; font-weight:600;
+          background:transparent; border:1px solid rgba(255,255,255,.2); }
+  .answer { font-size:14px; line-height:1.4; margin:8px 0 0; }
+  .muted { color:var(--muted); font-size:12px; }
   a { color:var(--accent); }
   .hidden { display:none; }
 </style>
@@ -344,6 +368,11 @@ _GUARDIAN_PAGE = """<!DOCTYPE html>
       <div class="row"><button id="playAll">Play all in order</button></div>
       <div id="videos"></div>
     </div>
+    <div class="card" id="logCard">
+      <h2>Evidence log</h2>
+      <p class="sub">Names heard, vehicle number plates and gesture moments during this incident. Every entry is rated &ldquo;possible&rdquo; or &ldquo;strongly possible&rdquo;, never certain.</p>
+      <div id="logBody"></div>
+    </div>
     <div class="card" id="audioCard">
       <h2>Audio</h2>
       <audio id="audioPlayer" controls></audio>
@@ -376,6 +405,66 @@ async function api(path) {
   if (res.status === 429) throw new Error("Too many tries. Wait a minute.");
   if (!res.ok) throw new Error("Something went wrong (" + res.status + ").");
   return res.json();
+}
+
+const CHIPS = ["What is happening here?", "Is this aimed at the wearer?", "What is in the hands?"];
+
+function fmtClock(ts) { return new Date(ts * 1000).toLocaleTimeString(); }
+function label(type) { return type === "plate" ? "Plate" : type === "name" ? "Name" : "Gesture"; }
+
+function renderLog(items, incidentId) {
+  const box = $("logBody");
+  if (!items || !items.length) {
+    box.innerHTML = '<p class="sub">Nothing captured yet. Names, plates and gesture moments appear here during an SOS.</p>';
+    return;
+  }
+  let html = '<table class="log"><tr><th>Time</th><th>Type</th><th>Detail</th><th>Confidence</th></tr>';
+  items.forEach((item, index) => {
+    html += '<tr><td>' + fmtClock(item.t) + '</td><td><span class="tag ' + item.type + '">' + label(item.type) + '</span></td><td>' +
+      '<b>' + escapeHtml(item.text) + '</b>' +
+      (item.count > 1 ? ' <span class="muted">seen ' + item.count + ' times</span>' : '') +
+      (item.source ? '<div class="src">&ldquo;' + escapeHtml(item.source) + '&rdquo;</div>' : '') +
+      '</td><td><span class="tag ' + (item.rating === "strongly possible" ? "strong" : "") + '">' + escapeHtml(item.rating) + '</span></td></tr>';
+    if (item.shot_url) {
+      html += '<tr class="shotrow"><td colspan="4" style="text-align:left"><div class="shotbox">' +
+        '<a href="' + item.shot_url + '" target="_blank"><img class="thumb" src="' + item.shot_url + '" alt="Captured moment"></a>' +
+        '<div class="shotside"><button class="alt chip" data-ask="' + index + '">Ask Muse about this moment</button>' +
+        '<div id="ask' + index + '"></div></div></div></td></tr>';
+    }
+  });
+  box.innerHTML = html + '</table>';
+  box.querySelectorAll("button[data-ask]").forEach((btn) => {
+    btn.onclick = () => openAsk(items[Number(btn.dataset.ask)], btn.dataset.ask, incidentId);
+  });
+}
+
+function openAsk(item, index, incidentId) {
+  const holder = $("ask" + index);
+  if (holder.innerHTML) { holder.innerHTML = ""; return; }
+  holder.innerHTML = '<div class="ask"><div class="chips">' +
+    CHIPS.map((q) => '<button class="chip" data-q="' + escapeHtml(q) + '">' + escapeHtml(q) + '</button>').join("") +
+    '</div><textarea maxlength="300" placeholder="Ask Muse about this moment"></textarea>' +
+    '<button class="send">Ask</button><p class="answer muted"></p></div>';
+  const area = holder.querySelector("textarea");
+  const answer = holder.querySelector(".answer");
+  holder.querySelectorAll(".chip").forEach((chip) => { chip.onclick = () => { area.value = chip.dataset.q; }; });
+  holder.querySelector(".send").onclick = async () => {
+    const question = area.value.trim();
+    if (question.length < 3) { answer.textContent = "Type a question first."; return; }
+    answer.textContent = "Muse is looking at the moment...";
+    try {
+      const res = await fetch("/guardian/api/incidents/" + encodeURIComponent(incidentId) + "/ask", {
+        method: "POST",
+        headers: {"X-Guardian-Code": CODE, "Content-Type": "application/json"},
+        body: JSON.stringify({shot: item.shot, question: question}),
+      });
+      if (res.status === 429) throw new Error("Too many questions. Wait a minute.");
+      if (!res.ok) throw new Error("Muse could not answer right now.");
+      const data = await res.json();
+      answer.className = "answer";
+      answer.textContent = data.answer;
+    } catch (e) { answer.className = "answer muted"; answer.textContent = e.message; }
+  };
 }
 
 async function loadAlerts() {
@@ -432,10 +521,15 @@ async function openIncident(id) {
   if (at) {
     L.marker(at).addTo(layer);
     const line = (d.trail || []).map((p) => [p.lat, p.lon]);
-    if (line.length > 1) L.polyline(line, {color: "#ff4d4d", weight: 4}).addTo(layer);
-    map.setView(at, 16);
+    if (line.length > 1) {
+      const path = L.polyline(line, {color: "#ff4d4d", weight: 4}).addTo(layer);
+      map.fitBounds(path.getBounds(), {padding: [28, 28], maxZoom: 17});
+    } else {
+      map.setView(at, 16);
+    }
   }
   setTimeout(() => map.invalidateSize(), 50);
+  renderLog(d.items, d.id);
   if (guardianHls) { guardianHls.destroy(); guardianHls = null; }
   if (d.hls && playContinuous(d.hls)) return;
   $("audioCard").classList.remove("hidden");

@@ -39,9 +39,21 @@ class Incident:
     end_sent: bool = False
     mode: str = "sos"
     guardian_code: str = ""
+    items: list = field(default_factory=list)
 
     def latest(self):
         return self.points[-1] if self.points else None
+
+
+MAX_ITEMS = 120
+RATING_ORDER = {"possible": 1, "strongly possible": 2}
+
+
+def _item_key(item):
+    if item["type"] == "gesture":
+        return ("gesture", item.get("shot") or int(item["t"]))
+    text = item["text"].strip().lower()
+    return (item["type"], text.replace(" ", "") if item["type"] == "plate" else text)
 
 
 DEFAULT_TTL_AFTER_END_S = 6 * 3600
@@ -126,7 +138,7 @@ class IncidentStore:
                 for key in (
                     "id", "session", "wearer_name", "contact_codes", "share_token",
                     "test", "dry_run", "lang", "status", "created_at", "ended_at",
-                    "alerted", "end_sent", "mode", "guardian_code",
+                    "alerted", "end_sent", "mode", "guardian_code", "items",
                 )
             }
             record["points"] = list(incident.points)
@@ -162,6 +174,30 @@ class IncidentStore:
 
     def get(self, incident_id):
         return self._by_id.get(incident_id)
+
+    def upsert_items(self, incident_id, items):
+        incident = self._by_id.get(incident_id)
+        if incident is None:
+            return None
+        for new in items:
+            key = _item_key(new)
+            existing = next((i for i in incident.items if _item_key(i) == key), None)
+            if existing is None:
+                if len(incident.items) >= MAX_ITEMS:
+                    continue
+                incident.items.append(dict(new))
+                continue
+            existing["count"] = int(existing.get("count", 1)) + int(new.get("count", 1))
+            if RATING_ORDER.get(new["rating"], 0) > RATING_ORDER.get(existing["rating"], 0):
+                existing["rating"] = new["rating"]
+            existing["last"] = max(existing.get("last", existing["t"]), new.get("last", new["t"]))
+            if not existing.get("shot") and new.get("shot"):
+                existing["shot"] = new["shot"]
+            if new.get("source") and not existing.get("source"):
+                existing["source"] = new["source"]
+        incident.items.sort(key=lambda item: item["t"])
+        self.save()
+        return incident
 
     def for_guardian(self, guardian_code):
         found = [

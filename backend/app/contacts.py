@@ -84,7 +84,6 @@ class ContactStore:
         return None
 
     def set_location(self, chat_id, lat, lon, at):
-        """Remembers the last location a linked contact shared. True if stored."""
         for record in self.contacts:
             if record.get("chat_id") == chat_id:
                 record["lat"] = lat
@@ -121,11 +120,6 @@ def guardian_invite_link(bot_username, code):
 
 
 def apply_locations(payload, store, now):
-    """Stores locations that linked contacts share with the bot.
-
-    Returns (chat_id, is_edit) for each stored location; edits are the
-    updates of a live location and need no reply.
-    """
     stored = []
     results = payload.get("result") if isinstance(payload, dict) else None
     if not isinstance(results, list):

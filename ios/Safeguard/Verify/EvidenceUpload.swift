@@ -5,6 +5,7 @@ public enum EvidenceKind: String, Sendable, CaseIterable {
     case audio
     case initSegment = "init"
     case mediaSegment = "seg"
+    case shot
 
     public var fileExtension: String {
         switch self {
@@ -12,6 +13,7 @@ public enum EvidenceKind: String, Sendable, CaseIterable {
         case .audio: "m4a"
         case .initSegment: "mp4"
         case .mediaSegment: "m4s"
+        case .shot: "jpg"
         }
     }
 }
@@ -33,7 +35,7 @@ public enum EvidenceSegmentName {
             return "init.mp4"
         case .mediaSegment:
             return String(format: "seg-%05d-%04d.m4s", seq, durationMs ?? 2000)
-        case .video, .audio:
+        case .video, .audio, .shot:
             return filename(kind: kind, seq: seq)
         }
     }

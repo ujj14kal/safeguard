@@ -18,7 +18,7 @@ One story: **fast checks on the phone, a Meta model for judgment, and a guardian
 2. **Dashboard** (20 s). Point at: protection status, 112 / 1091 helplines, "Police near me", and the safe-arrival timer.
 3. **Protect** (45 s). Tap Start protecting on the Dashboard; the live view opens. Make the hostile gesture in front of the camera; show the counter go up. Say: "Detection runs on the phone, so it is fast and the video does not leave it."
 4. **SOS** (60 s). Start an SOS (distress word or button). Show: countdown (cancellable), then the live map, nearby police and hospitals, the Telegram alert arriving on the second phone / laptop with the live link.
-5. **Guardian page** (45 s). On the laptop: live video with sound, location trail. Say: "One continuous recording, even if the phone breaks."
+5. **Guardian page** (60 s). On the laptop: live video with sound, the location trail, then the evidence log: names heard, plates seen, gesture moments, each rated possible or strongly possible. Tap Ask Muse on a moment and read the answer. Say: "One continuous recording, even if the phone breaks, and a log of who and what to look for."
 6. **End the SOS** (10 s), then show the finished recording on the guardian page as one video with sound.
 7. **Close** (20 s). "Muse judges the conversation and the scene. Next: Meta glasses as the live camera and microphone, with spoken prompts to the wearer."
 

@@ -71,6 +71,12 @@ public struct SpeechVerifyResult: Sendable, Equatable {
     public var categories: [String]
     public var directedAtWearer: Bool
     public var reason: String
+    public var names: [SpokenName] = []
+}
+
+public struct SpokenName: Sendable, Equatable, Decodable {
+    public var name: String
+    public var rating: String
 }
 
 public struct VerifyResult: Sendable, Equatable {
@@ -339,6 +345,7 @@ public final class VerifierClient: @unchecked Sendable {
         var categories: [String]
         var directed_at_wearer: Bool
         var reason: String
+        var names: [SpokenName]?
     }
 
     public func verifySpeech(
@@ -371,7 +378,8 @@ public final class VerifierClient: @unchecked Sendable {
             severity: parsed.severity,
             categories: parsed.categories,
             directedAtWearer: parsed.directed_at_wearer,
-            reason: parsed.reason
+            reason: parsed.reason,
+            names: parsed.names ?? []
         )
     }
 }

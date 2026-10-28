@@ -68,9 +68,14 @@ When unsure between low and medium because the speaker may be a stranger address
 Classify what was SAID only. NEVER consider or mention the appearance, identity, age, ethnicity, gender \
 presentation, or clothing of any speaker.
 
+Also list the personal names of people that are spoken in the text (someone addressing or naming a person, including \
+the wearer), as written in English letters. Only real personal names, never common words, places or brands. Give each \
+name a confidence from 0 to 1 for how sure you are it is a name that was really said, because the text may be misheard.
+
 Reply with STRICT JSON only, no other text:
 {"severity": "low|medium|high", "categories": ["threat|coercion|pursuit|proposition|abuse|distress|anger"],
-"directed_at_wearer": true|false, "reason": "one short sentence in English"}"""
+"directed_at_wearer": true|false, "reason": "one short sentence in English",
+"names": [{"name": "string", "confidence": 0.0-1.0}]}"""
 
 
 class MuseError(Exception):
@@ -178,6 +183,38 @@ class MuseClient:
         return parse_verdict(response.text), latency
 
 
+    def ask_about_image(self, image_b64: str, question: str) -> tuple[str, float]:
+        if not self.api_key:
+            raise MuseError("META_MODEL_API_KEY is not set")
+        body = {
+            "model": self.model,
+            "messages": [
+                {"role": "system", "content": ASK_SYSTEM_PROMPT},
+                {"role": "user", "content": [
+                    {"type": "text", "text": question},
+                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_b64}"}},
+                ]},
+            ],
+        }
+        if self.reasoning_effort:
+            body["reasoning_effort"] = self.reasoning_effort
+        started = time.monotonic()
+        try:
+            response = httpx.post(
+                f"{self.base_url}/chat/completions",
+                headers={"Authorization": f"Bearer {self.api_key}"},
+                json=body,
+                timeout=self.timeout_s,
+            )
+        except httpx.TimeoutException as exc:
+            raise MuseError(f"Muse call timed out after {self.timeout_s}s") from exc
+        except httpx.HTTPError as exc:
+            raise MuseError(f"Muse HTTP error: {exc}") from exc
+        latency = time.monotonic() - started
+        if response.status_code != 200:
+            raise MuseError(f"Muse status {response.status_code}: {response.text[:200]}")
+        return parse_answer(response.text), latency
+
     def verify_speech(self, snippet: str, on_device: dict) -> tuple[dict, float]:
         if not self.api_key:
             raise MuseError("META_MODEL_API_KEY is not set")
@@ -213,6 +250,23 @@ class MuseClient:
         if response.status_code != 200:
             raise MuseError(f"Muse status {response.status_code}: {response.text[:200]}")
         return parse_speech_verdict(response.text), latency
+
+
+ASK_SYSTEM_PROMPT = """You are helping a guardian review one still image captured by a personal-safety app \
+worn by a woman. Answer the guardian's question using only what is visible in the image. Describe BEHAVIOUR and \
+what hands, bodies and objects are doing. NEVER describe or guess appearance, identity, age, ethnicity, gender \
+presentation or clothing, and never name or accuse anyone. If something cannot be made out, say it is unclear. \
+Be calm, factual and brief (at most 100 words). Do not give legal conclusions."""
+
+
+def parse_answer(raw_body: str) -> str:
+    try:
+        content = json.loads(raw_body)["choices"][0]["message"]["content"]
+    except (KeyError, IndexError, json.JSONDecodeError, TypeError) as exc:
+        raise MuseError(f"Muse returned an unreadable answer: {exc}") from exc
+    if not isinstance(content, str) or not content.strip():
+        raise MuseError("Muse returned an empty answer")
+    return " ".join(content.split())[:900]
 
 
 def parse_verdict(raw_body: str) -> dict:
@@ -283,4 +337,27 @@ def parse_speech_verdict(raw_body: str) -> dict:
         "categories": categories,
         "directed_at_wearer": directed,
         "reason": reason,
+        "names": clean_names(verdict.get("names")),
     }
+
+
+STRONG_NAME_CONFIDENCE = 0.75
+_NAME_RE = re.compile(r"^[A-Za-z][A-Za-z .'-]{0,38}[A-Za-z.]$")
+
+
+def clean_names(raw) -> list:
+    if not isinstance(raw, list):
+        return []
+    found = {}
+    for entry in raw:
+        if not isinstance(entry, dict):
+            continue
+        name = " ".join(str(entry.get("name", "")).split())
+        confidence = entry.get("confidence")
+        if not _NAME_RE.match(name) or not isinstance(confidence, (int, float)):
+            continue
+        rating = "strongly possible" if confidence >= STRONG_NAME_CONFIDENCE else "possible"
+        key = name.lower()
+        if key not in found or confidence > found[key][1]:
+            found[key] = ({"name": name.title() if name.islower() else name, "rating": rating}, confidence)
+    return [item for item, _ in list(found.values())[:5]]

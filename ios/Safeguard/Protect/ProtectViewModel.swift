@@ -274,6 +274,8 @@ final class ProtectViewModel: ObservableObject {
         }
         stopEvidence()
         stopEgoMotion()
+        evidenceLog.clear()
+        plateTracker.reset()
         hapticGate.reset()
         source?.stop()
         source = nil
@@ -348,6 +350,12 @@ final class ProtectViewModel: ObservableObject {
     private var pendingGestureCause = false
     private var pendingTimerCause = false
     private var lastAlertAbove: TimeInterval = -.infinity
+    private nonisolated let evidenceLog = EvidenceLog()
+    private var plateTracker = PlateTracker()
+    private var shotSeq = 0
+    private var pendingItemPayload: [[String: Any]] = []
+    private var logFlushScheduled = false
+    private let shotUploader = EvidenceUploader()
 
     fileprivate func publishFrameCues(_ cues: FrameCues, at time: TimeInterval) {
         guard isProtecting else { return }
@@ -367,14 +375,87 @@ final class ProtectViewModel: ObservableObject {
         case .counted(let total):
             unwantedGestureCount = total
             AppLog.shared.event("gesture_counted", ["total": String(total), "limit": String(gestureCounter.limit)])
+            recordGestureMoment(score: hostile?.score ?? 0)
             showToast(L10n.format("Unwanted gesture noted (%d)", total))
             UINotificationFeedbackGenerator().notificationOccurred(.warning)
         case .exceeded(let total):
             unwantedGestureCount = 0
+            recordGestureMoment(score: hostile?.score ?? 0)
             AppLog.shared.event("gesture_sos", ["total": String(total), "enabled": String(gesturesTriggerSOS)])
             guard gesturesTriggerSOS else { return }
             pendingGestureCause = true
             distressHeard()
+        }
+    }
+
+    private func recordGestureMoment(score: Double) {
+        guard let jpeg = pipeline.frameBuffer.snapshot().frames.last else { return }
+        evidenceLog.add(LogItem(
+            type: "gesture", text: "Obscene hand gesture",
+            rating: score >= 0.8 ? "strongly possible" : "possible", shot: jpeg
+        ))
+        scheduleLogFlush()
+    }
+
+    fileprivate func publishPlates(_ plates: [String], at time: TimeInterval) {
+        guard isProtecting else { return }
+        for plate in plates {
+            guard let event = plateTracker.observe(plate, at: time) else { continue }
+            let jpeg = event.rating == "possible" ? pipeline.frameBuffer.snapshot().frames.last : nil
+            evidenceLog.add(LogItem(
+                type: "plate", text: event.text, rating: event.rating, shot: jpeg, count: event.count
+            ))
+            AppLog.shared.event("plate_seen", ["rating": event.rating])
+        }
+        scheduleLogFlush()
+    }
+
+    private func scheduleLogFlush() {
+        guard sosActive, incidentID != nil, !logFlushScheduled else { return }
+        logFlushScheduled = true
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(2))
+            guard let self else { return }
+            self.logFlushScheduled = false
+            if let id = self.incidentID, let session = self.evidenceSessionID {
+                await self.flushEvidenceLog(incident: id, session: session)
+            }
+        }
+    }
+
+    private func flushEvidenceLog(incident: String, session: String) async {
+        for item in evidenceLog.drain() {
+            var shotName: String?
+            if let data = item.shot {
+                shotSeq += 1
+                let name = EvidenceSegmentName.filename(kind: .shot, seq: shotSeq)
+                shotName = name
+                uploadShot(data, name: name, seq: shotSeq, session: session)
+            }
+            pendingItemPayload.append(item.json(shotName: shotName))
+        }
+        guard !pendingItemPayload.isEmpty else { return }
+        let batch = Array(pendingItemPayload.prefix(40))
+        do {
+            try await incidentClient.postItems(incidentID: incident, items: batch)
+            pendingItemPayload.removeFirst(batch.count)
+        } catch {
+            AppLog.shared.event("items_failed", ["pending": String(pendingItemPayload.count)])
+        }
+    }
+
+    private func uploadShot(_ data: Data, name: String, seq: Int, session: String) {
+        let folder = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Evidence", isDirectory: true)
+            .appendingPathComponent(session, isDirectory: true)
+        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let file = folder.appendingPathComponent(name)
+        guard (try? data.write(to: file, options: .atomic)) != nil else { return }
+        let uploader = shotUploader
+        Task.detached {
+            if await uploader.upload(file: file, sessionID: session, kind: .shot, seq: seq) {
+                try? FileManager.default.removeItem(at: file)
+            }
         }
     }
 
@@ -980,6 +1061,7 @@ final class ProtectViewModel: ObservableObject {
                     "ms": String(Int(Date().timeIntervalSince(sentAt) * 1000)),
                 ])
                 publishJudgement(result, onDevice: onDevice)
+                recordNames(result.names, snippet: snippet)
             } catch {
                 judgeSchedule.finished()
                 judgeStatus = L10n.format("AI judge failed: %@", error.localizedDescription)
@@ -989,6 +1071,16 @@ final class ProtectViewModel: ObservableObject {
                 }
             }
         }
+    }
+
+    private func recordNames(_ names: [SpokenName], snippet: String) {
+        guard isProtecting, !names.isEmpty else { return }
+        let source = String(snippet.suffix(120))
+        for name in names {
+            evidenceLog.add(LogItem(type: "name", text: name.name, rating: name.rating, source: source))
+        }
+        AppLog.shared.event("names_heard", ["count": String(names.count)])
+        scheduleLogFlush()
     }
 
     private func publishJudgement(_ result: SpeechVerifyResult, onDevice: SpeechMatch?) {
@@ -1179,6 +1271,8 @@ final class ProtectViewModel: ObservableObject {
         pendingTimerCause = false
         escalation = EscalationCoordinator()
         escalation.start()
+        shotSeq = 0
+        pendingItemPayload = []
         incidentID = nil
         liveURL = nil
         deliveryStatus = []
@@ -1228,7 +1322,11 @@ final class ProtectViewModel: ObservableObject {
         }.joined(separator: ",")
         AppLog.shared.event("sos_end", ["tracks": summary])
         if let id = incidentID {
-            Task { try? await incidentClient.endIncident(id) }
+            let session = evidenceSessionID ?? ""
+            Task {
+                await flushEvidenceLog(incident: id, session: session)
+                try? await incidentClient.endIncident(id)
+            }
         }
         incidentID = nil
         liveURL = nil
@@ -1342,6 +1440,7 @@ final class ProtectViewModel: ObservableObject {
             incidentID = result.id
             liveURL = result.liveURL
             deliveryStatus = result.delivery
+            scheduleLogFlush()
             return true
         } catch {
             return false
@@ -2005,6 +2104,8 @@ private final class DetectionPipeline {
     var sweepGate: NearSweepGate
     var verifyThrottle: VerifyThrottle
     let frameBuffer = FrameBuffer()
+    let plateScanner = PlateScanner()
+    var lastPlateScan = Date.distantPast
     var lastDetect = Date.distantPast
     let detectInterval: TimeInterval = 0.1
 
@@ -2046,6 +2147,11 @@ private final class DetectionPipeline {
         guard let people = try? detector.detect(in: frame.pixelBuffer) else { return }
         let frameCues = detector.lastFrameCues
         Task { await owner.publishFrameCues(frameCues, at: nowSeconds) }
+        if now.timeIntervalSince(lastPlateScan) >= 1.5 {
+            lastPlateScan = now
+            let plates = plateScanner.scan(frame.pixelBuffer)
+            if !plates.isEmpty { Task { await owner.publishPlates(plates, at: nowSeconds) } }
+        }
         let tracks = tracker.update(detections: people)
         let live = tracks.filter { $0.missed == 0 }
         frameBuffer.append(

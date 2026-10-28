@@ -181,6 +181,7 @@ class EvidenceBackend:
     def delete_session(self, session: str) -> bool: ...
     def exists(self, session: str, name: str) -> bool: ...
     def response(self, session: str, name: str, media_type: str, range_header: str | None): ...
+    def read(self, session: str, name: str) -> bytes | None: ...
 
 
 class LocalEvidence(EvidenceBackend):
@@ -191,6 +192,10 @@ class LocalEvidence(EvidenceBackend):
         folder = self.root / session
         folder.mkdir(parents=True, exist_ok=True)
         (folder / name).write_bytes(data)
+
+    def read(self, session, name):
+        path = self.root / session / name
+        return path.read_bytes() if path.is_file() else None
 
     def segments(self, session):
         folder = self.root / session
@@ -220,8 +225,16 @@ class SupabaseEvidence(EvidenceBackend):
         self._o = objects
 
     def put(self, session, name, data):
-        content_type = "audio/mp4" if name.endswith(".m4a") else "video/mp4"
+        if name.endswith(".m4a"):
+            content_type = "audio/mp4"
+        elif name.endswith(".jpg"):
+            content_type = "image/jpeg"
+        else:
+            content_type = "video/mp4"
         self._o.put(f"{session}/{name}", data, content_type)
+
+    def read(self, session, name):
+        return self._o.get(f"{session}/{name}")
 
     def segments(self, session):
         items = [i for i in self._o.list_objects(session) if i.get("id")]
