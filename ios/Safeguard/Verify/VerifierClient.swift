@@ -137,7 +137,8 @@ public struct VerifierConfig: Sendable {
     public static var appToken: String? {
         let raw = (Bundle.main.object(forInfoDictionaryKey: "SafeguardAppToken") as? String)?
             .trimmingCharacters(in: .whitespacesAndNewlines)
-        return raw?.isEmpty == false ? raw : nil
+        if let raw, !raw.isEmpty { return raw }
+        return DeviceRegistrar.shared.current
     }
 
     public func authorize(_ request: URLRequest) -> URLRequest {

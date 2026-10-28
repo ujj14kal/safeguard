@@ -103,11 +103,41 @@ _sam2 = Sam2Runner(
 _daily_counts: Counter[str] = Counter()
 
 
+def _device_key() -> bytes:
+    return hashlib.sha256(("device-token:" + SETTINGS.app_token).encode()).digest()
+
+
+def make_device_token() -> str:
+    ident = secrets.token_hex(12)
+    sig = hmac.new(_device_key(), ident.encode(), hashlib.sha256).hexdigest()[:32]
+    return f"d1.{ident}.{sig}"
+
+
+def device_token_ok(provided: str) -> bool:
+    parts = provided.split(".")
+    if len(parts) != 3 or parts[0] != "d1" or not parts[1] or not parts[2]:
+        return False
+    want = hmac.new(_device_key(), parts[1].encode(), hashlib.sha256).hexdigest()[:32]
+    return secrets.compare_digest(parts[2], want)
+
+
 def app_token_ok(provided: str | None) -> bool:
     want = SETTINGS.app_token
     if not want:
         return True
-    return bool(provided) and secrets.compare_digest(provided, want)
+    if not provided:
+        return False
+    return secrets.compare_digest(provided, want) or device_token_ok(provided)
+
+
+_device_register_limiter = RateLimiter(120, 3600.0)
+
+
+@app.post("/device/register")
+def device_register() -> dict:
+    if not _device_register_limiter.allow():
+        raise HTTPException(status_code=429, detail="too many registrations, try again later")
+    return {"token": make_device_token()}
 
 
 def require_app_token(provided: str | None) -> None:

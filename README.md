@@ -25,7 +25,7 @@ The camera source and the spoken check-in sit behind narrow interfaces, so the g
 1. **Sign in.** An account is required. A profile photo is optional.
 2. **Protect.** The wearer starts protection. The camera watches and the microphone listens.
 3. **Detect on the device.** People, hand gestures and facial expressions are read in real time. Repeated hostile gestures, a distress word, shouting or an unsafe phrase raise concern.
-4. **Judge in the cloud.** Short clips and speech snippets go to Meta's Muse model, which rates the threat from behaviour alone.
+4. **Judge with Meta's Muse.** Short clips and speech snippets go to Muse, which rates the threat from behaviour alone.
 5. **Ask.** The wearer is asked by voice whether she is safe. A safe phrase or a tap cancels it.
 6. **Countdown.** With no reply, a cancellable countdown starts.
 7. **Escalate automatically.** Contacts and the guardian get a Telegram alert with a live link and map pin. Video and sound stream to the cloud as one continuous recording. A ride link is prepared. Only the police call is left to the wearer, by design.
@@ -33,35 +33,47 @@ The camera source and the spoken check-in sit behind narrow interfaces, so the g
 
 Also included: a safe-arrival timer, helplines (112, 1091, 181), nearby police and hospitals, and an offline mode if the server is unreachable.
 
-## Technology and where it is used
+## How Meta's models are used
 
-### Meta models
+Meta's Muse models are the judgment layer. Fast, private checks run on the device; anything that needs understanding goes to Muse through the Meta Model API, called only from the backend so no key ever reaches a device.
 
-| Model | Role |
-|---|---|
-| **Muse Spark** (Meta Model API) | Multimodal threat judgment over short first-person clips: behaviours, objects in hand, approach, persistence. Also judges conversation snippets. Returns strict JSON. |
-| **Muse voice transcription** (Meta realtime speech recognition) | Streaming Hindi and English recognition of distress words and unsafe phrases, relayed through the backend so keys never reach the device. |
+**Muse Spark: scene judgment.** A short burst of first-person frames, up to eight JPEGs, is sent together with the on-device findings (people tracked, approach speed, hostile gestures, angry expressions, shouting). Muse Spark reads the frames as a human reviewer would and returns strict JSON: a threat level (low, medium or high), a confidence, the behaviours it observed and one short reason. It is asked to notice objects held, raised or pointed at the wearer, reaching and lunging, blocking, fixed staring at close range and indecent behaviour, and to treat ordinary scenes and calmly held objects as safe. Its prompt and an output filter forbid any reference to appearance or identity.
 
-### Other components
+**Muse Spark: conversation judgment.** Speech overheard near the wearer, in English, Hindi or Hinglish, is judged for meaning and intent rather than keywords: threats, coercion, pursuit, unwanted advances, abuse or a cry for help, and whether it is directed at the wearer. The result is a severity, categories and a one-line reason. Friendly talk, music and television rate low.
 
-| Layer | Technology |
-|---|---|
-| iOS app | Swift, SwiftUI, iOS 17 |
-| Person detection | Apple Vision |
-| Gestures and expressions | MediaPipe Tasks Vision (hand gestures, face blendshapes) |
-| On-device speech | Apple Speech |
-| Recording | AVAssetWriter, fragmented MP4 (HLS), AAC audio, uploaded as it is written |
-| Maps and nearby help | MapKit |
-| Backend | FastAPI (Python) on Google Cloud Run, scales to zero |
-| Accounts and storage | Supabase Auth, Postgres (profiles with row-level security), Storage (recordings, state, photos) |
-| Alerts | Telegram bot by webhook |
-| Guardian page | Server-rendered page with hls.js playback and signed media links |
+**Muse voice transcription: the cloud ear.** The device streams microphone audio to the backend, which relays it to Meta's realtime speech recognition. Hindi and English distress words and unsafe phrases are recognised with endpointing and keyword boosting, and partial results stream back within the second. Audio is relayed, never stored, and transcripts are never logged.
+
+**How the layers work together.** The device decides in milliseconds and keeps working offline. Muse adds understanding and reduces false alarms: a clip or a sentence that looks alarming to a simple rule can be rated low, and a quiet but menacing one rated high. The escalation logic combines both.
+
+With Meta glasses, the same Muse calls apply unchanged. Frames and audio come from the glasses instead of the iPhone.
+
+## Technology stack
+
+| Layer | Technology | Used for |
+|---|---|---|
+| Language models | **Meta Muse Spark** via Meta Model API (OpenAI-compatible chat completions, vision input, strict JSON) | Scene and conversation judgment |
+| Speech recognition | **Meta Muse voice transcription** (realtime websocket) | Distress words in Hindi and English |
+| iOS app | Swift, SwiftUI, iOS 17 | Interface, protection state machine, escalation |
+| People detection | Apple Vision | Person boxes, tracking, approach speed |
+| Gestures and expressions | MediaPipe Tasks Vision, GPU delegate | Hand gestures including finger geometry, face blendshapes for anger, surprise and similar |
+| On-device speech | Apple Speech | Immediate, offline phrase recognition |
+| Camera and audio capture | AVFoundation | Frames, microphone tap |
+| Recording | AVAssetWriter fragmented MP4 (HLS), H.264 and AAC | One continuous recording with sound, uploaded piece by piece as it is written |
+| Maps and nearby help | MapKit, CoreLocation | Accurate location, nearby police and hospitals, walking routes |
+| Backend | FastAPI (Python) on Google Cloud Run | Muse calls, alerts, links, recordings, accounts |
+| Accounts | Supabase Auth, relayed through the backend | Sign-up and sign-in; passwords never stored by Safeguard |
+| Device trust | Per-install signed tokens (HMAC), Keychain | Authorises the app to the backend with no shared secret shipped |
+| Database | Supabase Postgres with row-level security | Profiles |
+| Object storage | Supabase Storage | Recordings, incident state, profile photos |
+| Alerts | Telegram bot by webhook | Contact and guardian alerts with a live link |
+| Live and guardian pages | Server-rendered web pages, hls.js, signed media links | Live view and playback, no app needed |
 
 ```mermaid
 flowchart LR
   G[Meta glasses: eyes, ears, voice] <-->|sync| P[Phone: hub]
-  P -->|clips, speech| B[Backend on Cloud Run]
-  B -->|frames, text| M[Meta Muse models]
+  P -->|frames, speech| B[Backend on Cloud Run]
+  B -->|frames, text| M[Meta Muse Spark]
+  B -->|audio| A[Meta Muse voice transcription]
   B --> S[(Supabase)]
   B -->|alert + live link| T[Telegram contacts]
   S --> W[Guardian web page]
@@ -69,18 +81,22 @@ flowchart LR
 
 ## Principles
 
-- **Behaviour, never identity.** Prompts and rules exclude appearance entirely.
+- **Behaviour, never identity.** Prompts, filters and rules exclude appearance entirely.
 - **Automatic except the police call.** Safeguard never dials by itself.
-- **Private by default.** Detection runs on the device. Keys stay on the server. Passwords are never stored by Safeguard. Transcripts are not logged.
-- **Cheap to run.** One Cloud Run instance, none kept warm, with a cost check on every deploy.
+- **Private by default.** Detection runs on the device. Keys stay on the server. Passwords are never stored by Safeguard.
+- **No shared secret in the app.** Each install registers itself and receives its own signed token, stored in the Keychain and revocable from the server.
+
+## Run it on an iPhone
+
+Open `ios/Safeguard.xcodeproj` in Xcode, choose your team under Signing & Capabilities, and press Run. The app connects to the hosted backend on its own and needs nothing else.
 
 ## Layout
 
 - `ios/` native app
 - `backend/` FastAPI service and tests
 - `supabase/` database migrations
-- `scripts/` build, test, deploy and cost-check scripts
-- `deploy/` hosting guide
+- `scripts/` build, test and deploy scripts
+- `deploy/` hosting notes
 
 ## Status
 

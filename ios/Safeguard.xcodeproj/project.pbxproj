@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D459F5CD6907773507B3E293 /* DeviceToken.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3961D28590FE43BD3E6078B /* DeviceToken.swift */; };
+		D3780A4F0F813074557747B8 /* DeviceToken.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3961D28590FE43BD3E6078B /* DeviceToken.swift */; };
 		D497E6394908CE42D9E3C6E5 /* SafeArrival.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3D0E28C7FAF5E07E8FE7E99 /* SafeArrival.swift */; };
 		D307FA4B92131C79DC7B6CBB /* SafeArrivalTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D38D6968BA3CF8BB09AF21AB /* SafeArrivalTests.swift */; };
 		D39469BD09733DA2546BA383 /* SafeArrivalCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3921C40EE6AFB671043C0CC /* SafeArrivalCard.swift */; };
@@ -199,6 +201,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		D3961D28590FE43BD3E6078B /* DeviceToken.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceToken.swift; sourceTree = "<group>"; };
 		D38D6968BA3CF8BB09AF21AB /* SafeArrivalTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafeArrivalTests.swift; sourceTree = "<group>"; };
 		D3921C40EE6AFB671043C0CC /* SafeArrivalCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafeArrivalCard.swift; sourceTree = "<group>"; };
 		D3D0E28C7FAF5E07E8FE7E99 /* SafeArrival.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafeArrival.swift; sourceTree = "<group>"; };
@@ -358,6 +361,7 @@
 		D584F9DF9B6B42A842B7BE04 /* Account */ = {
 			isa = PBXGroup;
 			children = (
+				D3961D28590FE43BD3E6078B /* DeviceToken.swift */,
 				D3E91AA5C423981DDC5BEA56 /* AccountGateView.swift */,
 				D3669F15EF0DC80635D038EC /* ProfileView.swift */,
 				D3BAF103634A0F5000157BB4 /* AvatarView.swift */,
@@ -737,6 +741,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D3780A4F0F813074557747B8 /* DeviceToken.swift in Sources */,
 				D39469BD09733DA2546BA383 /* SafeArrivalCard.swift in Sources */,
 				D383E748C6D166B65CE5CD65 /* SafeArrival.swift in Sources */,
 				D3E63B663B85F65A9EA6F42B /* Helplines.swift in Sources */,
@@ -841,6 +846,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D459F5CD6907773507B3E293 /* DeviceToken.swift in Sources */,
 				D497E6394908CE42D9E3C6E5 /* SafeArrival.swift in Sources */,
 				D307FA4B92131C79DC7B6CBB /* SafeArrivalTests.swift in Sources */,
 				D454DCFCD279A948D85023B1 /* Helplines.swift in Sources */,
@@ -980,6 +986,7 @@
 		A10000000000000000000064 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				BACKEND_BASE_URL = "https://safeguard-backend-1067547469878.asia-south1.run.app";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
@@ -988,7 +995,7 @@
 				INFOPLIST_FILE = "Safeguard/Supporting/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 0.7.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "io.github.ujj14kal.safeguard";
+				PRODUCT_BUNDLE_IDENTIFIER = "io.github.ujj14kal.safeguard.$(DEVELOPMENT_TEAM:default=local)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
@@ -998,6 +1005,7 @@
 		A10000000000000000000065 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				BACKEND_BASE_URL = "https://safeguard-backend-1067547469878.asia-south1.run.app";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
@@ -1006,7 +1014,7 @@
 				INFOPLIST_FILE = "Safeguard/Supporting/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 0.7.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "io.github.ujj14kal.safeguard";
+				PRODUCT_BUNDLE_IDENTIFIER = "io.github.ujj14kal.safeguard.$(DEVELOPMENT_TEAM:default=local)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;

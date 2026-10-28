@@ -320,3 +320,41 @@ final class EvidenceTuningTests: XCTestCase {
         XCTAssertEqual(EvidenceRetryPolicy().delay(beforeRetry: 1), 1)
     }
 }
+
+final class DeviceRegistrarTests: XCTestCase {
+    func testRegistersOnceStoresTheTokenAndRenewsOnDemand() async {
+        let secrets = InMemorySecretStore()
+        let counter = Counter()
+        let registrar = DeviceRegistrar(secrets: secrets, fetch: { _ in
+            await counter.next()
+        })
+        let url = URL(string: "https://example.test")!
+        XCTAssertNil(registrar.current)
+        async let a = registrar.ensure(baseURL: url)
+        async let b = registrar.ensure(baseURL: url)
+        let (first, second) = await (a, b)
+        XCTAssertEqual(first, second)
+        XCTAssertEqual(registrar.current, first)
+        let again = await registrar.ensure(baseURL: url)
+        XCTAssertEqual(again, first, "a stored token is reused")
+        let renewed = await registrar.renew(baseURL: url)
+        XCTAssertNotEqual(renewed, first)
+        XCTAssertEqual(registrar.current, renewed)
+    }
+
+    func testFailedRegistrationStoresNothing() async {
+        let secrets = InMemorySecretStore()
+        let registrar = DeviceRegistrar(secrets: secrets, fetch: { _ in nil })
+        let token = await registrar.ensure(baseURL: URL(string: "https://example.test")!)
+        XCTAssertNil(token)
+        XCTAssertNil(registrar.current)
+    }
+
+    private actor Counter {
+        var value = 0
+        func next() -> String {
+            value += 1
+            return "d1.token.\(value)"
+        }
+    }
+}

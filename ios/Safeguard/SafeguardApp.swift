@@ -21,6 +21,7 @@ struct SafeguardApp: App {
             .statusBarHidden(showSplash)
             .preferredColorScheme(.dark)
             .task {
+                await DeviceRegistrar.shared.ensure(baseURL: VerifierConfig.default.baseURL)
                 CueEngineFactory.make = { MediaPipeCueEngine() }
                 _ = ProtectViewModel.shared
                 if let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {

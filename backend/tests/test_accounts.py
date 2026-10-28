@@ -291,3 +291,43 @@ def test_avatar_needs_sign_in_and_dies_with_account(api, avatars):
     api.put("/me/avatar", content=JPEG, headers=headers)
     assert api.delete("/me", headers=headers).status_code == 200
     assert avatars.get(USER_ID) is None
+
+
+def test_device_tokens_are_issued_and_accepted_without_a_shared_secret(monkeypatch):
+    import dataclasses
+
+    monkeypatch.setattr(
+        main, "SETTINGS", dataclasses.replace(main.SETTINGS, app_token="private-" + "p" * 8)
+    )
+    monkeypatch.setattr(main, "_device_register_limiter", RateLimiter(1000))
+    client = TestClient(main.app)
+    token = client.post("/device/register").json()["token"]
+    assert main.app_token_ok(token)
+    assert main.app_token_ok("private-" + "p" * 8)
+    assert client.get("/me", headers={"X-Safeguard-Token": token}).status_code != 401
+    assert client.get("/me", headers={"X-Safeguard-Token": "d1.abc.def"}).status_code == 401
+
+
+def test_forged_or_stale_device_tokens_are_rejected(monkeypatch):
+    import dataclasses
+
+    monkeypatch.setattr(
+        main, "SETTINGS", dataclasses.replace(main.SETTINGS, app_token="private-" + "p" * 8)
+    )
+    token = main.make_device_token()
+    assert main.device_token_ok(token)
+    ident = token.split(".")[1]
+    assert not main.device_token_ok(f"d1.{ident}." + "0" * 32)
+    assert not main.device_token_ok("d1.only-two")
+    monkeypatch.setattr(
+        main, "SETTINGS", dataclasses.replace(main.SETTINGS, app_token="rotated-" + "r" * 8)
+    )
+    assert not main.app_token_ok(token), "rotating the server secret revokes every device token"
+
+
+def test_device_registration_is_rate_limited(monkeypatch):
+    monkeypatch.setattr(main, "_device_register_limiter", RateLimiter(2, 3600.0))
+    client = TestClient(main.app)
+    assert client.post("/device/register").status_code == 200
+    assert client.post("/device/register").status_code == 200
+    assert client.post("/device/register").status_code == 429

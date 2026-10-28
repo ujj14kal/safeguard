@@ -152,10 +152,21 @@ public struct AccountClient: AccountService {
     }
 
     private func send(_ request: URLRequest) async throws -> Data {
+        let base = config().baseURL
+        if config().authorize(URLRequest(url: base)).value(forHTTPHeaderField: "X-Safeguard-Token") == nil {
+            await DeviceRegistrar.shared.ensure(baseURL: base)
+        }
         let data: Data
         let response: URLResponse
         do {
-            (data, response) = try await session.data(for: request)
+            var (body, reply) = try await session.data(for: config().authorize(request))
+            if (reply as? HTTPURLResponse)?.statusCode == 401,
+               String(data: body, encoding: .utf8)?.contains("app token") == true,
+               await DeviceRegistrar.shared.renew(baseURL: base) != nil
+            {
+                (body, reply) = try await session.data(for: config().authorize(request))
+            }
+            (data, response) = (body, reply)
         } catch {
             throw AccountError(String(localized: "Could not reach the Safeguard server. Check your connection."))
         }
