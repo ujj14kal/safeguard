@@ -381,10 +381,10 @@ final class GestureFeatureTests: XCTestCase {
     func testNearSweepFiresAfterNearHoldThenAtInterval() {
         var gate = NearSweepGate(config: config)
         XCTAssertFalse(gate.consume(isNear: true, at: 0))
-        XCTAssertFalse(gate.consume(isNear: true, at: 2.9))
-        XCTAssertTrue(gate.consume(isNear: true, at: 3.1))
-        XCTAssertFalse(gate.consume(isNear: true, at: 10))
-        XCTAssertTrue(gate.consume(isNear: true, at: 24))
+        XCTAssertFalse(gate.consume(isNear: true, at: 1.9))
+        XCTAssertTrue(gate.consume(isNear: true, at: 2.1))
+        XCTAssertFalse(gate.consume(isNear: true, at: 6))
+        XCTAssertTrue(gate.consume(isNear: true, at: 12.5))
     }
 
     func testNearSweepResetsWhenPersonLeaves() {
@@ -392,8 +392,8 @@ final class GestureFeatureTests: XCTestCase {
         _ = gate.consume(isNear: true, at: 0)
         XCTAssertFalse(gate.consume(isNear: false, at: 2))
         XCTAssertFalse(gate.consume(isNear: true, at: 3))
-        XCTAssertFalse(gate.consume(isNear: true, at: 5))
-        XCTAssertTrue(gate.consume(isNear: true, at: 6.5))
+        XCTAssertFalse(gate.consume(isNear: true, at: 4.5))
+        XCTAssertTrue(gate.consume(isNear: true, at: 5.5))
     }
 
     func testAlertClipSuppressesImmediateSweep() {

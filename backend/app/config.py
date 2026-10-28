@@ -45,7 +45,7 @@ class Settings:
         default_factory=lambda: os.environ.get("SPEECH_REASONING_EFFORT", "minimal")
     )
     verify_reasoning_effort: str = field(
-        default_factory=lambda: os.environ.get("VERIFY_REASONING_EFFORT", "low")
+        default_factory=lambda: os.environ.get("VERIFY_REASONING_EFFORT", "minimal")
     )
 
     incident_token_ttl_hours: float = field(

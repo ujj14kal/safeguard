@@ -25,7 +25,15 @@ expression; staring fixedly from very close; and indecent behaviour aimed at \
 the wearer, such as exposing oneself or touching oneself or making sexual \
 gestures. Describe such behaviour in plain clinical words in "behaviours_observed" \
 and rate it medium or high when it is directed at the wearer. A person holding an \
-ordinary object calmly (a phone, a bag, a drink) is not a threat.
+ordinary object calmly (a phone, a bag, a drink, a pen, a book) is not a threat.
+
+Weapons and objects used as weapons: a knife, blade, razor, cutter, scissors, \
+sharp tool, bat, stick, rod, hammer, bottle or any heavy object that is raised, \
+swung, held out, pointed toward the wearer or carried openly at her is a HIGH \
+threat even when the person looks calm. A blade held in the hand close to the \
+wearer is at least MEDIUM even if it is not pointed. Always name what is held in \
+"object_held", with a short plain phrase such as "a bottle", "a phone" or "a kitchen \
+knife"; use an empty string when the hands are empty or nothing can be made out.
 
 The on-device features may include hints from a fast gesture and expression \
 classifier: "hostile_gesture" (an obscene hand gesture such as a raised middle \
@@ -37,6 +45,7 @@ threat. Never mention appearance.
 
 Reply with STRICT JSON only, no other text:
 {"threat_level": "low|medium|high", "behaviours_observed": ["..."], \
+"object_held": "short phrase or empty string", \
 "confidence": 0.0-1.0, "reason": "one short sentence"}"""
 
 
@@ -226,12 +235,15 @@ def parse_verdict(raw_body: str) -> dict:
         raise MuseError(f"bad confidence: {confidence!r}")
     if not isinstance(reason, str) or not reason:
         raise MuseError("bad reason: must be a non-empty string")
-    term = mentions_appearance(" ".join(behaviours + [reason]))
+    held = verdict.get("object_held", "")
+    held = " ".join(held.split())[:60] if isinstance(held, str) else ""
+    term = mentions_appearance(" ".join(behaviours + [reason, held]))
     if term:
         raise MuseError(f"verdict mentions appearance ({term!r}); refusing to use it")
     return {
         "threat_level": level,
         "behaviours_observed": behaviours,
+        "object_held": held,
         "confidence": float(confidence),
         "reason": reason,
     }

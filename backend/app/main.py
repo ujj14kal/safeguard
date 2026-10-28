@@ -303,6 +303,7 @@ class VerifyRequest(BaseModel):
 class VerifyResponse(BaseModel):
     threat_level: str
     behaviours_observed: list[str]
+    object_held: str = ""
     confidence: float
     reason: str
     path: str
@@ -367,6 +368,7 @@ def verify(
     return VerifyResponse(
         threat_level=verdict["threat_level"],
         behaviours_observed=verdict["behaviours_observed"],
+        object_held=verdict.get("object_held", ""),
         confidence=verdict["confidence"],
         reason=verdict["reason"],
         path=path,

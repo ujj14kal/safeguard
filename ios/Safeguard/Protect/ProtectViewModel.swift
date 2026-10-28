@@ -26,6 +26,7 @@ final class ProtectViewModel: ObservableObject {
     @Published var proximity: Proximity = .clear
     @Published var threatAlert = false
     @Published var lastVerifyResult: String?
+    @Published var museSees: String?
     @Published var verifyFailure: VerifyFailure?
     @Published var backendStatus: BackendStatus?
     @Published var listenerLive = false
@@ -286,6 +287,7 @@ final class ProtectViewModel: ObservableObject {
         proximity = .clear
         threatAlert = false
         lastVerifyResult = nil
+        museSees = nil
         verifyFailure = nil
         backendStatus = nil
         lastSpeechInfo = nil
@@ -319,6 +321,7 @@ final class ProtectViewModel: ObservableObject {
         proximity = .clear
         threatAlert = false
         lastVerifyResult = nil
+        museSees = nil
         verifyFailure = nil
         lastSpeechInfo = nil
         window.clear()
@@ -452,14 +455,21 @@ final class ProtectViewModel: ObservableObject {
         }
     }
 
+    static func museSeesLine(objectHeld: String, level: String) -> String {
+        let object = objectHeld.isEmpty ? String(localized: "nothing in hand") : objectHeld
+        return L10n.format("Muse sees: %@ • threat %@", object, level)
+    }
+
     fileprivate func publishVerification(_ result: VerifyResult) {
         guard isProtecting else { return }
         lastVerifyResult = L10n.format("Verify: %@ via %@ (%@)", result.threatLevel, result.path, result.reason)
         AppLog.shared.event("vision_verify", [
             "level": result.threatLevel, "path": result.path, "reason": result.reason,
+            "object": result.objectHeld,
             "ms": String(Int(result.museLatencyMs)),
         ])
         verifyFailure = nil
+        museSees = Self.museSeesLine(objectHeld: result.objectHeld, level: result.threatLevel)
         if let level = MuseVerdictLevel(rawValue: result.threatLevel) {
             safety.noteMuseVerdict(level, at: Self.now)
             drainAskSpeech()

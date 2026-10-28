@@ -21,6 +21,7 @@ struct SOSView: View {
                     liveLinkCard
                     cabCard
                     evidenceRow
+                    museRow
                     Color.clear.frame(height: 150)
                 }
                 .padding(.horizontal)
@@ -432,6 +433,17 @@ struct SOSView: View {
             return L10n.format("From your location to %@", dropoff.nickname)
         }
         return String(localized: "From your location (choose where to in Uber)")
+    }
+
+    @ViewBuilder
+    private var museRow: some View {
+        if let seen = model.museSees {
+            Label(seen, systemImage: "eye")
+                .font(.footnote)
+                .foregroundStyle(.white.opacity(0.85))
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
+        }
     }
 
     @ViewBuilder

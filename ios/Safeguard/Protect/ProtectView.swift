@@ -189,7 +189,7 @@ struct ProtectView: View {
     private var hudBottomBar: some View {
         VStack(spacing: DS.Spacing.small) {
             if debugOverlay {
-                (Text(verbatim: heardLine + "\n\(model.judgeStatus)\n\(model.latencyLine)\nCues: \(model.cueLine.isEmpty ? "none" : model.cueLine) • rude gestures: \(model.unwantedGestureCount)/5\n")
+                (Text(verbatim: heardLine + "\n\(model.judgeStatus)\n\(model.museSees ?? String(localized: "Muse sees: waiting"))\n\(model.latencyLine)\nCues: \(model.cueLine.isEmpty ? "none" : model.cueLine) • rude gestures: \(model.unwantedGestureCount)/5\n")
                     + Text(format: "Apple ear on • %@", model.cloudStatus))
                     .font(.footnote.monospaced())
                     .lineLimit(6)

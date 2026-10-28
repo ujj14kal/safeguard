@@ -65,8 +65,8 @@ public struct ThreatConfig: Sendable {
     public var egoMaxDiscount: Double = 0.85
     public var egoWindow: TimeInterval = 1.5
 
-    public var sweepNearSeconds: TimeInterval = 3
-    public var sweepIntervalSeconds: TimeInterval = 20
+    public var sweepNearSeconds: TimeInterval = 2
+    public var sweepIntervalSeconds: TimeInterval = 10
 
     public var weightSpeech: Double = 0.30
     public var speechWindowSeconds: TimeInterval = 20

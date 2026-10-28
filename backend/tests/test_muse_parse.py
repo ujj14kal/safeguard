@@ -72,3 +72,38 @@ def test_appearance_words_inside_other_words_are_not_matched():
 def test_refusal_names_the_term():
     with pytest.raises(MuseError, match="'wearing'"):
         parse_verdict(envelope("Someone wearing gloves approaches."))
+
+
+def with_object(held, level="low") -> str:
+    verdict = {
+        "threat_level": level,
+        "behaviours_observed": ["holding an object"],
+        "object_held": held,
+        "confidence": 0.8,
+        "reason": "Object held near the wearer.",
+    }
+    return json.dumps({"choices": [{"message": {"content": json.dumps(verdict)}}]})
+
+
+def test_object_held_is_returned_and_cleaned():
+    assert parse_verdict(with_object("a bottle"))["object_held"] == "a bottle"
+    assert parse_verdict(with_object("  a   kitchen knife "))["object_held"] == "a kitchen knife"
+    assert len(parse_verdict(with_object("x" * 200))["object_held"]) == 60
+
+
+def test_object_held_is_optional_and_defaults_to_empty():
+    assert parse_verdict(envelope("A person stands still."))["object_held"] == ""
+    assert parse_verdict(with_object(None))["object_held"] == ""
+    assert parse_verdict(with_object(5))["object_held"] == ""
+
+
+def test_object_held_may_not_mention_appearance():
+    with pytest.raises(MuseError):
+        parse_verdict(with_object("a young man's jacket"))
+
+
+def test_prompt_treats_raised_blades_as_high_and_asks_for_the_object():
+    from app.muse import SYSTEM_PROMPT
+
+    assert "HIGH" in SYSTEM_PROMPT and "knife" in SYSTEM_PROMPT
+    assert '"object_held"' in SYSTEM_PROMPT

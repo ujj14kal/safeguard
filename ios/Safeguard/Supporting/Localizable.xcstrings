@@ -9120,6 +9120,54 @@
           }
         }
       }
+    },
+    "Muse sees: %@ • threat %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Muse sees: %@ • threat %@"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Muse को दिखा: %@ • खतरा %@"
+          }
+        }
+      }
+    },
+    "nothing in hand": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "nothing in hand"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "हाथ में कुछ नहीं"
+          }
+        }
+      }
+    },
+    "Muse sees: waiting": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Muse sees: waiting"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Muse देख रहा है: प्रतीक्षा"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

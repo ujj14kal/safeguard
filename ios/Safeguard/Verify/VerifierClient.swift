@@ -76,6 +76,7 @@ public struct SpeechVerifyResult: Sendable, Equatable {
 public struct VerifyResult: Sendable, Equatable {
     public var threatLevel: String
     public var behaviours: [String]
+    public var objectHeld: String
     public var confidence: Double
     public var reason: String
     public var path: String
@@ -274,6 +275,7 @@ public final class VerifierClient: @unchecked Sendable {
     private struct ResponseBody: Decodable {
         var threat_level: String
         var behaviours_observed: [String]
+        var object_held: String?
         var confidence: Double
         var reason: String
         var path: String
@@ -313,6 +315,7 @@ public final class VerifierClient: @unchecked Sendable {
         return VerifyResult(
             threatLevel: parsed.threat_level,
             behaviours: parsed.behaviours_observed,
+            objectHeld: parsed.object_held ?? "",
             confidence: parsed.confidence,
             reason: parsed.reason,
             path: parsed.path,
