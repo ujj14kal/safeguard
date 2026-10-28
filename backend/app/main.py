@@ -38,7 +38,9 @@ from .accounts import (
     valid_phone,
 )
 from .config import SETTINGS
-from .contacts import ContactLimitError, ContactStore, invite_link, link_from_updates
+from .contacts import (
+    ContactLimitError, ContactStore, guardian_invite_link, invite_link, link_from_updates,
+)
 from . import hls
 from .incidents import IncidentStore
 from .links import ChannelStore, GuardianStore, normalize_code
@@ -222,7 +224,7 @@ async def telegram_webhook(
         update = await request.json()
     except ValueError:
         raise HTTPException(status_code=400, detail="bad body")
-    linked, _ = link_from_updates({"result": [update]}, get_contact_store())
+    linked, _ = link_from_updates({"result": [update]}, get_contact_store(), get_guardians())
     if linked:
         logger.info("telegram linked %d contact(s)", len(linked))
     return {"ok": True}
@@ -245,7 +247,7 @@ async def _telegram_poll_loop() -> None:
                     params={"offset": offset, "timeout": 20},
                 )
                 linked, offset = link_from_updates(
-                    response.json(), get_contact_store()
+                    response.json(), get_contact_store(), get_guardians()
                 )
                 if linked:
                     logger.info("telegram linked %d contact(s)", len(linked))
@@ -842,6 +844,18 @@ def _send_to_codes(codes, text, dry_run, url_button=None, pin=None) -> list:
     return delivery
 
 
+def _alert_guardian(incident, text: str, live: str, pin) -> dict:
+    """The guardian who linked Telegram gets the same alert as the contacts."""
+    chat = get_guardians().chat_id(incident.guardian_code)
+    if chat is None:
+        return {"code": "guardian", "name": "Guardian", "status": "skipped", "detail": "not linked"}
+    notifier = _notifier_for(incident.dry_run)
+    result = notifier.send_text(chat, text, url_button=("Open live view", live))
+    if result.ok and pin is not None:
+        notifier.send_location(chat, *pin)
+    return {"code": "guardian", "name": "Guardian", "status": result.status, "detail": result.detail}
+
+
 @app.post("/incident/start")
 def incident_start(
     body: IncidentStartRequest,
@@ -912,6 +926,8 @@ def incident_start(
         incident.contact_codes, text, incident.dry_run,
         url_button=("Open live view", live), pin=pin,
     )
+    if incident.guardian_code and not body.test:
+        delivery.append(_alert_guardian(incident, text, live, pin))
     incident.alerted = True
     store.save()
     sent = sum(1 for item in delivery if item["status"] in ("sent", "dry-run"))
@@ -1544,6 +1560,21 @@ def _guardian_summary(incident, files=None) -> dict:
             e["bytes"] for e in files if hls.is_hls_name(e["name"])
         ),
         "continuous": _hls_info(incident, files) is not None,
+    }
+
+
+@app.get("/guardian/api/alerts")
+def guardian_alerts(
+    request: Request, x_guardian_code: str | None = Header(default=None)
+) -> dict:
+    """Whether this guardian gets Telegram alerts, and the link to turn them on."""
+    code = _guardian_from_header(request, x_guardian_code)
+    bot = SETTINGS.telegram_bot
+    enabled = SETTINGS.notify_mode == "telegram" and bool(bot)
+    return {
+        "available": enabled,
+        "linked": get_guardians().chat_id(code) is not None,
+        "link": guardian_invite_link(bot, code) if enabled else None,
     }
 
 

@@ -72,6 +72,7 @@ final class AccountStoreTests: XCTestCase {
         var deleted = false
         var signedOut = false
         var failSignIn = false
+        var failSignInUnreachable = false
         var requireConfirmation = false
         var serverAvatar: Data?
         var expiresIn: TimeInterval = 3600
@@ -94,6 +95,7 @@ final class AccountStoreTests: XCTestCase {
         }
 
         func signIn(email: String, password: String) async throws -> AccountAuthResult {
+            if failSignInUnreachable { throw AccountError("Could not reach the server.") }
             if failSignIn { throw AccountError("Wrong email or password.", status: 401) }
             return result(name: "Asha", email: email, withSession: true)
         }
@@ -165,6 +167,29 @@ final class AccountStoreTests: XCTestCase {
         XCTAssertNotNil(store.avatarData)
         await store.signOut()
         XCTAssertNil(store.avatarData)
+    }
+
+    func testOfflineProfileWorksWithoutServerAndSurvivesRelaunch() async {
+        XCTAssertFalse(store.continueOffline(name: "  "))
+        XCTAssertTrue(store.continueOffline(name: " Asha "))
+        XCTAssertTrue(store.isSignedIn)
+        XCTAssertEqual(store.profile?.name, "Asha")
+        XCTAssertEqual(store.profile?.isOffline, true)
+        let again = AccountStore(service: service, secrets: secrets, defaults: suite, avatarCache: avatarFile)
+        XCTAssertTrue(again.isSignedIn)
+        await again.signOut()
+        XCTAssertFalse(again.isSignedIn)
+    }
+
+    func testUnreachableServerIsFlaggedForTheOfflineOffer() async {
+        service.failSignInUnreachable = true
+        let ok = await store.signIn(email: "a@b.co", password: pw)
+        XCTAssertFalse(ok)
+        XCTAssertTrue(store.serverUnreachable)
+        service.failSignInUnreachable = false
+        service.failSignIn = true
+        _ = await store.signIn(email: "a@b.co", password: pw)
+        XCTAssertFalse(store.serverUnreachable, "a wrong password is not a network problem")
     }
 
     func testSignUpStoresSessionProfileAndName() async {

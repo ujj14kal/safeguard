@@ -7,6 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D497E6394908CE42D9E3C6E5 /* SafeArrival.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3D0E28C7FAF5E07E8FE7E99 /* SafeArrival.swift */; };
+		D307FA4B92131C79DC7B6CBB /* SafeArrivalTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D38D6968BA3CF8BB09AF21AB /* SafeArrivalTests.swift */; };
+		D39469BD09733DA2546BA383 /* SafeArrivalCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3921C40EE6AFB671043C0CC /* SafeArrivalCard.swift */; };
+		D383E748C6D166B65CE5CD65 /* SafeArrival.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3D0E28C7FAF5E07E8FE7E99 /* SafeArrival.swift */; };
+		D454DCFCD279A948D85023B1 /* Helplines.swift in Sources */ = {isa = PBXBuildFile; fileRef = D375FE365B8406AE7C087BCD /* Helplines.swift */; };
+		D3E63B663B85F65A9EA6F42B /* Helplines.swift in Sources */ = {isa = PBXBuildFile; fileRef = D375FE365B8406AE7C087BCD /* Helplines.swift */; };
 		D45AF5A33F9F61419E116F71 /* AvatarImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F764734E9E3297124FA691 /* AvatarImage.swift */; };
 		D3D3C4050C20F31E8E338726 /* AccountGateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3E91AA5C423981DDC5BEA56 /* AccountGateView.swift */; };
 		D34C4E108B269FCDD9979AB1 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3669F15EF0DC80635D038EC /* ProfileView.swift */; };
@@ -193,6 +199,10 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		D38D6968BA3CF8BB09AF21AB /* SafeArrivalTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafeArrivalTests.swift; sourceTree = "<group>"; };
+		D3921C40EE6AFB671043C0CC /* SafeArrivalCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafeArrivalCard.swift; sourceTree = "<group>"; };
+		D3D0E28C7FAF5E07E8FE7E99 /* SafeArrival.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafeArrival.swift; sourceTree = "<group>"; };
+		D375FE365B8406AE7C087BCD /* Helplines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Helplines.swift; sourceTree = "<group>"; };
 		D3E91AA5C423981DDC5BEA56 /* AccountGateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountGateView.swift; sourceTree = "<group>"; };
 		D3669F15EF0DC80635D038EC /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 		D3BAF103634A0F5000157BB4 /* AvatarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvatarView.swift; sourceTree = "<group>"; };
@@ -449,6 +459,7 @@
 		A10000000000000000000016 /* Tabs */ = {
 			isa = PBXGroup;
 			children = (
+				D3921C40EE6AFB671043C0CC /* SafeArrivalCard.swift */,
 				D3530D8636BEE50AB954BF0E /* LiveSettingsSection.swift */,
 				D3755B6E7787565AC33A8D91 /* Readiness.swift */,
 				D34E73CF3271830AD2BB74B0 /* DashboardView.swift */,
@@ -497,6 +508,7 @@
 		B20000000000000000000004 /* SafeguardTests */ = {
 			isa = PBXGroup;
 			children = (
+				D38D6968BA3CF8BB09AF21AB /* SafeArrivalTests.swift */,
 				D3B16841A4B9979C608B7715 /* HLSEvidenceTests.swift */,
 				D3A701056CD4995ADA43C998 /* VerifierClientTests.swift */,
 				D397449DDB49A2AC3DE15F80 /* GestureTests.swift */,
@@ -546,6 +558,8 @@
 		A1000000000000000000009E /* Escalation */ = {
 			isa = PBXGroup;
 			children = (
+				D3D0E28C7FAF5E07E8FE7E99 /* SafeArrival.swift */,
+				D375FE365B8406AE7C087BCD /* Helplines.swift */,
 				D38FBA25D03880860EE730A3 /* LiveLinkStore.swift */,
 				D3212D41F7A01FC88794D27C /* UberDeepLink.swift */,
 				D3B95933BB2350AAAEB8AC15 /* LocationFixPolicy.swift */,
@@ -723,6 +737,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D39469BD09733DA2546BA383 /* SafeArrivalCard.swift in Sources */,
+				D383E748C6D166B65CE5CD65 /* SafeArrival.swift in Sources */,
+				D3E63B663B85F65A9EA6F42B /* Helplines.swift in Sources */,
 				D3D3C4050C20F31E8E338726 /* AccountGateView.swift in Sources */,
 				D34C4E108B269FCDD9979AB1 /* ProfileView.swift in Sources */,
 				D30A0394C2C7506920DD83B8 /* AvatarView.swift in Sources */,
@@ -824,6 +841,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D497E6394908CE42D9E3C6E5 /* SafeArrival.swift in Sources */,
+				D307FA4B92131C79DC7B6CBB /* SafeArrivalTests.swift in Sources */,
+				D454DCFCD279A948D85023B1 /* Helplines.swift in Sources */,
 				D45AF5A33F9F61419E116F71 /* AvatarImage.swift in Sources */,
 				D328257A41C637B25DC6D7F1 /* HLSEvidenceTests.swift in Sources */,
 				D470154E813C1E3446E8070D /* EvidenceCapture.swift in Sources */,

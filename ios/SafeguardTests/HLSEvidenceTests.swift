@@ -65,3 +65,15 @@ final class AvatarImageTests: XCTestCase {
         XCTAssertEqual(AvatarImage.initials("  "), "?")
     }
 }
+
+final class HelplinesTests: XCTestCase {
+    func testHelplineNumbersAndURLs() {
+        XCTAssertEqual(Helplines.dialURL(Helplines.police)?.absoluteString, "tel:112")
+        XCTAssertEqual(Helplines.dialURL(Helplines.women)?.absoluteString, "tel:1091")
+        XCTAssertEqual(Helplines.all.count, 3)
+        XCTAssertEqual(
+            Helplines.mapsURL(for: .police)?.absoluteString, "https://maps.apple.com/?q=police%20station"
+        )
+        XCTAssertEqual(Helplines.mapsURL(for: .hospital)?.absoluteString, "https://maps.apple.com/?q=hospital")
+    }
+}

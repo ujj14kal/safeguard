@@ -108,7 +108,14 @@ def invite_link(bot_username, code):
     return f"https://t.me/{bot_username}?start={code}"
 
 
-def link_from_updates(payload, store):
+GUARDIAN_START_PREFIX = "g_"
+
+
+def guardian_invite_link(bot_username, code):
+    return f"https://t.me/{bot_username}?start={GUARDIAN_START_PREFIX}{code}"
+
+
+def link_from_updates(payload, store, guardians=None):
     """Applies one Telegram `getUpdates` payload to the store.
 
     Returns (linked codes, next offset). Pure apart from the store calls,
@@ -135,6 +142,10 @@ def link_from_updates(payload, store):
         chat = message.get("chat") or {}
         chat_id = chat.get("id")
         if not code or chat_id is None:
+            continue
+        if code.startswith(GUARDIAN_START_PREFIX):
+            if guardians is not None and guardians.link_chat(code[len(GUARDIAN_START_PREFIX):], chat_id):
+                linked.append(code)
             continue
         if store.link(code, chat_id) is not None:
             linked.append(code)

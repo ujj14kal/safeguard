@@ -17,6 +17,9 @@ public final class AccountStore: ObservableObject {
     @Published public var errorMessage: String?
     /// Set after a sign-up that needs the email link opened first.
     @Published public private(set) var needsConfirmation = false
+    /// True after the last attempt failed because the server could not be
+    /// reached (the sign-in screen then offers to continue offline).
+    @Published public private(set) var serverUnreachable = false
 
     private let service: AccountService
     private let secrets: SecretStore
@@ -42,7 +45,7 @@ public final class AccountStore: ObservableObject {
         avatarData = try? Data(contentsOf: avatarCache)
         if let data = defaults.data(forKey: Self.profileKey),
            let cached = try? JSONDecoder().decode(AccountProfile.self, from: data),
-           loadSession() != nil
+           loadSession() != nil || cached.isOffline
         {
             profile = cached
         }
@@ -90,6 +93,27 @@ public final class AccountStore: ObservableObject {
         }
     }
 
+    /// Lets the app be used when the server cannot be reached (bad network
+    /// at a demo, say). A profile that lives on this phone only; signing in
+    /// later from Settings backs it up.
+    @discardableResult
+    public func continueOffline(name: String) -> Bool {
+        guard SetupMachine.nameValid(name) else {
+            errorMessage = String(localized: "Enter your name (1 to 40 characters).")
+            return false
+        }
+        let local = AccountProfile(
+            id: AccountProfile.offlineID, email: "", name: Self.clean(name),
+            language: AppLanguage.alertLang
+        )
+        profile = local
+        persist(local)
+        defaults.set(local.name, forKey: "wearerName")
+        errorMessage = nil
+        serverUnreachable = false
+        return true
+    }
+
     public func signOut() async {
         if let token = loadSession()?.accessToken {
             await service.signOut(accessToken: token)
@@ -118,6 +142,7 @@ public final class AccountStore: ObservableObject {
         avatarData = nil
         profile = nil
         needsConfirmation = false
+        serverUnreachable = false
     }
 
     // MARK: Profile
@@ -229,12 +254,15 @@ public final class AccountStore: ObservableObject {
     private func run(_ work: @escaping () async throws -> Void) async -> Bool {
         isBusy = true
         errorMessage = nil
+        serverUnreachable = false
         defer { isBusy = false }
         do {
             try await work()
             return true
         } catch let error as AccountError {
             errorMessage = error.message
+            // No HTTP status means the request never got an answer.
+            serverUnreachable = error.status == nil || error.status == 503
             return false
         } catch {
             errorMessage = String(localized: "Something went wrong. Please try again.")

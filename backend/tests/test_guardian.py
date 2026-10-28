@@ -214,3 +214,49 @@ def test_expiring_one_incident_keeps_the_channel_token_for_the_newer_one():
     now[0] += 100  # old one expired, new one active
     store.save()
     assert store.get_by_token("shared-token-xyz") is new
+
+
+def test_guardian_links_telegram_and_gets_the_sos_alert(api, monkeypatch):
+    from app.contacts import link_from_updates
+
+    import dataclasses
+
+    monkeypatch.setattr(
+        main, "SETTINGS",
+        dataclasses.replace(main.SETTINGS, notify_mode="telegram", telegram_bot="TestBot"),
+    )
+    code = new_code(api)
+    headers = {"X-Guardian-Code": code}
+    info = api.get("/guardian/api/alerts", headers=headers).json()
+    assert info["available"] and not info["linked"]
+    assert info["link"] == f"https://t.me/TestBot?start=g_{code}"
+
+    # The guardian presses Start in Telegram.
+    update = {"update_id": 5, "message": {"text": f"/start g_{code}", "chat": {"id": 777}}}
+    linked, _ = link_from_updates({"result": [update]}, main.get_contact_store(), main.get_guardians())
+    assert linked and api.get("/guardian/api/alerts", headers=headers).json()["linked"]
+
+    res = start(api, guardian_code=code)
+    guardian = [d for d in res["delivery"] if d["code"] == "guardian"]
+    assert guardian and guardian[0]["status"] == "dry-run"
+
+
+def test_unlinked_guardian_is_skipped_and_tests_do_not_alert(api):
+    code = new_code(api)
+    res = start(api, guardian_code=code)
+    assert [d["status"] for d in res["delivery"] if d["code"] == "guardian"] == ["skipped"]
+    res = start(api, guardian_code=code, session="sos-test0001", test=True)
+    assert not [d for d in res["delivery"] if d["code"] == "guardian"]
+
+
+def test_guardian_alert_route_needs_a_valid_code(api):
+    assert api.get("/guardian/api/alerts", headers={"X-Guardian-Code": "AAAA-AAAA-AAAA"}).status_code == 403
+
+
+def test_a_start_with_a_wrong_prefix_never_links_a_guardian(api):
+    from app.contacts import link_from_updates
+
+    code = new_code(api)
+    update = {"update_id": 1, "message": {"text": f"/start {code}", "chat": {"id": 9}}}
+    link_from_updates({"result": [update]}, main.get_contact_store(), main.get_guardians())
+    assert main.get_guardians().chat_id(code) is None

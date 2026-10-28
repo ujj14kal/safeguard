@@ -41,6 +41,7 @@ struct DashboardView: View {
                             readinessCard
                             statsGrid
                             recentCard
+                            SafeArrivalCard()
                             emergencyCard
                         }
                         .padding(.horizontal)
@@ -333,10 +334,45 @@ struct DashboardView: View {
             }
             .buttonStyle(.plain)
             .tapHaptic(.medium)
+            HStack(spacing: DS.Spacing.small) {
+                helplineButton(Helplines.women, symbol: "figure.stand.dress")
+                helplineButton(Helplines.domesticAbuse, symbol: "heart.circle.fill")
+            }
+            HStack(spacing: DS.Spacing.small) {
+                nearbyButton(.police, title: String(localized: "Police near me"), symbol: "building.columns.fill")
+                nearbyButton(.hospital, title: String(localized: "Hospitals near me"), symbol: "cross.case.fill")
+            }
             Text("Safeguard never dials by itself. Everything else in an SOS runs automatically.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }
         .dsCard()
+    }
+
+    private func helplineButton(_ line: Helplines.Line, symbol: String) -> some View {
+        Button {
+            if let url = Helplines.dialURL(line) { openURL(url) }
+        } label: {
+            Label(LocalizedStringKey(line.titleKey), systemImage: symbol)
+                .font(.subheadline.weight(.semibold))
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity, minHeight: 48)
+                .background(DS.Colors.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .tapHaptic(.light)
+    }
+
+    private func nearbyButton(_ place: Helplines.Place, title: String, symbol: String) -> some View {
+        Button {
+            if let url = Helplines.mapsURL(for: place) { openURL(url) }
+        } label: {
+            Label(title, systemImage: symbol)
+                .font(.subheadline.weight(.semibold))
+                .frame(maxWidth: .infinity, minHeight: 48)
+                .background(DS.Colors.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .tapHaptic(.light)
     }
 }

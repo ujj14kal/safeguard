@@ -474,6 +474,16 @@ struct SOSView: View {
             }
             .buttonStyle(.plain)
             .accessibilityHint("Starts a phone call to the emergency number. Nothing dials by itself.")
+            Button {
+                if let url = Helplines.dialURL(Helplines.women) { openURL(url) }
+            } label: {
+                Label("Women helpline (1091)", systemImage: "figure.stand.dress")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                    .foregroundStyle(.white)
+                    .background(.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            }
+            .buttonStyle(.plain)
             holdToEnd
         }
         .padding(.horizontal)

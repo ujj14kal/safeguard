@@ -63,6 +63,9 @@ struct AccountFlowView: View {
                 }
                 .buttonStyle(PrimaryButtonStyle())
                 .disabled(store.isBusy)
+                if store.serverUnreachable {
+                    offlineOffer
+                }
                 if allowSkip {
                     Button("Continue without an account") { onFinished?() }
                         .font(.subheadline.weight(.semibold))
@@ -79,6 +82,31 @@ struct AccountFlowView: View {
         .animation(DS.Motion.smooth, value: mode)
         .animation(DS.Motion.smooth, value: store.errorMessage)
         .onAppear { if name.isEmpty { name = wearerName } }
+    }
+
+    /// Shown only when the server did not answer: use the app now, back it
+    /// up later from Settings.
+    private var offlineOffer: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Can't reach the Safeguard server. You can still use the app on this phone and sign in later in Settings.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+            if mode == .signIn {
+                field("Your name", text: $name, symbol: "person.fill", focus: .name)
+                    .textInputAutocapitalization(.words)
+            }
+            Button("Continue offline for now") {
+                if store.continueOffline(name: name) {
+                    UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                    onFinished?()
+                }
+            }
+            .buttonStyle(.bordered)
+            .tint(DS.Colors.accent)
+            .minTouchTarget()
+        }
+        .padding(14)
+        .background(DS.Colors.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
     private var header: some View {

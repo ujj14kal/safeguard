@@ -78,6 +78,19 @@ class GuardianStore(_JsonMap):
     def exists(self, code: str) -> bool:
         return normalize_code(code) in self._data
 
+    def link_chat(self, code: str, chat_id) -> bool:
+        """Remembers the guardian's Telegram chat, so an SOS can alert them."""
+        key = normalize_code(code)
+        if key not in self._data or chat_id is None:
+            return False
+        self._data[key]["chat_id"] = chat_id
+        self._save()
+        return True
+
+    def chat_id(self, code: str):
+        entry = self._data.get(normalize_code(code))
+        return entry.get("chat_id") if entry else None
+
     def revoke(self, code: str) -> bool:
         key = normalize_code(code)
         if key in self._data:

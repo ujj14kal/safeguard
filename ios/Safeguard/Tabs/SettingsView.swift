@@ -135,8 +135,16 @@ struct SettingsView: View {
                         }
                     }
                 }
+                if profile.isOffline {
+                    Label("Offline: this profile is only on this phone. Sign out, then sign in to back it up.",
+                          systemImage: "icloud.slash")
+                        .font(.footnote)
+                        .foregroundStyle(DS.Colors.warning)
+                }
                 Button("Sign out") { Task { await account.signOut() } }
-                Button("Delete my account", role: .destructive) { confirmDeleteAccount = true }
+                if !profile.isOffline {
+                    Button("Delete my account", role: .destructive) { confirmDeleteAccount = true }
+                }
             } else {
                 Button("Create account or sign in") { showingAccount = true }
             }

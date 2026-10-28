@@ -409,6 +409,7 @@ final class ProtectViewModel: ObservableObject {
     private var gestureCounter = UnwantedGestureCounter()
     private var lastGestureLog: [String: TimeInterval] = [:]
     private var pendingGestureCause = false
+    private var pendingTimerCause = false
 
     fileprivate func publishFrameCues(_ cues: FrameCues, at time: TimeInterval) {
         guard isProtecting else { return }
@@ -717,6 +718,24 @@ final class ProtectViewModel: ObservableObject {
         syncProtectionState()
     }
 
+    /// The safe-arrival time passed without "I'm safe": start protecting (if
+    /// needed) and run the countdown, which the person can still cancel.
+    func safeArrivalExpired() {
+        AppLog.shared.event("safe_arrival_expired", [:])
+        pendingTimerCause = true
+        if state == .idle {
+            guard !pendingDistressStart else { return }
+            pendingDistressStart = true
+            NotificationCenter.default.post(name: .safeguardGoBack, object: nil)
+            Task {
+                await startCamera()
+                if state == .idle { pendingDistressStart = false }
+            }
+        } else {
+            distressHeard()
+        }
+    }
+
     /// A distress word heard while NOT protecting: start protecting at once,
     /// then run the countdown as soon as the camera is up.
     private func distressHeardWhileIdle() {
@@ -771,6 +790,7 @@ final class ProtectViewModel: ObservableObject {
                     // Cancelled countdown: a later SOS is not shout-caused.
                     pendingShoutCause = false
                     pendingGestureCause = false
+                    pendingTimerCause = false
                 }
             }
             if mapped == .asking, previous != .asking {
@@ -1310,6 +1330,7 @@ final class ProtectViewModel: ObservableObject {
         sosCause = resolveSosCause()
         pendingShoutCause = false
         pendingGestureCause = false
+        pendingTimerCause = false
         escalation = EscalationCoordinator()
         escalation.start()
         incidentID = nil
@@ -2079,6 +2100,7 @@ final class ProtectViewModel: ObservableObject {
         case .unsafePhrase:
             return "unsafePhrase"
         case .distressWord:
+            if pendingTimerCause { return "safeArrival" }
             if pendingGestureCause { return "gestures" }
             return pendingShoutCause ? "shouting" : "distressWord"
         case .noReply, .none:

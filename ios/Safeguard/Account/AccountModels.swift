@@ -9,6 +9,10 @@ public struct AccountProfile: Codable, Equatable, Sendable {
     public var phone: String?
     public var language: String
 
+    /// Id of the on-phone-only profile used when the server cannot be reached.
+    public static let offlineID = "offline"
+    public var isOffline: Bool { id == Self.offlineID }
+
     public init(id: String, email: String, name: String, phone: String? = nil, language: String = "en") {
         self.id = id
         self.email = email

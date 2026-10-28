@@ -340,6 +340,9 @@ _GUARDIAN_PAGE = """<!DOCTYPE html>
 
   <section id="list" class="hidden">
     <div class="row"><button class="alt" id="signout">Sign out</button><button class="alt" id="reload">Refresh</button></div>
+    <div class="card hidden" id="alertCard"><h2>SOS alerts on Telegram</h2>
+      <p class="sub" id="alertText"></p>
+      <a class="btn" id="alertLink" target="_blank" rel="noopener">Get alerts on Telegram</a></div>
     <div class="card"><h2>Incidents</h2><div id="items"></div></div>
   </section>
 
@@ -391,7 +394,21 @@ async function api(path) {
   return res.json();
 }
 
+async function loadAlerts() {
+  try {
+    const a = await api("/guardian/api/alerts");
+    $("alertCard").classList.toggle("hidden", !a.available);
+    if (!a.available) return;
+    $("alertText").textContent = a.linked
+      ? "You will get a Telegram message with the live link the moment an SOS starts."
+      : "Open Telegram once and press Start. After that you are messaged the moment an SOS starts.";
+    $("alertLink").href = a.link;
+    $("alertLink").classList.toggle("hidden", a.linked);
+  } catch (e) { $("alertCard").classList.add("hidden"); }
+}
+
 async function loadList() {
+  loadAlerts();
   const data = await api("/guardian/api/incidents");
   const box = $("items");
   box.innerHTML = "";

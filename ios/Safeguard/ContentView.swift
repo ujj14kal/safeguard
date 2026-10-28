@@ -10,6 +10,9 @@ struct ContentView: View {
     @AppStorage("setupStep") private var savedStep = SetupStep.welcome.rawValue
     @State private var rerunSetup = false
     @StateObject private var account = AccountStore.shared
+    @StateObject private var safeArrival = SafeArrivalStore.shared
+    @Environment(\.scenePhase) private var scenePhase
+    private let tick = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     enum Tab: Hashable {
         case dashboard, protect, contacts, activity, settings
@@ -70,6 +73,10 @@ struct ContentView: View {
                 .tag(Tab.settings)
         }
         .tint(DS.Colors.accent)
+        .onReceive(tick) { _ in checkSafeArrival() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { checkSafeArrival() }
+        }
         .onReceive(NotificationCenter.default.publisher(for: .safeguardOpenSettings)) { _ in
             selection = .settings
         }
@@ -109,4 +116,14 @@ struct ContentView: View {
 
 #Preview {
     ContentView()
+}
+
+extension ContentView {
+    /// The safe-arrival deadline passed: bring up Protect and start the
+    /// (cancellable) SOS countdown, once.
+    fileprivate func checkSafeArrival() {
+        guard safeArrival.consumeOverdue() else { return }
+        selection = .protect
+        ProtectViewModel.shared.safeArrivalExpired()
+    }
 }

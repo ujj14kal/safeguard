@@ -154,6 +154,7 @@ enum ActivityText {
         case "shouting": String(localized: "Shouting")
         case "gestures": String(localized: "Unwanted gestures")
         case "flag": String(localized: "Conversation flag")
+        case "safeArrival": String(localized: "Safe-arrival timer")
         default: cause
         }
     }

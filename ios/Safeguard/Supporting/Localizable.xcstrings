@@ -8816,6 +8816,310 @@
           }
         }
       }
+    },
+    "Women helpline (1091)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Women helpline (1091)"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "महिला हेल्पलाइन (1091)"
+          }
+        }
+      }
+    },
+    "Women in distress (181)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Women in distress (181)"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "संकट में महिला (181)"
+          }
+        }
+      }
+    },
+    "Police near me": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Police near me"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "मेरे पास पुलिस"
+          }
+        }
+      }
+    },
+    "Hospitals near me": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hospitals near me"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "मेरे पास अस्पताल"
+          }
+        }
+      }
+    },
+    "Can't reach the Safeguard server. You can still use the app on this phone and sign in later in Settings.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can't reach the Safeguard server. You can still use the app on this phone and sign in later in Settings."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safeguard सर्वर तक नहीं पहुँच पा रहे। आप इस फ़ोन पर ऐप चला सकते हैं और बाद में सेटिंग्स में साइन इन कर सकते हैं।"
+          }
+        }
+      }
+    },
+    "Continue offline for now": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continue offline for now"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अभी ऑफ़लाइन जारी रखें"
+          }
+        }
+      }
+    },
+    "Offline: this profile is only on this phone. Sign out, then sign in to back it up.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Offline: this profile is only on this phone. Sign out, then sign in to back it up."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ऑफ़लाइन: यह प्रोफ़ाइल केवल इसी फ़ोन पर है। साइन आउट करके साइन इन करें ताकि इसका बैकअप हो सके।"
+          }
+        }
+      }
+    },
+    "Safe arrival": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safe arrival"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सुरक्षित पहुँच"
+          }
+        }
+      }
+    },
+    "Be safe by %@ (%@ left)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Be safe by %@ (%@ left)"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ तक सुरक्षित पहुँचें (%@ बाकी)"
+          }
+        }
+      }
+    },
+    "If you do not tap this in time, an SOS countdown starts and you can still cancel it.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If you do not tap this in time, an SOS countdown starts and you can still cancel it."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अगर आप समय पर इसे नहीं दबाते, तो SOS की गिनती शुरू होगी और आप उसे रद्द कर सकते हैं।"
+          }
+        }
+      }
+    },
+    "Minutes": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Minutes"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "मिनट"
+          }
+        }
+      }
+    },
+    "%d min": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d min"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d मिनट"
+          }
+        }
+      }
+    },
+    "Start timer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start timer"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "टाइमर शुरू करें"
+          }
+        }
+      }
+    },
+    "Heading somewhere? Set a time. If you have not tapped I'm safe by then, Safeguard starts an SOS countdown. Keep the app installed and notifications on.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heading somewhere? Set a time. If you have not tapped I'm safe by then, Safeguard starts an SOS countdown. Keep the app installed and notifications on."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कहीं जा रहे हैं? समय तय करें। अगर तब तक आपने \"मैं सुरक्षित हूँ\" नहीं दबाया, तो Safeguard SOS की गिनती शुरू करेगा। ऐप इंस्टॉल रखें और सूचनाएँ चालू रखें।"
+          }
+        }
+      }
+    },
+    "Safe-arrival time is up": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safe-arrival time is up"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सुरक्षित पहुँचने का समय हो गया"
+          }
+        }
+      }
+    },
+    "Open Safeguard and tap I'm safe, or an SOS countdown will start.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Safeguard and tap I'm safe, or an SOS countdown will start."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safeguard खोलें और \"मैं सुरक्षित हूँ\" दबाएँ, वरना SOS की गिनती शुरू होगी।"
+          }
+        }
+      }
+    },
+    "Almost time": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Almost time"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "लगभग समय हो गया"
+          }
+        }
+      }
+    },
+    "Tap I'm safe in Safeguard when you arrive.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap I'm safe in Safeguard when you arrive."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "पहुँचने पर Safeguard में \"मैं सुरक्षित हूँ\" दबाएँ।"
+          }
+        }
+      }
+    },
+    "Safe-arrival timer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safe-arrival timer"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सुरक्षित-पहुँच टाइमर"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
