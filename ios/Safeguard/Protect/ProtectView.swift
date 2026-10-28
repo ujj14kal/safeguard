@@ -8,34 +8,10 @@ struct ProtectView: View {
     @AppStorage("listenerOptIn") private var listenerOptIn = Defaults.current.listenerOptIn
     @Environment(\.openURL) private var openURL
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-    @AppStorage("autoStartProtecting") private var autoStart = Defaults.autoStartProtectingDefault
-    @AppStorage("setupComplete") private var setupComplete = false
-    @State private var autoStartTried = false
-    @State private var breathing = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        ZStack {
-            if model.isProtecting {
-                hudView
-                    .transition(.opacity)
-            } else {
-                idleView
-                    .transition(.opacity)
-            }
-        }
-        .animation(DS.Motion.smooth, value: model.isProtecting)
-        .task { await autoStartIfWanted() }
-    }
-
-    private func autoStartIfWanted() async {
-        guard autoStart, setupComplete, !autoStartTried, !model.isProtecting,
-              SetupPermissions.status(of: .camera) == .granted
-        else { return }
-        autoStartTried = true
-        try? await Task.sleep(for: .milliseconds(3900))
-        guard !model.isProtecting else { return }
-        await model.startCamera()
+        hudView
     }
 
     private var hudView: some View {
@@ -94,7 +70,7 @@ struct ProtectView: View {
                     DS.Colors.background.opacity(0.92).ignoresSafeArea()
                     LoadingScreen(
                         title: String(localized: "Starting protection"),
-                        subtitle: String(localized: "Warming up the camera and microphone")
+                        steps: LoadingScreen.protectionSteps
                     )
                 }
                 .transition(.opacity)
@@ -104,7 +80,6 @@ struct ProtectView: View {
         .animation(DS.Motion.smooth, value: model.state)
         .animation(DS.Motion.smooth, value: model.isStarting)
         .animation(DS.Motion.smooth, value: model.conversationFlag?.label)
-        .toolbar(.hidden, for: .tabBar)
         .onTapGesture(count: 2) { model.tapCheckIn() }
     }
 
@@ -310,179 +285,6 @@ struct ProtectView: View {
                 UIAccessibility.post(notification: .announcement, argument: text)
             }
             .accessibilityAddTraits(.isHeader)
-    }
-
-    private var idleView: some View {
-        NavigationStack {
-            ZStack(alignment: .top) {
-                DS.Colors.background.ignoresSafeArea()
-                RadialGradient(
-                    colors: [DS.Colors.brandPurple.opacity(0.45), .clear],
-                    center: .top, startRadius: 20, endRadius: 420
-                )
-                .ignoresSafeArea()
-                ScrollView {
-                    VStack(spacing: DS.Spacing.large) {
-                        hero
-                        VStack(spacing: DS.Spacing.medium) {
-                            Button {
-                                Task { await model.startCamera() }
-                            } label: {
-                                Label("Start protecting", systemImage: "play.fill")
-                            }
-                            .buttonStyle(PrimaryButtonStyle())
-                            Button("Replay a video…") { model.showingPicker = true }
-                                .font(.subheadline.weight(.semibold))
-                                .tint(DS.Colors.accent)
-                                .minTouchTarget()
-                        }
-                        readinessPill
-                        voiceCommandsCard
-                        if let error = model.errorMessage {
-                            Label(error, systemImage: "exclamationmark.triangle.fill")
-                                .font(.footnote)
-                                .foregroundStyle(DS.Colors.danger)
-                                .multilineTextAlignment(.center)
-                        }
-                    }
-                    .padding()
-                }
-                .scrollIndicators(.hidden)
-                if let toast = model.toast {
-                    toastBubble(toast)
-                        .padding(.top, DS.Spacing.small)
-                }
-                if model.isStarting {
-                    ZStack {
-                        DS.Colors.background.opacity(0.94).ignoresSafeArea()
-                        LoadingScreen(
-                            title: String(localized: "Starting protection"),
-                            subtitle: String(localized: "Warming up the camera and microphone")
-                        )
-                    }
-                    .transition(.opacity)
-                }
-            }
-            .animation(DS.Motion.smooth, value: model.isStarting)
-            .toolbar(.hidden, for: .navigationBar)
-            .sheet(isPresented: $model.showingPicker) {
-                DocumentPicker { url in model.startReplay(url: url) }
-            }
-        }
-    }
-
-    private var hero: some View {
-        VStack(spacing: DS.Spacing.medium) {
-            ZStack {
-                Circle()
-                    .fill(RadialGradient(
-                        colors: [DS.Colors.accent.opacity(0.4), .clear],
-                        center: .center, startRadius: 10, endRadius: 150
-                    ))
-                    .frame(width: 280, height: 280)
-                    .scaleEffect(breathing && !reduceMotion ? 1.06 : 0.96)
-                Circle()
-                    .strokeBorder(
-                        AngularGradient(
-                            colors: [DS.Colors.accent, DS.Colors.buttonFill, DS.Colors.accent],
-                            center: .center
-                        ),
-                        lineWidth: 5
-                    )
-                    .frame(width: 150, height: 150)
-                Image(systemName: "shield.lefthalf.filled")
-                    .font(.system(size: 66, weight: .medium))
-                    .foregroundStyle(DS.Colors.accent)
-                    .symbolRenderingMode(.hierarchical)
-            }
-            .frame(height: 230)
-            .accessibilityHidden(true)
-            .onAppear {
-                guard !reduceMotion else { return }
-                withAnimation(.easeInOut(duration: 3).repeatForever(autoreverses: true)) {
-                    breathing = true
-                }
-            }
-            Text("Safeguard")
-                .font(.system(.largeTitle, design: .rounded, weight: .bold))
-                .foregroundStyle(DS.Colors.accent)
-            Text(model.statusLine)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-            if let verify = model.lastVerifyResult {
-                Text(verify).font(.footnote).foregroundStyle(.secondary)
-            }
-            if let speech = model.lastSpeechInfo {
-                Text(speech).font(.footnote).foregroundStyle(.secondary)
-            }
-        }
-    }
-
-    private var readinessPill: some View {
-        let items = Readiness.items(ReadinessInput(
-            camera: SetupPermissions.status(of: .camera),
-            microphone: SetupPermissions.status(of: .microphone),
-            speech: SetupPermissions.status(of: .speech),
-            location: SetupPermissions.status(of: .location),
-            backendReachable: model.idleBackendReachable,
-            contactCount: model.sosContacts.contacts.count,
-            linkedCount: model.sosContacts.linkedCodes.count,
-            sendsRealAlerts: model.sendRealAlerts
-        ))
-        let problems = items.filter { $0.level == .problem }.count
-        return Button {
-            NotificationCenter.default.post(name: .safeguardOpenDashboard, object: nil)
-        } label: {
-            HStack {
-                StatusPill(
-                    text: problems == 0
-                        ? String(localized: "Ready to protect")
-                        : L10n.format("Items needing attention: %d", problems),
-                    symbol: problems == 0 ? "checkmark.seal.fill" : "exclamationmark.triangle.fill",
-                    color: problems == 0 ? DS.Colors.ok : DS.Colors.warning
-                )
-                Spacer()
-                Text("Details")
-                    .font(.footnote.weight(.semibold))
-                Image(systemName: "chevron.right").font(.footnote.weight(.semibold))
-            }
-            .foregroundStyle(DS.Colors.accent)
-            .dsCard()
-        }
-        .buttonStyle(.plain)
-        .onAppear { model.checkBackend() }
-    }
-
-    private var voiceCommandsCard: some View {
-        VStack(alignment: .leading, spacing: DS.Spacing.small) {
-            HStack {
-                Label("Voice commands", systemImage: "mic.fill")
-                    .font(.headline)
-                    .foregroundStyle(DS.Colors.accent)
-                Spacer()
-                if model.listenerLive {
-                    Text("ready")
-                        .font(.footnote)
-                        .foregroundStyle(DS.Colors.ok)
-                        .accessibilityLabel("Voice commands ready")
-                } else if let deaf = model.listenerDeafReason {
-                    Text("unavailable")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .accessibilityLabel(Text(format: "Voice commands unavailable: %@", deaf))
-                }
-            }
-            ForEach(
-                ["Say “help” or “bachao”, or shout: SOS starts by itself",
-                 "Safeguard, stop • status • dim"],
-                id: \.self
-            ) { command in
-                Text(command)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .dsCard()
     }
 }
 

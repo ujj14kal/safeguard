@@ -26,4 +26,5 @@ xcodebuild -project ios/Safeguard.xcodeproj -scheme Safeguard \
 
 APP="$(find build/DerivedData -name Safeguard.app -maxdepth 6 | head -1)"
 xcrun simctl install "$UDID" "$APP"
-xcrun simctl launch "$UDID" io.github.ujj14kal.safeguard
+BUNDLE_ID="$(/usr/libexec/PlistBuddy -c "Print CFBundleIdentifier" "$APP/Info.plist")"
+xcrun simctl launch "$UDID" "$BUNDLE_ID"

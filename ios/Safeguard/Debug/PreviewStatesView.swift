@@ -5,6 +5,8 @@
         var body: some View {
             ScrollView {
                 VStack(spacing: DS.Spacing.medium) {
+                    LoadingScreen(title: "Starting protection", steps: LoadingScreen.protectionSteps)
+                        .frame(maxWidth: .infinity)
                     ForEach(ProtectionState.allCases, id: \.self) { state in
                         HStack(spacing: DS.Spacing.medium) {
                             ShieldRingView(state: state, size: 72)

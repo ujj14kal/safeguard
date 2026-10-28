@@ -129,7 +129,6 @@ public struct StopConfirmation: Sendable {
 
 extension Notification.Name {
     public static let safeguardOpenSettings = Notification.Name("SafeguardOpenSettings")
-    public static let safeguardGoBack = Notification.Name("SafeguardGoBack")
     public static let safeguardRunSetup = Notification.Name("SafeguardRunSetup")
     public static let safeguardOpenContacts = Notification.Name("SafeguardOpenContacts")
     public static let safeguardOpenActivity = Notification.Name("SafeguardOpenActivity")

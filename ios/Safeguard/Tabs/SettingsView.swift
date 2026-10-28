@@ -43,6 +43,9 @@ struct SettingsView: View {
                 rerunSection
             }
             .navigationTitle("Settings")
+            .sheet(isPresented: $model.showingPicker) {
+                DocumentPicker { url in model.startReplay(url: url) }
+            }
             .confirmationDialog(
                 "Send real alerts?",
                 isPresented: $showingRealAlertsConfirm,

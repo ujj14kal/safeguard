@@ -9168,6 +9168,70 @@
           }
         }
       }
+    },
+    "Warming up the camera": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Warming up the camera"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कैमरा तैयार हो रहा है"
+          }
+        }
+      }
+    },
+    "Tuning the microphone": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tuning the microphone"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "माइक्रोफ़ोन ठीक किया जा रहा है"
+          }
+        }
+      }
+    },
+    "Connecting to Muse": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connecting to Muse"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Muse से जुड़ रहे हैं"
+          }
+        }
+      }
+    },
+    "Getting your location": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Getting your location"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आपकी लोकेशन ली जा रही है"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

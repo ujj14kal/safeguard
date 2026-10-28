@@ -33,7 +33,10 @@ swung, held out, pointed toward the wearer or carried openly at her is a HIGH \
 threat even when the person looks calm. A blade held in the hand close to the \
 wearer is at least MEDIUM even if it is not pointed. Always name what is held in \
 "object_held", with a short plain phrase such as "a bottle", "a phone" or "a kitchen \
-knife"; use an empty string when the hands are empty or nothing can be made out.
+knife"; use an empty string when the hands are empty or nothing can be made out. \
+Judge how the object is used, not only what it is: drinking from a bottle or cup, \
+holding it near the mouth or against the chest, writing with a pen, or putting an \
+object down are calm actions and stay low.
 
 The on-device features may include hints from a fast gesture and expression \
 classifier: "hostile_gesture" (an obscene hand gesture such as a raised middle \

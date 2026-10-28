@@ -8,11 +8,14 @@ struct ContentView: View {
     @State private var rerunSetup = false
     @StateObject private var account = AccountStore.shared
     @StateObject private var safeArrival = SafeArrivalStore.shared
+    @StateObject private var protection = ProtectViewModel.shared
+    @AppStorage("autoStartProtecting") private var autoStart = Defaults.autoStartProtectingDefault
+    @State private var autoStartTried = false
     @Environment(\.scenePhase) private var scenePhase
     private let tick = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     enum Tab: Hashable {
-        case dashboard, protect, contacts, activity, settings
+        case dashboard, contacts, activity, settings
     }
 
     #if DEBUG
@@ -48,13 +51,44 @@ struct ContentView: View {
     }
 
     private var tabsView: some View {
+        ZStack {
+            tabs
+            if protection.isProtecting {
+                ProtectView()
+                    .transition(.opacity)
+                    .zIndex(1)
+            } else if protection.isStarting {
+                ZStack {
+                    DS.Colors.background.opacity(0.96).ignoresSafeArea()
+                    LoadingScreen(
+                        title: String(localized: "Starting protection"),
+                        steps: LoadingScreen.protectionSteps
+                    )
+                }
+                .transition(.opacity)
+                .zIndex(2)
+            }
+        }
+        .animation(DS.Motion.smooth, value: protection.isProtecting)
+        .animation(DS.Motion.smooth, value: protection.isStarting)
+        .task { await autoStartIfWanted() }
+    }
+
+    private func autoStartIfWanted() async {
+        guard autoStart, setupComplete, !autoStartTried, !protection.isProtecting,
+              SetupPermissions.status(of: .camera) == .granted
+        else { return }
+        autoStartTried = true
+        try? await Task.sleep(for: .milliseconds(3900))
+        guard !protection.isProtecting else { return }
+        await protection.startCamera()
+    }
+
+    private var tabs: some View {
         TabView(selection: $selection.animation(DS.Motion.snappy)) {
             DashboardView()
                 .tabItem { Label("Dashboard", systemImage: "square.grid.2x2.fill") }
                 .tag(Tab.dashboard)
-            ProtectView()
-                .tabItem { Label("Protect", systemImage: "shield.fill") }
-                .tag(Tab.protect)
             ContactsView()
                 .tabItem { Label("Contacts", systemImage: "person.2.fill") }
                 .tag(Tab.contacts)
@@ -72,9 +106,6 @@ struct ContentView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .safeguardOpenSettings)) { _ in
             selection = .settings
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .safeguardGoBack)) { _ in
-            selection = .protect
         }
         .onReceive(NotificationCenter.default.publisher(for: .safeguardRunSetup)) { _ in
             savedStep = SetupStep.welcome.rawValue
@@ -94,10 +125,7 @@ struct ContentView: View {
                 let initial = UserDefaults.standard.string(forKey: "debugInitialTab")
                 if initial == "settings" {
                     selection = .settings
-                } else if initial == "protect" {
-                    selection = .protect
                 } else if initial == "sos" {
-                    selection = .protect
                     ProtectViewModel.shared.debugSimulateSOS()
                 }
             #endif
@@ -112,7 +140,6 @@ struct ContentView: View {
 extension ContentView {
     fileprivate func checkSafeArrival() {
         guard safeArrival.consumeOverdue() else { return }
-        selection = .protect
         ProtectViewModel.shared.safeArrivalExpired()
     }
 }

@@ -39,6 +39,7 @@ struct DashboardView: View {
                             readinessCard
                             statsGrid
                             recentCard
+                            voiceCard
                             SafeArrivalCard()
                             emergencyCard
                         }
@@ -138,16 +139,34 @@ struct DashboardView: View {
                 .buttonStyle(DestructiveButtonStyle())
             } else {
                 Button {
-                    NotificationCenter.default.post(name: .safeguardGoBack, object: nil)
                     Task { await model.startCamera() }
                 } label: {
                     Label("Start protecting", systemImage: "play.fill")
                 }
                 .buttonStyle(PrimaryButtonStyle())
             }
+            if let error = model.errorMessage, !model.isProtecting {
+                Label(error, systemImage: "exclamationmark.triangle.fill")
+                    .font(.footnote)
+                    .foregroundStyle(DS.Colors.danger)
+                    .multilineTextAlignment(.center)
+            }
         }
         .dsCard()
         .animation(DS.Motion.smooth, value: model.isProtecting)
+    }
+
+    private var voiceCard: some View {
+        VStack(alignment: .leading, spacing: DS.Spacing.small) {
+            DSSectionHeader(title: String(localized: "Voice commands"))
+            Text("Say “help” or “bachao”, or shout: SOS starts by itself")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+            Text("Safeguard, stop • status • dim")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+        .dsCard()
     }
 
     private var heroColor: Color {

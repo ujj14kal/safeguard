@@ -107,53 +107,101 @@ struct LoadingScreen: View {
     let title: String
     var subtitle: String?
     var symbol = "shield.fill"
+    var steps: [String] = []
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var spinning = false
-    @State private var breathe = false
+    @State private var stepIndex = 0
+
+    static var protectionSteps: [String] {
+        [
+            String(localized: "Warming up the camera"),
+            String(localized: "Tuning the microphone"),
+            String(localized: "Connecting to Muse"),
+            String(localized: "Getting your location"),
+        ]
+    }
 
     var body: some View {
-        VStack(spacing: DS.Spacing.large) {
+        VStack(spacing: DS.Spacing.xLarge) {
+            emblem
+            VStack(spacing: 10) {
+                Text(title)
+                    .font(.system(.title2, design: .rounded, weight: .bold))
+                if !steps.isEmpty {
+                    Text(steps[stepIndex % steps.count])
+                        .id(stepIndex)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .transition(.asymmetric(
+                            insertion: .move(edge: .bottom).combined(with: .opacity),
+                            removal: .move(edge: .top).combined(with: .opacity)
+                        ))
+                    stepDots
+                } else if let subtitle {
+                    Text(subtitle)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+            }
+            .clipped()
+        }
+        .padding(DS.Spacing.xLarge)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(title)
+        .task(id: steps.count) {
+            guard steps.count > 1 else { return }
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(1300))
+                withAnimation(.easeInOut(duration: 0.4)) { stepIndex += 1 }
+            }
+        }
+    }
+
+    private var stepDots: some View {
+        HStack(spacing: 6) {
+            ForEach(0..<steps.count, id: \.self) { index in
+                Capsule()
+                    .fill(index == stepIndex % steps.count ? DS.Colors.accent : .white.opacity(0.18))
+                    .frame(width: index == stepIndex % steps.count ? 18 : 6, height: 6)
+            }
+        }
+        .animation(.easeInOut(duration: 0.3), value: stepIndex)
+    }
+
+    private var emblem: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: reduceMotion)) { context in
+            let t = reduceMotion ? 0 : context.date.timeIntervalSinceReferenceDate
             ZStack {
+                ForEach(0..<3, id: \.self) { ring in
+                    let phase = (t / 2.6 + Double(ring) / 3).truncatingRemainder(dividingBy: 1)
+                    Circle()
+                        .stroke(DS.Colors.accent.opacity((1 - phase) * 0.4), lineWidth: 2)
+                        .scaleEffect(0.5 + phase * 0.9)
+                }
                 Circle()
-                    .stroke(.white.opacity(0.08), lineWidth: 6)
+                    .fill(RadialGradient(
+                        colors: [DS.Colors.accent.opacity(0.28), .clear],
+                        center: .center, startRadius: 4, endRadius: 56
+                    ))
+                    .frame(width: 112, height: 112)
                 Circle()
-                    .trim(from: 0, to: 0.28)
+                    .trim(from: 0, to: 0.3)
                     .stroke(
                         AngularGradient(
                             colors: [DS.Colors.accent.opacity(0), DS.Colors.accent],
                             center: .center
                         ),
-                        style: StrokeStyle(lineWidth: 6, lineCap: .round)
+                        style: StrokeStyle(lineWidth: 5, lineCap: .round)
                     )
-                    .rotationEffect(.degrees(spinning ? 360 : 0))
+                    .frame(width: 92, height: 92)
+                    .rotationEffect(.degrees((t * 220).truncatingRemainder(dividingBy: 360)))
                 Image(systemName: symbol)
-                    .font(.system(size: 34, weight: .semibold))
+                    .font(.system(size: 36, weight: .semibold))
                     .foregroundStyle(DS.Colors.accent)
-                    .scaleEffect(breathe && !reduceMotion ? 1.06 : 1)
+                    .scaleEffect(1 + 0.05 * sin(t * 2.6))
             }
-            .frame(width: 96, height: 96)
-            VStack(spacing: 6) {
-                Text(title)
-                    .font(.system(.title3, design: .rounded, weight: .semibold))
-                if let subtitle {
-                    Text(subtitle)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                }
-            }
-        }
-        .padding(DS.Spacing.xLarge)
-        .accessibilityElement(children: .combine)
-        .onAppear {
-            guard !reduceMotion else { return }
-            withAnimation(.linear(duration: 1.1).repeatForever(autoreverses: false)) {
-                spinning = true
-            }
-            withAnimation(.easeInOut(duration: 1.4).repeatForever(autoreverses: true)) {
-                breathe = true
-            }
+            .frame(width: 170, height: 170)
         }
     }
 }

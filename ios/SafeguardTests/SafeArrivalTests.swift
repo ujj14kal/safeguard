@@ -58,18 +58,47 @@ final class SafeArrivalTests: XCTestCase {
 }
 
 final class AlertHysteresisTests: XCTestCase {
-    func testAlertDoesNotFlapAroundTheThreshold() {
+    func testAlertHoldsThroughShortDipsAndEndsAfterTheHold() {
         let config = ThreatConfig()
         var on = false
+        var above = -Double.infinity
         var changes = 0
-        for score in [0.50, 0.46, 0.54, 0.43, 0.51, 0.44, 0.41] {
-            let next = config.nextAlert(wasAlert: on, topScore: score)
+        let samples: [(Double, Double)] = [
+            (0.0, 0.50), (0.2, 0.39), (0.4, 0.54), (0.6, 0.38), (0.8, 0.58), (1.0, 0.39),
+            (1.4, 0.38), (2.0, 0.38), (2.6, 0.30),
+        ]
+        for (time, score) in samples {
+            let next = config.nextAlert(wasAlert: on, topScore: score, now: time, lastAbove: above)
+            if score >= config.alertThreshold { above = time }
             if next != on { changes += 1 }
             on = next
         }
-        XCTAssertEqual(changes, 1, "once on, scores just under 0.50 keep the alert on")
-        XCTAssertTrue(on)
-        XCTAssertFalse(config.nextAlert(wasAlert: true, topScore: 0.39))
-        XCTAssertFalse(config.nextAlert(wasAlert: false, topScore: 0.49))
+        XCTAssertEqual(changes, 2, "one on, one off: dips below 0.40 inside the hold do not flap")
+        XCTAssertFalse(on)
+    }
+
+    func testScoresBelowTheThresholdNeverStartAnAlert() {
+        let config = ThreatConfig()
+        XCTAssertFalse(config.nextAlert(wasAlert: false, topScore: 0.49, now: 5, lastAbove: 4.9))
+        XCTAssertTrue(config.nextAlert(wasAlert: false, topScore: 0.50, now: 5, lastAbove: -.infinity))
+    }
+}
+
+final class VerifyThrottleTests: XCTestCase {
+    func testBurstsAreSpacedAndTheLastRequestIsNotLost() {
+        var throttle = VerifyThrottle()
+        XCTAssertTrue(throttle.consume(wanted: true, at: 10))
+        XCTAssertFalse(throttle.consume(wanted: true, at: 11))
+        XCTAssertFalse(throttle.consume(wanted: false, at: 12))
+        XCTAssertTrue(throttle.consume(wanted: false, at: 13.1), "the held request goes out once the gap passes")
+        XCTAssertFalse(throttle.consume(wanted: false, at: 14))
+    }
+
+    func testResetClearsEverything() {
+        var throttle = VerifyThrottle()
+        _ = throttle.consume(wanted: true, at: 1)
+        _ = throttle.consume(wanted: true, at: 2)
+        throttle.reset()
+        XCTAssertTrue(throttle.consume(wanted: true, at: 2.1))
     }
 }

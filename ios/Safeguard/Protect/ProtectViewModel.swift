@@ -347,6 +347,7 @@ final class ProtectViewModel: ObservableObject {
     private var lastGestureLog: [String: TimeInterval] = [:]
     private var pendingGestureCause = false
     private var pendingTimerCause = false
+    private var lastAlertAbove: TimeInterval = -.infinity
 
     fileprivate func publishFrameCues(_ cues: FrameCues, at time: TimeInterval) {
         guard isProtecting else { return }
@@ -432,7 +433,12 @@ final class ProtectViewModel: ObservableObject {
         debugScores = scores
         personCount = tracks.count
         let wasAlert = threatAlert
-        threatAlert = pipeline.config.nextAlert(wasAlert: wasAlert, topScore: scores.values.max() ?? 0)
+        let topScore = scores.values.max() ?? 0
+        let nowSeconds = Self.now
+        threatAlert = pipeline.config.nextAlert(
+            wasAlert: wasAlert, topScore: topScore, now: nowSeconds, lastAbove: lastAlertAbove
+        )
+        if topScore >= pipeline.config.alertThreshold { lastAlertAbove = nowSeconds }
         if threatAlert != wasAlert {
             AppLog.shared.event("vision_alert", [
                 "on": String(threatAlert), "score": String(format: "%.2f", scores.values.max() ?? 0),
@@ -640,7 +646,6 @@ final class ProtectViewModel: ObservableObject {
         if state == .idle {
             guard !pendingDistressStart else { return }
             pendingDistressStart = true
-            NotificationCenter.default.post(name: .safeguardGoBack, object: nil)
             Task {
                 await startCamera()
                 if state == .idle { pendingDistressStart = false }
@@ -654,7 +659,6 @@ final class ProtectViewModel: ObservableObject {
         guard distressWordsEnabled, !pendingDistressStart else { return }
         AppLog.shared.event("distress", ["protecting": "false", "action": "auto-start"])
         pendingDistressStart = true
-        NotificationCenter.default.post(name: .safeguardGoBack, object: nil)
         Task {
             await startCamera()
             if state == .idle { pendingDistressStart = false }
@@ -688,9 +692,6 @@ final class ProtectViewModel: ObservableObject {
             state = mapped
             if mapped == .asking || mapped == .suspected || mapped == .unsafe || mapped == .countdown {
                 dimmed = false
-            }
-            if mapped == .countdown || mapped == .unsafe || mapped == .asking {
-                NotificationCenter.default.post(name: .safeguardGoBack, object: nil)
             }
             if mapped == .countdown {
                 beginCountdown()
@@ -1067,7 +1068,6 @@ final class ProtectViewModel: ObservableObject {
             NotificationCenter.default.post(name: .safeguardOpenSettings, object: nil)
         case .goBack:
             confirm(String(localized: "Going back"))
-            NotificationCenter.default.post(name: .safeguardGoBack, object: nil)
         case .callEmergency:
             confirm(String(localized: "Calling 112"))
             if let url = URL(string: "telprompt://112") {
@@ -1642,7 +1642,6 @@ final class ProtectViewModel: ObservableObject {
             return
         }
         if !isProtecting {
-            NotificationCenter.default.post(name: .safeguardGoBack, object: nil)
             await startCamera()
         }
         guard isProtecting else { return }
@@ -2004,6 +2003,7 @@ private final class DetectionPipeline {
     let verifier = VerifierClient()
     var verifierGate: VerifierGate
     var sweepGate: NearSweepGate
+    var verifyThrottle: VerifyThrottle
     let frameBuffer = FrameBuffer()
     var lastDetect = Date.distantPast
     let detectInterval: TimeInterval = 0.1
@@ -2016,6 +2016,7 @@ private final class DetectionPipeline {
         self.proximityTracker = ProximityTracker(config: config)
         self.verifierGate = VerifierGate(config: config)
         self.sweepGate = NearSweepGate(config: config)
+        self.verifyThrottle = VerifyThrottle(config: config)
     }
 
     func reset() {
@@ -2024,6 +2025,7 @@ private final class DetectionPipeline {
         proximityTracker.reset()
         verifierGate.reset()
         sweepGate.reset()
+        verifyThrottle.reset()
         frameBuffer.clear()
     }
 
@@ -2066,7 +2068,7 @@ private final class DetectionPipeline {
             isNear: (nearestHeight ?? 0) >= config.nearHeight, at: nowSeconds
         )
         if alertFired { sweepGate.noteSent(at: nowSeconds) }
-        if alertFired || sweepDue {
+        if verifyThrottle.consume(wanted: alertFired || sweepDue, at: nowSeconds) {
             let clip = frameBuffer.clip()
             let top = scored.sorted { $0.score.value > $1.score.value }.prefix(3)
             let payload = VerifyPayload(

@@ -60,3 +60,29 @@ public struct NearSweepGate: Sendable {
         lastFire = nil
     }
 }
+
+public struct VerifyThrottle: Sendable {
+    private let minGap: TimeInterval
+    private var lastSent: TimeInterval = -.infinity
+    private var pending = false
+
+    public init(config: ThreatConfig = ThreatConfig()) {
+        self.minGap = config.verifyMinGapSeconds
+    }
+
+    public mutating func consume(wanted: Bool, at time: TimeInterval) -> Bool {
+        guard wanted || pending else { return false }
+        if time - lastSent < minGap {
+            pending = true
+            return false
+        }
+        pending = false
+        lastSent = time
+        return true
+    }
+
+    public mutating func reset() {
+        lastSent = -.infinity
+        pending = false
+    }
+}
