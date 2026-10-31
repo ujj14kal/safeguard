@@ -918,7 +918,7 @@ final class ProtectViewModel: ObservableObject {
         }
         if feedsConversation {
             rateAndFlag(text)
-            spotNames(text)
+            if !aiJudgeEnabled { spotNames(text) }
             if listenerOptIn, aiJudgeEnabled { judgeConversation(partial: text) }
         }
         guard let reply = partialGate.consume(phraseMatcher.match(text)) else { return }
@@ -990,7 +990,7 @@ final class ProtectViewModel: ObservableObject {
         guard listenerOptIn else { return }
         guard source == .cloud || sourcePolicy.appleMayFeedConversation(at: Self.now) else { return }
         rateAndFlag(text)
-        spotNames(text)
+        if !aiJudgeEnabled { spotNames(text) }
         window.append(text, at: Self.now)
         if aiJudgeEnabled {
             judgeConversation()
@@ -1075,6 +1075,7 @@ final class ProtectViewModel: ObservableObject {
                 judgeSchedule.finished()
                 judgeStatus = L10n.format("AI judge failed: %@", error.localizedDescription)
                 AppLog.shared.event("judge_failed", ["error": error.localizedDescription])
+                spotNames(snippet)
                 if let onDevice {
                     publishSpeechFallback(severity: onDevice.severity, category: onDevice.category.rawValue)
                 }
