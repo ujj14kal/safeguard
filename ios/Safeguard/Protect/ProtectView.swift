@@ -9,6 +9,7 @@ struct ProtectView: View {
     @Environment(\.openURL) private var openURL
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var pinchBase: CGFloat?
 
     var body: some View {
         hudView
@@ -34,6 +35,18 @@ struct ProtectView: View {
                 if let toast = model.toast {
                     toastBubble(toast)
                         .padding(.top, DS.Spacing.small)
+                }
+                if let badge = model.evidenceBadge {
+                    Label(badge.text, systemImage: badge.symbol)
+                        .font(.footnote.weight(.semibold))
+                        .multilineTextAlignment(.leading)
+                        .padding(.horizontal, DS.Spacing.medium)
+                        .padding(.vertical, DS.Spacing.small)
+                        .safeguardPanel()
+                        .overlay(Capsule().stroke(DS.Colors.accent, lineWidth: 1.5))
+                        .padding(.top, DS.Spacing.small)
+                        .padding(.horizontal)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
                 }
                 if let failure = model.verifyFailure {
                     Text(failure.message)
@@ -80,7 +93,17 @@ struct ProtectView: View {
         .animation(DS.Motion.smooth, value: model.state)
         .animation(DS.Motion.smooth, value: model.isStarting)
         .animation(DS.Motion.smooth, value: model.conversationFlag?.label)
+        .animation(DS.Motion.smooth, value: model.evidenceBadge)
         .onTapGesture(count: 2) { model.tapCheckIn() }
+        .simultaneousGesture(
+            MagnificationGesture()
+                .onChanged { value in
+                    let base = pinchBase ?? model.zoom
+                    pinchBase = base
+                    model.setZoom(base * value)
+                }
+                .onEnded { _ in pinchBase = nil }
+        )
     }
 
     private var dimOverlay: some View {
@@ -179,6 +202,9 @@ struct ProtectView: View {
             Text("Say “help” / “bachao” for SOS")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
+            if model.maxZoom > 1.01 {
+                zoomBar
+            }
             if model.state == .monitoring || model.state == .suspected {
                 Button("SOS", role: .destructive) { model.manualSOS() }
                     .buttonStyle(DestructiveButtonStyle())
@@ -196,6 +222,39 @@ struct ProtectView: View {
             }
         }
         .padding()
+    }
+
+    private var zoomBar: some View {
+        HStack(spacing: DS.Spacing.small) {
+            ForEach([1, 2, 3], id: \.self) { step in
+                if CGFloat(step) <= model.maxZoom {
+                    Button {
+                        model.setZoom(CGFloat(step))
+                    } label: {
+                        Text(verbatim: "\(step)×")
+                            .font(.footnote.weight(.bold))
+                            .frame(minWidth: 34, minHeight: 34)
+                            .background(
+                                Circle().fill(abs(model.zoom - CGFloat(step)) < 0.25 ? DS.Colors.accent : Color.clear)
+                            )
+                            .foregroundStyle(abs(model.zoom - CGFloat(step)) < 0.25 ? Color.black : Color.white)
+                    }
+                    .accessibilityLabel(Text(format: "Zoom %d times", step))
+                }
+            }
+            Text(verbatim: String(format: "%.1f×", Double(model.zoom)))
+                .font(.footnote.monospacedDigit())
+                .foregroundStyle(.secondary)
+            Toggle(isOn: $model.autoZoomEnabled) {
+                Label("Auto zoom", systemImage: "sparkle.magnifyingglass")
+                    .font(.footnote)
+            }
+            .toggleStyle(.button)
+            .tint(DS.Colors.accent)
+        }
+        .padding(.horizontal, DS.Spacing.small)
+        .padding(.vertical, 4)
+        .safeguardPanel()
     }
 
     private var countdownCard: some View {

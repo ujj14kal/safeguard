@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D4D043C775E35880FC00B22D /* PlateScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3B687A049B5B9E7791A0E8C /* PlateScanner.swift */; };
+		D37CF08BFD44B59E2D63C74D /* PlateScannerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D324D578570E581A896291CC /* PlateScannerTests.swift */; };
 		D49BB6A479BAC37FEFD7BE6F /* NameSpotter.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33E61C301C913EA68428B8F /* NameSpotter.swift */; };
 		D36CE9B2704F84458846FEFF /* NameSpotterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3CA48B251BA3CB51517E1B7 /* NameSpotterTests.swift */; };
 		D3E3FF467C47287A9D065662 /* NameSpotter.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33E61C301C913EA68428B8F /* NameSpotter.swift */; };
@@ -210,6 +212,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		D324D578570E581A896291CC /* PlateScannerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlateScannerTests.swift; sourceTree = "<group>"; };
 		D3CA48B251BA3CB51517E1B7 /* NameSpotterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NameSpotterTests.swift; sourceTree = "<group>"; };
 		D33E61C301C913EA68428B8F /* NameSpotter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NameSpotter.swift; sourceTree = "<group>"; };
 		D397BBD345D2FD8DDB3472B0 /* EvidenceLogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EvidenceLogTests.swift; sourceTree = "<group>"; };
@@ -529,6 +532,7 @@
 		B20000000000000000000004 /* SafeguardTests */ = {
 			isa = PBXGroup;
 			children = (
+				D324D578570E581A896291CC /* PlateScannerTests.swift */,
 				D3CA48B251BA3CB51517E1B7 /* NameSpotterTests.swift */,
 				D397BBD345D2FD8DDB3472B0 /* EvidenceLogTests.swift */,
 				D38D6968BA3CF8BB09AF21AB /* SafeArrivalTests.swift */,
@@ -871,6 +875,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D4D043C775E35880FC00B22D /* PlateScanner.swift in Sources */,
+				D37CF08BFD44B59E2D63C74D /* PlateScannerTests.swift in Sources */,
 				D49BB6A479BAC37FEFD7BE6F /* NameSpotter.swift in Sources */,
 				D36CE9B2704F84458846FEFF /* NameSpotterTests.swift in Sources */,
 				D39659D74D79F40609BE715C /* EvidenceLogTests.swift in Sources */,

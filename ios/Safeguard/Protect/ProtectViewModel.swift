@@ -271,6 +271,9 @@ final class ProtectViewModel: ObservableObject {
     func stop() {
         stopWatch()
         stopLiveStream()
+        zoom = 1
+        autoZoomed = false
+        evidenceBadge = nil
         isStarting = false
         if sosActive {
             endSOS()
@@ -403,6 +406,70 @@ final class ProtectViewModel: ObservableObject {
         scheduleLogFlush()
     }
 
+    struct EvidenceBadge: Equatable {
+        var text: String
+        var symbol: String
+    }
+
+    @Published var evidenceBadge: EvidenceBadge?
+    @Published var zoom: CGFloat = 1
+    @AppStorage("autoZoomEnabled") var autoZoomEnabled = true
+    private var manualZoomUntil: TimeInterval = 0
+    private var autoZoomHoldUntil: TimeInterval = 0
+    private var autoZoomed = false
+
+    private var phoneCamera: PhoneCameraSource? { source as? PhoneCameraSource }
+
+    var maxZoom: CGFloat { phoneCamera?.maxZoom ?? 1 }
+
+    func setZoom(_ factor: CGFloat, manual: Bool = true) {
+        guard let camera = phoneCamera else { return }
+        let target = max(1, min(factor, camera.maxZoom))
+        zoom = target
+        camera.setZoom(target, ramp: !manual)
+        if manual {
+            manualZoomUntil = Self.now + 20
+            autoZoomed = false
+        }
+    }
+
+    fileprivate func autoZoom(hint: CGRect?, plateRead: Bool) {
+        guard isProtecting, autoZoomEnabled, let camera = phoneCamera else { return }
+        let now = Self.now
+        guard now >= manualZoomUntil else { return }
+        if plateRead {
+            autoZoomHoldUntil = max(autoZoomHoldUntil, now + 4)
+            return
+        }
+        if let hint, hint.midX > 0.15, hint.midX < 0.85, hint.midY > 0.15, hint.midY < 0.85 {
+            let wanted = zoom * min(3, 0.3 / max(hint.width, 0.04))
+            if wanted > zoom * 1.15, zoom < camera.maxZoom {
+                camera.focus(onUprightPoint: CGPoint(x: hint.midX, y: hint.midY))
+                setZoom(wanted, manual: false)
+                autoZoomed = true
+                autoZoomHoldUntil = now + 5
+                showBadge(String(localized: "Zooming in to read the plate"), symbol: "plus.magnifyingglass")
+            }
+        } else if autoZoomed, now > autoZoomHoldUntil {
+            autoZoomed = false
+            setZoom(1, manual: false)
+        }
+    }
+
+    func showBadge(_ text: String, symbol: String) {
+        let badge = EvidenceBadge(text: text, symbol: symbol)
+        evidenceBadge = badge
+        Task {
+            try? await Task.sleep(for: .seconds(5))
+            if evidenceBadge == badge { evidenceBadge = nil }
+        }
+    }
+
+    private var sendsEvidence: Bool {
+        guard let code = LiveLinkStore.shared.guardianCode else { return false }
+        return !code.isEmpty
+    }
+
     fileprivate func publishPlates(_ plates: [String], at time: TimeInterval) {
         guard isProtecting else { return }
         for plate in plates {
@@ -412,6 +479,13 @@ final class ProtectViewModel: ObservableObject {
                 type: "plate", text: event.text, rating: event.rating, shot: jpeg, count: event.count
             ))
             AppLog.shared.event("plate_seen", ["rating": event.rating])
+            showBadge(
+                L10n.format(
+                    sendsEvidence ? "Plate noted: %@ · sending to cloud" : "Plate noted: %@ · saved on this phone",
+                    event.text
+                ),
+                symbol: sendsEvidence ? "icloud.and.arrow.up" : "car.fill"
+            )
         }
         scheduleLogFlush()
     }
@@ -525,6 +599,7 @@ final class ProtectViewModel: ObservableObject {
         do {
             try await incidentClient.postItems(incidentID: incident, items: batch)
             pendingItemPayload.removeFirst(batch.count)
+            showBadge(String(localized: "Evidence sent to your guardian"), symbol: "checkmark.icloud.fill")
         } catch {
             if case VerifierError.serverStatus(let code) = error, (400..<500).contains(code), code != 429 {
                 pendingItemPayload.removeFirst(min(batch.count, pendingItemPayload.count))
@@ -1201,6 +1276,13 @@ final class ProtectViewModel: ObservableObject {
             evidenceLog.add(LogItem(type: "name", text: name.name, rating: name.rating, source: source))
         }
         AppLog.shared.event("names_heard", ["count": String(names.count)])
+        showBadge(
+            L10n.format(
+                sendsEvidence ? "Name detected: %@ · sending to cloud" : "Name detected: %@ · saved on this phone",
+                names.map(\.name).joined(separator: ", ")
+            ),
+            symbol: sendsEvidence ? "icloud.and.arrow.up" : "person.wave.2.fill"
+        )
         scheduleLogFlush()
     }
 
@@ -2282,8 +2364,9 @@ private final class DetectionPipeline {
         Task { await owner.publishFrameCues(frameCues, at: nowSeconds) }
         if now.timeIntervalSince(lastPlateScan) >= 0.8 {
             lastPlateScan = now
-            let plates = plateScanner.scan(frame.pixelBuffer)
-            if !plates.isEmpty { Task { await owner.publishPlates(plates, at: nowSeconds) } }
+            let scan = plateScanner.scanWithHint(frame.pixelBuffer)
+            if !scan.plates.isEmpty { Task { await owner.publishPlates(scan.plates, at: nowSeconds) } }
+            Task { await owner.autoZoom(hint: scan.hint, plateRead: !scan.plates.isEmpty) }
         }
         let tracks = tracker.update(detections: people)
         let live = tracks.filter { $0.missed == 0 }

@@ -174,7 +174,8 @@ Below the video is a chat for the whole recording. A guardian who is not sure wh
 - **Understanding.** Every few seconds Muse looks at a short burst of what the camera saw and decides how worrying it is, from behaviour alone. It names the object in the hand and shows it live on screen as "Muse sees: a bottle, threat low". A raised bottle, a knife or a box cutter pointed at her is rated high, even when the person looks calm, while a pen or a phone held calmly is not.
 - **Listening.** Muse also reads the conversation near her, in English, Hindi or Hinglish, for threats, coercion, pursuit and unwelcome advances. Distress words such as "bachao" or "help me", shouting, and her own code phrase are caught on the device too, even with no signal. Listening is a choice she makes in Settings.
 - **Asking.** When something looks wrong, the app does not jump to alarm. It asks aloud whether she is safe. A safe phrase or a tap cancels it at once. If she says nothing, a countdown begins, and she can still cancel it.
-- **Reading plates and names.** Plates are read on the device and names are lifted from conversation, feeding the guardian's evidence log as described above.
+- **Reading plates and names.** Plates are read on the device and names are lifted from conversation, feeding the guardian's evidence log as described above. The screen says so as it happens: "Plate noted: MH 12 AB 1234 · sending to cloud", "Name detected: Ujjwal · sending to cloud", and "Evidence sent to your guardian" once it has arrived. With no guardian code set, it says the evidence is saved on the phone instead, so she is never left guessing.
+- **Seeing better, by herself or by itself.** She can pinch to zoom, or tap 1×, 2× or 3×, on the live view. With **Auto zoom** on, the phone notices text that looks like a plate but is too small to read, focuses on it, zooms in until it can read it, holds the zoom while it does, and returns to the wide view. Her own zoom always wins for twenty seconds, and auto zoom can be switched off. On Meta glasses the same auto zoom runs on the glasses camera. The microphone adjusts its own gain to hear quiet and distant speech, and the camera keeps focus and exposure on what matters.
 
 **She can go live on purpose.** A standing private link she shares with whoever she chooses opens the same live map, video and sound, without an SOS. It appears on the guardian portal as a live stream.
 
@@ -232,10 +233,10 @@ Meta's Muse models are the judgment layer. Fast, private checks run on the devic
 | iOS app | Swift, SwiftUI, iOS 17, String Catalog in English and Hindi | Interface, protection state machine, escalation |
 | People detection | Apple Vision | Person boxes, tracking, approach speed |
 | Gestures and expressions | MediaPipe Tasks Vision, GPU delegate | Hand gestures including finger geometry, face blendshapes for anger, surprise and similar |
-| Number plates | Apple Vision text recognition | On-device plate reading with Indian-format validation, scanned about twice a second |
+| Number plates | Apple Vision text recognition | On-device plate reading with Indian-format validation, joining two-line plates, a zoomed second pass and auto zoom on small text, scanned about twice a second |
 | On-device speech | Apple Speech | Immediate, offline phrase recognition and the fallback name spotter |
 | Names | Muse Spark, with an on-device name spotter as fallback | Names heard, rated possible or strongly possible |
-| Camera and audio capture | AVFoundation | Frames, microphone tap |
+| Camera and audio capture | AVFoundation | Frames, microphone tap, pinch and auto zoom, focus and exposure control, automatic microphone gain |
 | Recording | AVAssetWriter fragmented MP4 (HLS), H.264 and AAC | One continuous recording with sound, uploaded piece by piece as it is written |
 | Maps and nearby help | MapKit, CoreLocation | Accurate location, nearby police and hospitals, walking routes |
 | Ride | Uber deep link | Prefilled pickup and drop-off, no API approval needed |

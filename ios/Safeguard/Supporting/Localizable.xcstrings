@@ -9232,6 +9232,134 @@
           }
         }
       }
+    },
+    "Plate noted: %@ · sending to cloud": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plate noted: %@ · sending to cloud"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "प्लेट दर्ज: %@ · क्लाउड पर भेजा जा रहा है"
+          }
+        }
+      }
+    },
+    "Plate noted: %@ · saved on this phone": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plate noted: %@ · saved on this phone"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "प्लेट दर्ज: %@ · इस फ़ोन में सहेजी गई"
+          }
+        }
+      }
+    },
+    "Name detected: %@ · sending to cloud": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name detected: %@ · sending to cloud"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "नाम मिला: %@ · क्लाउड पर भेजा जा रहा है"
+          }
+        }
+      }
+    },
+    "Name detected: %@ · saved on this phone": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name detected: %@ · saved on this phone"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "नाम मिला: %@ · इस फ़ोन में सहेजा गया"
+          }
+        }
+      }
+    },
+    "Evidence sent to your guardian": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Evidence sent to your guardian"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सबूत आपके अभिभावक को भेज दिए गए"
+          }
+        }
+      }
+    },
+    "Zooming in to read the plate": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zooming in to read the plate"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "प्लेट पढ़ने के लिए ज़ूम हो रहा है"
+          }
+        }
+      }
+    },
+    "Auto zoom": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto zoom"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ऑटो ज़ूम"
+          }
+        }
+      }
+    },
+    "Zoom %d times": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zoom %d times"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d गुना ज़ूम"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

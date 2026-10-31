@@ -9,6 +9,7 @@ final class PhoneCameraSource: NSObject, FrameSource {
     private let output = AVCaptureVideoDataOutput()
     private let queue = DispatchQueue(label: "app.safeguard.camera", qos: .userInitiated)
     private var observers: [any NSObjectProtocol] = []
+    private var device: AVCaptureDevice?
 
     deinit { removeObservers() }
 
@@ -35,6 +36,7 @@ final class PhoneCameraSource: NSObject, FrameSource {
             throw FrameSourceError.cameraUnavailable
         }
 
+        self.device = device
         try configure(with: device)
         addObservers()
         let session = session
@@ -75,6 +77,41 @@ final class PhoneCameraSource: NSObject, FrameSource {
            connection.isVideoRotationAngleSupported(90)
         {
             connection.videoRotationAngle = 90
+        }
+    }
+
+    var maxZoom: CGFloat {
+        guard let device else { return 1 }
+        return min(device.maxAvailableVideoZoomFactor, 6)
+    }
+
+    var zoomFactor: CGFloat { device?.videoZoomFactor ?? 1 }
+
+    func setZoom(_ factor: CGFloat, ramp: Bool) {
+        guard let device else { return }
+        let target = max(1, min(factor, maxZoom))
+        guard (try? device.lockForConfiguration()) != nil else { return }
+        defer { device.unlockForConfiguration() }
+        if ramp {
+            device.ramp(toVideoZoomFactor: target, withRate: 3)
+        } else {
+            device.cancelVideoZoomRamp()
+            device.videoZoomFactor = target
+        }
+    }
+
+    func focus(onUprightPoint point: CGPoint) {
+        guard let device else { return }
+        let sensor = CGPoint(x: min(max(1 - point.y, 0), 1), y: min(max(1 - point.x, 0), 1))
+        guard (try? device.lockForConfiguration()) != nil else { return }
+        defer { device.unlockForConfiguration() }
+        if device.isFocusPointOfInterestSupported {
+            device.focusPointOfInterest = sensor
+            if device.isFocusModeSupported(.continuousAutoFocus) { device.focusMode = .continuousAutoFocus }
+        }
+        if device.isExposurePointOfInterestSupported {
+            device.exposurePointOfInterest = sensor
+            if device.isExposureModeSupported(.continuousAutoExposure) { device.exposureMode = .continuousAutoExposure }
         }
     }
 
