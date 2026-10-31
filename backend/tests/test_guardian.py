@@ -586,3 +586,21 @@ def test_chat_refuses_off_topic_questions_and_states_its_scope(api, monkeypatch)
         headers={"X-Guardian-Code": code},
     ).json()
     assert out["answer"] == main.CHAT_OFF_TOPIC
+
+
+def test_one_chat_that_is_guardian_and_contact_gets_a_single_alert(api, monkeypatch):
+    import dataclasses
+
+    monkeypatch.setattr(
+        main, "SETTINGS",
+        dataclasses.replace(main.SETTINGS, notify_mode="telegram", telegram_bot="TestBot"),
+    )
+    code = new_code(api)
+    main.get_guardians().link_chat(code, 777)
+    contact = main.get_contact_store().invite("Mum")
+    contact_code = contact["code"] if isinstance(contact, dict) else contact
+    main.get_contact_store().link(contact_code, 777)
+    res = start(api, guardian_code=code, contact_codes=[contact_code])
+    sent = [d for d in res["delivery"] if d["status"] == "dry-run"]
+    assert [d["code"] for d in sent] == ["guardian"]
+    assert any(d["status"] == "skipped" and d["code"] == contact_code for d in res["delivery"])

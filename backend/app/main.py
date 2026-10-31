@@ -813,15 +813,25 @@ def _notifier_for(dry_run: bool):
         )
 
 
-def _send_to_codes(codes, text, dry_run, url_button=None, pin=None, notes=None) -> list:
+def _send_to_codes(
+    codes, text, dry_run, url_button=None, pin=None, notes=None, skip_chats=None
+) -> list:
     store = get_contact_store()
     notifier = _notifier_for(dry_run)
     delivery = []
+    reached = set(skip_chats or ())
     for code in codes:
         record = store.get(code)
         if record is None or record.get("chat_id") is None:
             delivery.append({"code": code, "status": "skipped", "detail": "not linked"})
             continue
+        if record["chat_id"] in reached:
+            delivery.append({
+                "code": code, "name": record["name"], "status": "skipped",
+                "detail": "this chat is already alerted once",
+            })
+            continue
+        reached.add(record["chat_id"])
         body = text + "\n\n" + notes[code] if notes and code in notes else text
         result = notifier.send_text(
             record["chat_id"], body, url_button=url_button
@@ -921,9 +931,14 @@ def incident_start(
     if not body.test:
         located = [get_contact_store().get(code) for code in incident.contact_codes]
         notes = nearest_notes([r for r in located if r], pin, lang=body.lang)
+    guardian_chat = (
+        get_guardians().chat_id(incident.guardian_code)
+        if incident.guardian_code and not body.test else None
+    )
     delivery = _send_to_codes(
         incident.contact_codes, text, incident.dry_run,
         url_button=("Open live view", live), pin=pin, notes=notes,
+        skip_chats={guardian_chat} if guardian_chat is not None else None,
     )
     if incident.guardian_code and not body.test:
         delivery.append(_alert_guardian(incident, text, live, pin))
