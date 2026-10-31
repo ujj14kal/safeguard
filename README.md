@@ -202,21 +202,6 @@ Below the video is a chat for the whole recording. A guardian who is not sure wh
 
 ---
 
-## The whole flow, start to finish
-
-1. **She signs in** (or continues offline) and taps **Start protecting**. A loading screen shows the camera, microphone, Muse connection and location coming up.
-2. **The phone watches and listens.** People, gestures, expressions and plates are read on the device. Speech is recognised on the device and, when she allows it, by Meta's speech model for Hindi and Hinglish.
-3. **A protection session opens** on the guardian portal. Names Muse hears, plates the phone reads and gesture screenshots flow into the evidence log, and the transcription of what was said is saved for the guardian's chat.
-4. **Muse judges.** Short bursts of frames and the last seconds of conversation go to Muse through the backend. It returns a threat level, the object held, the names spoken and a reason, and the on-device checks and Muse are combined.
-5. **Something looks wrong.** The app asks aloud, "Are you safe?" She can answer, or tap, or say nothing.
-6. **The SOS starts**, by a distress word, shout, repeated hostile gesture, silence after the question, an expired safe-arrival timer or the red SOS button. A short countdown can still be cancelled.
-7. **Four tracks run together:** route to the nearest police station or hospital, Telegram alerts to contacts (nearest first) and to the guardian, the live link, and the cab link.
-8. **Recording builds in the cloud** in two-second pieces, with her location trail, while the guardian watches live.
-9. **The guardian opens the portal** from the alert button. They watch live, read the evidence log, ask Muse about a moment, or chat with Muse about the whole recording and get suggested next steps.
-10. **She ends it** with a three-second hold, or by saying her safe phrase. A closing message goes to her contacts. The recording stays for the guardian, and a stream that simply goes quiet is marked ended on its own.
-
----
-
 ## How Meta's models are used
 
 Meta's Muse models are the judgment layer. Fast, private checks run on the device, and anything that needs understanding goes to Muse through the Meta Model API. Muse is called only from the backend, so no key ever reaches a device.
@@ -274,6 +259,21 @@ flowchart LR
   S --> W[Guardian portal]
   W -->|ask about a moment, chat about the recording| B
 ```
+
+---
+
+## The whole flow, start to finish
+
+1. **She signs in** (or continues offline) and taps **Start protecting**. A loading screen shows the camera, microphone, Muse connection and location coming up.
+2. **The phone watches and listens.** People, gestures, expressions and plates are read on the device. Speech is recognised on the device and, when she allows it, by Meta's speech model for Hindi and Hinglish.
+3. **A protection session opens** on the guardian portal. Names Muse hears, plates the phone reads and gesture screenshots flow into the evidence log, and the transcription of what was said is saved for the guardian's chat.
+4. **Muse judges.** Short bursts of frames and the last seconds of conversation go to Muse through the backend. It returns a threat level, the object held, the names spoken and a reason, and the on-device checks and Muse are combined.
+5. **Something looks wrong.** The app asks aloud, "Are you safe?" She can answer, or tap, or say nothing.
+6. **The SOS starts**, by a distress word, shout, repeated hostile gesture, silence after the question, an expired safe-arrival timer or the red SOS button. A short countdown can still be cancelled.
+7. **Four tracks run together:** route to the nearest police station or hospital, Telegram alerts to contacts (nearest first) and to the guardian, the live link, and the cab link.
+8. **Recording builds in the cloud** in two-second pieces, with her location trail, while the guardian watches live.
+9. **The guardian opens the portal** from the alert button. They watch live, read the evidence log, ask Muse about a moment, or chat with Muse about the whole recording and get suggested next steps.
+10. **She ends it** with a three-second hold, or by saying her safe phrase. A closing message goes to her contacts. The recording stays for the guardian, and a stream that simply goes quiet is marked ended on its own.
 
 ---
 
