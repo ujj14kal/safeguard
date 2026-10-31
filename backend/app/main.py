@@ -774,7 +774,7 @@ class IncidentStartRequest(BaseModel):
     lang: str = Field(default="en", pattern="^(en|hi)$")
     lat: float | None = None
     lon: float | None = None
-    mode: str = Field(default="sos", pattern="^(sos|live)$")
+    mode: str = Field(default="sos", pattern="^(sos|live|watch)$")
     channel_token: str | None = Field(default=None, max_length=64)
     guardian_code: str | None = Field(default=None, max_length=24)
 
@@ -901,7 +901,7 @@ def incident_start(
     if body.lat is not None:
         store.add_point(incident.id, body.lat, body.lon)
         pin = (body.lat, body.lon)
-    if body.mode == "live":
+    if body.mode in ("live", "watch"):
         store.save()
         return {
             "id": incident.id,

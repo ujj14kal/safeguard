@@ -200,8 +200,8 @@ async function refresh() {
   const ended = state.status === "ended";
   const isLive = state.mode === "live";
   document.getElementById("statusText").textContent = idle ? "NOT LIVE RIGHT NOW"
-    : ended ? (isLive ? "STREAM ENDED" : "SOS ENDED")
-    : (isLive ? "LIVE" : "SOS ACTIVE");
+    : ended ? (isLive ? "STREAM ENDED" : state.mode === "watch" ? "SESSION ENDED" : "SOS ENDED")
+    : (isLive ? "LIVE" : state.mode === "watch" ? "PROTECTING" : "SOS ACTIVE");
   pill.className = "pill " + (ended || idle ? "ended" : "active");
   document.getElementById("who").textContent =
     "Live view: " + (state.wearer_name || "wearer");
@@ -492,7 +492,7 @@ async function loadList() {
     const row = document.createElement("div");
     row.className = "item";
     const live = i.status === "active";
-    row.innerHTML = '<div><b>' + (i.mode === "live" ? "Live stream" : "SOS") + ' · ' + escapeHtml(i.wearer_name) +
+    row.innerHTML = '<div><b>' + modeLabel(i.mode) + ' · ' + escapeHtml(i.wearer_name) +
       '</b><span>' + fmtDate(i.started_at) + ' · ' + fmtDur(i.started_at, i.ended_at) + '</span></div>' +
       '<div style="text-align:right"><span class="pill ' + (live ? "live" : "") + '">' + (live ? "LIVE NOW" : "ended") +
       '</span><br><span>' + (i.continuous ? 'continuous recording · ' : i.videos + ' video · ' + i.audios + ' audio · ') + fmtSize(i.bytes) + '</span></div>';
@@ -502,11 +502,13 @@ async function loadList() {
   show("list");
 }
 
+function modeLabel(m) { return m === "live" ? "Live stream" : m === "watch" ? "Protection session" : "SOS"; }
+
 function escapeHtml(t) { return String(t).replace(/[&<>"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
 
 async function openIncident(id) {
   const d = await api("/guardian/api/incidents/" + encodeURIComponent(id));
-  $("dTitle").textContent = (d.mode === "live" ? "Live stream" : "SOS") + " · " + d.wearer_name;
+  $("dTitle").textContent = modeLabel(d.mode) + " · " + d.wearer_name;
   $("dMeta").textContent = fmtDate(d.started_at) + " · " + fmtDur(d.started_at, d.ended_at) +
     (d.status === "active" ? " · still live" : "");
   show("detail");

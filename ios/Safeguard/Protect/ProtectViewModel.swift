@@ -235,6 +235,7 @@ final class ProtectViewModel: ObservableObject {
             state = .monitoring
             beginSession(status: String(localized: "Monitoring with phone camera"))
             startEgoMotion()
+            startWatch()
             Task {
                 try? await Task.sleep(for: .milliseconds(1100))
                 isStarting = false
@@ -268,6 +269,7 @@ final class ProtectViewModel: ObservableObject {
     }
 
     func stop() {
+        stopWatch()
         stopLiveStream()
         isStarting = false
         if sosActive {
@@ -412,20 +414,73 @@ final class ProtectViewModel: ObservableObject {
         scheduleLogFlush()
     }
 
-    private var logIncidentID: String? {
-        if sosActive, let id = incidentID { return id }
-        return liveStreaming ? liveIncidentID : nil
+    private var logTarget: (id: String, session: String)? {
+        if sosActive, let id = incidentID, let session = evidenceSessionID { return (id, session) }
+        if liveStreaming, let id = liveIncidentID, let session = evidenceSessionID { return (id, session) }
+        if let id = watchIncidentID, let session = watchSessionID { return (id, session) }
+        return nil
+    }
+
+    private var watchIncidentID: String?
+    private var watchSessionID: String?
+    private var watchTimer: Timer?
+
+    private func startWatch() {
+        guard watchIncidentID == nil, let guardianCode = LiveLinkStore.shared.guardianCode,
+              !guardianCode.isEmpty
+        else { return }
+        let session = EvidenceSessionID.make()
+        Task {
+            do {
+                let result = try await incidentClient.startIncident(
+                    sessionID: session,
+                    wearerName: wearerName.isEmpty ? String(localized: "Someone") : wearerName,
+                    contactCodes: [], dryRun: true, mode: "watch", guardianCode: guardianCode
+                )
+                guard isProtecting, watchIncidentID == nil else {
+                    _ = try? await incidentClient.endIncident(result.id)
+                    return
+                }
+                watchIncidentID = result.id
+                watchSessionID = session
+                scheduleLogFlush()
+                watchTimer = Timer.scheduledTimer(withTimeInterval: 20, repeats: true) { [weak self] _ in
+                    Task { @MainActor [weak self] in self?.watchBeat() }
+                }
+            } catch {
+                AppLog.shared.event("watch_failed", ["error": error.localizedDescription])
+            }
+        }
+    }
+
+    private func watchBeat() {
+        guard let id = watchIncidentID else { return }
+        if evidenceLog.count > 0 || !pendingItemPayload.isEmpty {
+            scheduleLogFlush()
+        } else {
+            Task { try? await incidentClient.postItems(incidentID: id, items: []) }
+        }
+    }
+
+    private func stopWatch() {
+        watchTimer?.invalidate()
+        watchTimer = nil
+        if let id = watchIncidentID {
+            Task { _ = try? await incidentClient.endIncident(id) }
+        }
+        watchIncidentID = nil
+        watchSessionID = nil
     }
 
     private func scheduleLogFlush() {
-        guard logIncidentID != nil, !logFlushScheduled else { return }
+        guard logTarget != nil, !logFlushScheduled else { return }
         logFlushScheduled = true
         Task { @MainActor [weak self] in
             try? await Task.sleep(for: .seconds(2))
             guard let self else { return }
             self.logFlushScheduled = false
-            if let id = self.logIncidentID, let session = self.evidenceSessionID {
-                await self.flushEvidenceLog(incident: id, session: session)
+            if let target = self.logTarget {
+                await self.flushEvidenceLog(incident: target.id, session: target.session)
             }
         }
     }
@@ -720,6 +775,11 @@ final class ProtectViewModel: ObservableObject {
     private func stopEvidence() {
         listener.setAudioSink(nil)
         evidence.stop()
+    }
+
+    func manualSOS() {
+        AppLog.shared.event("manual_sos")
+        distressHeard()
     }
 
     private func distressHeard() {
@@ -2183,7 +2243,7 @@ private final class DetectionPipeline {
         guard let people = try? detector.detect(in: frame.pixelBuffer) else { return }
         let frameCues = detector.lastFrameCues
         Task { await owner.publishFrameCues(frameCues, at: nowSeconds) }
-        if now.timeIntervalSince(lastPlateScan) >= 1.5 {
+        if now.timeIntervalSince(lastPlateScan) >= 0.8 {
             lastPlateScan = now
             let plates = plateScanner.scan(frame.pixelBuffer)
             if !plates.isEmpty { Task { await owner.publishPlates(plates, at: nowSeconds) } }

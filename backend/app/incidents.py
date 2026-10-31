@@ -211,7 +211,7 @@ class IncidentStore:
             lang=lang if lang in ("en", "hi") else "en",
             created_at=self._clock(),
             last_seen=self._clock(),
-            mode=mode if mode in ("sos", "live") else "sos",
+            mode=mode if mode in ("sos", "live", "watch") else "sos",
             guardian_code=guardian_code,
         )
         self._index(incident)
@@ -225,6 +225,9 @@ class IncidentStore:
         incident = self._by_id.get(incident_id)
         if incident is None:
             return None
+        self._revive(incident)
+        if incident.status == "active":
+            incident.last_seen = self._clock()
         for new in items:
             key = _item_key(new)
             existing = next((i for i in incident.items if _item_key(i) == key), None)

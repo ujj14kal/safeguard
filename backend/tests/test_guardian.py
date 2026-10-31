@@ -508,3 +508,13 @@ def test_new_start_on_same_link_ends_the_old_one():
 def test_site_root_opens_the_guardian_page(api):
     res = api.get("/")
     assert res.status_code == 200 and "Safeguard" in res.text
+
+
+def test_watch_session_is_listed_for_the_guardian_without_alerts(api):
+    code = new_code(api)
+    res = start(
+        api, session="watch-abc12345", mode="watch", guardian_code=code, contact_codes=[]
+    )
+    assert res["delivery"] == []
+    listed = api.get("/guardian/api/incidents", headers={"X-Guardian-Code": code}).json()
+    assert listed["incidents"][0]["mode"] == "watch"

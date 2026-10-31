@@ -81,7 +81,7 @@ Most recordings die with the phone. Safeguard's does not. From the moment the SO
 
 ## Names heard, plates seen, moments captured
 
-A recording tells a guardian what happened. The evidence log tells them who and what to look for. Beneath the video, the guardian page keeps a running log of three things Safeguard noticed during the incident, and every entry carries an honest rating: **possible** or **strongly possible**, never certain, because a device that guesses should say so.
+A recording tells a guardian what happened. The evidence log tells them who and what to look for. Beneath the video, the guardian page keeps a running log of three things Safeguard noticed during the incident, and every entry carries an honest rating: **possible** or **strongly possible**, never certain, because a device that guesses should say so. The log is kept from the moment protection starts, as a quiet *protection session* on the guardian page, so names and plates are there even before an SOS begins. Muse reads the conversation for names; the phone's own spotter takes over if Muse cannot be reached.
 
 <table>
 <tr>

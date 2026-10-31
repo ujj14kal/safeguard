@@ -179,9 +179,13 @@ struct ProtectView: View {
             Text("Say “help” / “bachao” for SOS")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
-            HStack(spacing: DS.Spacing.medium) {
-                Button("Stop protecting", role: .destructive) { model.stop() }
+            if model.state == .monitoring || model.state == .suspected {
+                Button("SOS", role: .destructive) { model.manualSOS() }
                     .buttonStyle(DestructiveButtonStyle())
+            }
+            HStack(spacing: DS.Spacing.medium) {
+                Button("Stop protecting") { model.stop() }
+                    .buttonStyle(SecondaryButtonStyle())
                 Button { model.dimmed.toggle() } label: {
                     Image(systemName: model.dimmed ? "sun.max.fill" : "moon.fill")
                         .accessibilityLabel(
