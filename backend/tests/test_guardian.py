@@ -518,3 +518,53 @@ def test_watch_session_is_listed_for_the_guardian_without_alerts(api):
     assert res["delivery"] == []
     listed = api.get("/guardian/api/incidents", headers={"X-Guardian-Code": code}).json()
     assert listed["incidents"][0]["mode"] == "watch"
+
+
+def test_transcript_and_guardian_chat(api, monkeypatch):
+    code = new_code(api)
+    res = start(api, guardian_code=code)
+    incident_id = res["id"]
+    posted = api.post(
+        f"/incident/{incident_id}/transcript",
+        json={"lines": [{"t": 1.0, "text": "come with me"}, {"t": 2.0, "text": "come with me"}]},
+    )
+    assert posted.status_code == 200 and posted.json()["total"] == 1
+    seen = {}
+
+    def fake(context, history, question, frames=None):
+        seen.update(context=context, question=question)
+        return "She may be pressured. Call her.", 0.1
+
+    monkeypatch.setattr(main._muse_client, "chat_about_incident", fake)
+    out = api.post(
+        f"/guardian/api/incidents/{incident_id}/chat",
+        json={"question": "What happened?", "history": []},
+        headers={"X-Guardian-Code": code},
+    )
+    assert out.status_code == 200
+    assert out.json()["answer"].endswith("it can make mistakes.")
+    assert "come with me" in seen["context"]
+    other = api.post(
+        f"/guardian/api/incidents/{incident_id}/chat",
+        json={"question": "What happened?"},
+        headers={"X-Guardian-Code": new_code(api)},
+    )
+    assert other.status_code == 404
+
+
+def test_chat_passes_video_frames_and_rejects_bad_ones(api, monkeypatch):
+    code = new_code(api)
+    incident_id = start(api, guardian_code=code)["id"]
+    seen = {}
+
+    def fake(context, history, question, frames=None):
+        seen["frames"] = frames
+        return "ok", 0.1
+
+    monkeypatch.setattr(main._muse_client, "chat_about_incident", fake)
+    headers = {"X-Guardian-Code": code}
+    url = f"/guardian/api/incidents/{incident_id}/chat"
+    good = api.post(url, json={"question": "What happened?", "frames": ["QUJD"]}, headers=headers)
+    assert good.status_code == 200 and seen["frames"] == ["QUJD"]
+    bad = api.post(url, json={"question": "What happened?", "frames": ["not base64!"]}, headers=headers)
+    assert bad.status_code == 422

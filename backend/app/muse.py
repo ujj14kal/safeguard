@@ -213,6 +213,42 @@ class MuseClient:
             raise MuseError(f"Muse status {response.status_code}: {response.text[:200]}")
         return parse_answer(response.text), latency
 
+    def chat_about_incident(
+        self, context: str, history: list, question: str, frames: list | None = None
+    ) -> tuple[str, float]:
+        if not self.api_key:
+            raise MuseError("META_MODEL_API_KEY is not set")
+        messages = [{"role": "system", "content": CHAT_SYSTEM_PROMPT + "\n\nRECORDING DETAILS\n" + context}]
+        messages += [{"role": m["role"], "content": m["content"]} for m in history]
+        if frames:
+            parts = [{"type": "text", "text": question + f"\n\n({len(frames)} frames from the video, in time order.)"}]
+            parts += [
+                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{frame}"}}
+                for frame in frames
+            ]
+            messages.append({"role": "user", "content": parts})
+        else:
+            messages.append({"role": "user", "content": question})
+        body = {"model": self.model, "messages": messages}
+        if self.reasoning_effort:
+            body["reasoning_effort"] = self.reasoning_effort
+        started = time.monotonic()
+        try:
+            response = httpx.post(
+                f"{self.base_url}/chat/completions",
+                headers={"Authorization": f"Bearer {self.api_key}"},
+                json=body,
+                timeout=self.timeout_s,
+            )
+        except httpx.TimeoutException as exc:
+            raise MuseError(f"Muse call timed out after {self.timeout_s}s") from exc
+        except httpx.HTTPError as exc:
+            raise MuseError(f"Muse HTTP error: {exc}") from exc
+        latency = time.monotonic() - started
+        if response.status_code != 200:
+            raise MuseError(f"Muse status {response.status_code}: {response.text[:200]}")
+        return parse_answer(response.text, limit=1600, lines=True), latency
+
     def verify_speech(self, snippet: str, on_device: dict) -> tuple[dict, float]:
         if not self.api_key:
             raise MuseError("META_MODEL_API_KEY is not set")
@@ -257,14 +293,33 @@ presentation or clothing, and never name or accuse anyone. If something cannot b
 Be calm, factual and brief (at most 100 words). Do not give legal conclusions."""
 
 
-def parse_answer(raw_body: str) -> str:
+CHAT_SYSTEM_PROMPT = """You are a calm assistant helping a guardian understand a recording from a personal-safety \
+app worn by a woman. You are given the transcription of what was heard (speech-to-text, so words may be wrong or \
+missing, and it can be English, Hindi or Hinglish), plus any names, vehicle plates and gesture moments the app noted. \
+Sometimes you also get a few still frames sampled evenly from the video; use them only to describe behaviour, \
+hands, objects and the surroundings, and say that a few frames cannot show everything.
+
+Explain in plain, everyday language what the transcription suggests happened, how worried the guardian should be \
+(low, medium or high) and why, and what practical steps they could take, such as calling the wearer, opening the \
+live location, contacting the police (112 in India) or a nearby trusted person, and keeping the recording. Offer \
+these as SUGGESTIONS, never orders, and say what you are unsure about. Never state that a crime happened or \
+accuse anyone; never guess appearance, identity, age, ethnicity, gender presentation or clothing of anyone. If the \
+transcription is too short or unclear, say so plainly. Answer in the language the guardian wrote in. Keep it under \
+170 words, in short paragraphs or a few bullets. Finish with this exact sentence: \
+"This is a suggestion from an AI and it can make mistakes."""
+
+
+def parse_answer(raw_body: str, limit: int = 900, lines: bool = False) -> str:
     try:
         content = json.loads(raw_body)["choices"][0]["message"]["content"]
     except (KeyError, IndexError, json.JSONDecodeError, TypeError) as exc:
         raise MuseError(f"Muse returned an unreadable answer: {exc}") from exc
     if not isinstance(content, str) or not content.strip():
         raise MuseError("Muse returned an empty answer")
-    return " ".join(content.split())[:900]
+    if lines:
+        text = "\n".join(" ".join(row.split()) for row in content.splitlines() if row.strip())
+        return text[:limit]
+    return " ".join(content.split())[:limit]
 
 
 def parse_verdict(raw_body: str) -> dict:

@@ -41,6 +41,7 @@ class Incident:
     mode: str = "sos"
     guardian_code: str = ""
     items: list = field(default_factory=list)
+    transcript: list = field(default_factory=list)
     last_seen: float = 0
     stale: bool = False
 
@@ -49,6 +50,7 @@ class Incident:
 
 
 MAX_ITEMS = 120
+MAX_TRANSCRIPT_LINES = 400
 RATING_ORDER = {"possible": 1, "strongly possible": 2}
 
 
@@ -169,7 +171,7 @@ class IncidentStore:
                 for key in (
                     "id", "session", "wearer_name", "contact_codes", "share_token",
                     "test", "dry_run", "lang", "status", "created_at", "ended_at",
-                    "alerted", "end_sent", "mode", "guardian_code", "items", "last_seen",
+                    "alerted", "end_sent", "mode", "guardian_code", "items", "transcript", "last_seen",
                 )
             }
             record["points"] = list(incident.points)
@@ -246,6 +248,21 @@ class IncidentStore:
                 existing["source"] = new["source"]
         incident.items.sort(key=lambda item: item["t"])
         self.save()
+        return incident
+
+    def add_transcript(self, incident_id, lines):
+        incident = self._by_id.get(incident_id)
+        if incident is None:
+            return None
+        self._revive(incident)
+        if incident.status == "active":
+            incident.last_seen = self._clock()
+        for line in lines:
+            if incident.transcript and incident.transcript[-1]["text"] == line["text"]:
+                continue
+            incident.transcript.append(line)
+        del incident.transcript[:-MAX_TRANSCRIPT_LINES]
+        self.save(force=False)
         return incident
 
     def for_guardian(self, guardian_code):

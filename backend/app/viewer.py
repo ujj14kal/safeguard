@@ -309,6 +309,14 @@ _GUARDIAN_PAGE = """<!DOCTYPE html>
   .shotbox { display:flex; gap:12px; align-items:flex-start; }
   .shotside { flex:1; min-width:0; }
   .src { color:var(--muted); font-size:12px; margin-top:3px; }
+  .warnbox { background:#3d2a14; color:#ffd9a0; border-radius:10px; padding:10px 12px; font-size:13px;
+             line-height:1.45; margin:0 0 10px; }
+  #chatLog .msg { margin:8px 0; padding:10px 12px; border-radius:12px; font-size:14px; line-height:1.5;
+                  white-space:pre-wrap; }
+  #chatLog .me { background:#1d1626; margin-left:24px; }
+  #chatLog .ai { background:#120d18; border:1px solid rgba(255,255,255,.1); margin-right:12px; }
+  #chatInput { width:100%; min-height:52px; padding:10px; border-radius:10px; font-size:14px; margin-top:8px;
+               border:1px solid rgba(255,255,255,.15); background:#0c0911; color:var(--text); font-family:inherit; }
   .ask { margin-top:8px; padding:10px; border-radius:12px; background:#120d18; }
   .ask textarea { width:100%; min-height:52px; padding:10px; border-radius:10px; font-size:14px;
                   border:1px solid rgba(255,255,255,.15); background:#0c0911; color:var(--text);
@@ -373,6 +381,16 @@ _GUARDIAN_PAGE = """<!DOCTYPE html>
       <p class="sub">Names heard, vehicle number plates and gesture moments during this incident. Every entry is rated &ldquo;possible&rdquo; or &ldquo;strongly possible&rdquo;, never certain.</p>
       <div id="logBody"></div>
     </div>
+    <div class="card" id="chatCard">
+      <h2>Ask Muse about this recording</h2>
+      <p class="warnbox"><b>Suggestion only.</b> Muse reads the transcription of this recording and explains what it thinks happened and what you could do. It can make mistakes: speech-to-text can mishear, and an AI can misjudge. Use it to help you decide, never as proof, and call 112 if someone may be in danger.</p>
+      <p class="sub" id="chatInfo"></p>
+      <div class="chips" id="chatChips"></div>
+      <div id="chatLog"></div>
+      <label class="muted"><input type="checkbox" id="chatFrames" checked> Also let Muse look at 6 frames from the video</label>
+      <textarea id="chatInput" maxlength="400" placeholder="Ask anything about this recording"></textarea>
+      <button id="chatSend">Ask Muse</button>
+    </div>
     <div class="card" id="audioCard">
       <h2>Audio</h2>
       <audio id="audioPlayer" controls></audio>
@@ -436,6 +454,87 @@ function renderLog(items, incidentId) {
   box.querySelectorAll("button[data-ask]").forEach((btn) => {
     btn.onclick = () => openAsk(items[Number(btn.dataset.ask)], btn.dataset.ask, incidentId);
   });
+}
+
+const CHAT_CHIPS = ["Explain in simple words what happened", "How worried should I be?", "What should I do now?"];
+let chatTurns = [], chatIncident = "", chatBusy = false;
+
+function setupChat(d) {
+  chatTurns = []; chatIncident = d.id; chatBusy = false;
+  $("chatLog").innerHTML = "";
+  $("chatInput").value = "";
+  const n = d.transcript_lines || 0;
+  $("chatInfo").textContent = n
+    ? n + " lines of transcription are available for this recording."
+    : "No speech was transcribed for this recording, so Muse can only go by the names, plates and moments noted above.";
+  $("chatChips").innerHTML = CHAT_CHIPS.map((q) =>
+    '<button class="chip" data-q="' + escapeHtml(q) + '">' + escapeHtml(q) + '</button>').join("");
+  $("chatChips").querySelectorAll(".chip").forEach((chip) => { chip.onclick = () => sendChat(chip.dataset.q); });
+  $("chatSend").onclick = () => sendChat($("chatInput").value);
+}
+
+function addMsg(kind, text) {
+  const div = document.createElement("div");
+  div.className = "msg " + kind;
+  div.textContent = text;
+  $("chatLog").appendChild(div);
+  div.scrollIntoView({block: "nearest"});
+  return div;
+}
+
+async function grabFrames(count) {
+  const video = $("player");
+  const span = video.seekable && video.seekable.length ? video.seekable.end(video.seekable.length - 1) : video.duration;
+  if (!isFinite(span) || span < 1 || video.readyState < 1) return [];
+  const canvas = document.createElement("canvas");
+  const width = 384;
+  canvas.width = width;
+  canvas.height = Math.max(2, Math.round(width * (video.videoHeight || 9) / (video.videoWidth || 16)));
+  const ctx = canvas.getContext("2d");
+  const resume = video.currentTime, wasPaused = video.paused;
+  video.pause();
+  const frames = [];
+  for (let i = 0; i < count; i++) {
+    const at = Math.min(span - 0.2, span * (i + 0.5) / count);
+    await new Promise((resolve) => {
+      const done = () => { video.removeEventListener("seeked", done); resolve(); };
+      video.addEventListener("seeked", done);
+      video.currentTime = at;
+      setTimeout(done, 4000);
+    });
+    try {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      frames.push(canvas.toDataURL("image/jpeg", 0.6).split(",")[1]);
+    } catch (e) { break; }
+  }
+  video.currentTime = resume;
+  if (!wasPaused) video.play().catch(() => {});
+  return frames;
+}
+
+async function sendChat(text) {
+  const question = (text || "").trim();
+  if (chatBusy) return;
+  if (question.length < 3) { addMsg("ai", "Type a question first."); return; }
+  chatBusy = true;
+  $("chatInput").value = "";
+  addMsg("me", question);
+  const withFrames = $("chatFrames").checked && !chatTurns.length;
+  const waiting = addMsg("ai", withFrames ? "Muse is looking at the video and reading the transcription..." : "Muse is reading the transcription...");
+  try {
+    const frames = withFrames ? await grabFrames(6) : [];
+    const res = await fetch("/guardian/api/incidents/" + encodeURIComponent(chatIncident) + "/chat", {
+      method: "POST",
+      headers: {"X-Guardian-Code": CODE, "Content-Type": "application/json"},
+      body: JSON.stringify({question: question, history: chatTurns.slice(-8), frames: frames}),
+    });
+    if (res.status === 429) throw new Error("Too many questions. Wait a minute.");
+    if (!res.ok) throw new Error("Muse could not answer right now. Try again in a moment.");
+    const data = await res.json();
+    waiting.textContent = data.answer;
+    chatTurns.push({role: "user", content: question}, {role: "assistant", content: data.answer.slice(0, 1700)});
+  } catch (e) { waiting.textContent = e.message; }
+  chatBusy = false;
 }
 
 function openAsk(item, index, incidentId) {
@@ -532,6 +631,7 @@ async function openIncident(id) {
   }
   setTimeout(() => map.invalidateSize(), 50);
   renderLog(d.items, d.id);
+  setupChat(d);
   if (guardianHls) { guardianHls.destroy(); guardianHls = null; }
   if (d.hls && playContinuous(d.hls)) return;
   $("audioCard").classList.remove("hidden");

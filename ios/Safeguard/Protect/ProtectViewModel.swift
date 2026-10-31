@@ -278,6 +278,7 @@ final class ProtectViewModel: ObservableObject {
         stopEvidence()
         stopEgoMotion()
         evidenceLog.clear()
+        pendingTranscript.removeAll()
         namesRecorded.removeAll()
         plateTracker.reset()
         hapticGate.reset()
@@ -455,7 +456,7 @@ final class ProtectViewModel: ObservableObject {
 
     private func watchBeat() {
         guard let id = watchIncidentID else { return }
-        if evidenceLog.count > 0 || !pendingItemPayload.isEmpty {
+        if evidenceLog.count > 0 || !pendingItemPayload.isEmpty || !pendingTranscript.isEmpty {
             scheduleLogFlush()
         } else {
             Task { try? await incidentClient.postItems(incidentID: id, items: []) }
@@ -485,7 +486,29 @@ final class ProtectViewModel: ObservableObject {
         }
     }
 
+    private var pendingTranscript: [[String: Any]] = []
+
+    private func noteTranscript(_ text: String) {
+        let clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard isProtecting, listenerOptIn, clean.count >= 2 else { return }
+        pendingTranscript.append(["t": Date().timeIntervalSince1970, "text": String(clean.prefix(300))])
+        if pendingTranscript.count > 200 { pendingTranscript.removeFirst(pendingTranscript.count - 200) }
+        scheduleLogFlush()
+    }
+
+    private func flushTranscript(incident: String) async {
+        guard !pendingTranscript.isEmpty else { return }
+        let batch = Array(pendingTranscript.prefix(40))
+        do {
+            try await incidentClient.postTranscript(incidentID: incident, lines: batch)
+            pendingTranscript.removeFirst(min(batch.count, pendingTranscript.count))
+        } catch {
+            AppLog.shared.event("transcript_failed", ["pending": String(pendingTranscript.count)])
+        }
+    }
+
     private func flushEvidenceLog(incident: String, session: String) async {
+        await flushTranscript(incident: incident)
         for item in evidenceLog.drain() {
             var shotName: String?
             if let data = item.shot {
@@ -1051,6 +1074,7 @@ final class ProtectViewModel: ObservableObject {
         guard source == .cloud || sourcePolicy.appleMayFeedConversation(at: Self.now) else { return }
         rateAndFlag(text)
         if !aiJudgeEnabled { spotNames(text) }
+        noteTranscript(text)
         window.append(text, at: Self.now)
         if aiJudgeEnabled {
             judgeConversation()

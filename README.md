@@ -115,6 +115,10 @@ Muse looks at the still image and describes behaviour: what the hands are doing,
 
 ---
 
+### Ask Muse about the whole recording
+
+Below the video, the guardian page has a chat. Muse reads the transcription of the recording, the names, plates and moments noted, and, if the guardian leaves the box ticked, six frames sampled evenly from the video. It explains in plain words what it thinks happened, how worried to be, and what could be done next, such as calling her, opening the live location or calling 112. Every answer is labelled as a suggestion from an AI that can make mistakes, because speech-to-text mishears and a model can misjudge.
+
 ## The rest of the story
 
 **She is watched over before anything goes wrong.** Once she taps Start on the Dashboard, a full-screen live view opens and the phone begins to watch and listen.

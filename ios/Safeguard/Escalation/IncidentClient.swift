@@ -58,6 +58,13 @@ public struct IncidentClient: Sendable {
         return config().authorize(request)
     }
 
+    public func postTranscript(incidentID: String, lines: [[String: Any]]) async throws {
+        let (data, response) = try await session.data(
+            for: post("incident/\(incidentID)/transcript", json: ["lines": lines])
+        )
+        try check(data: data, response: response)
+    }
+
     public func postItems(incidentID: String, items: [[String: Any]]) async throws {
         let request = try post("incident/\(incidentID)/items", json: ["items": items])
         let (_, response) = try await session.data(for: request)

@@ -20,7 +20,7 @@ from pathlib import Path
 import httpx
 from fastapi import FastAPI, Header, HTTPException, Request, WebSocket, WebSocketDisconnect, status
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from .accounts import (
     AccountsError,
@@ -1013,6 +1013,32 @@ def incident_items(
     return {"stored": len(cleaned), "total": len(incident.items)}
 
 
+class TranscriptLine(BaseModel):
+    t: float
+    text: str = Field(min_length=1, max_length=300)
+
+
+class TranscriptBody(BaseModel):
+    lines: list[TranscriptLine] = Field(max_length=40)
+
+
+@app.post("/incident/{incident_id}/transcript")
+def incident_transcript(
+    incident_id: str,
+    body: TranscriptBody,
+    x_safeguard_token: str | None = Header(default=None),
+) -> dict:
+    require_app_token(x_safeguard_token)
+    lines = [
+        {"t": line.t, "text": " ".join(line.text.split())}
+        for line in body.lines if line.text.strip()
+    ]
+    incident = get_incidents().add_transcript(incident_id, lines)
+    if incident is None:
+        raise HTTPException(status_code=404, detail="no such incident")
+    return {"stored": len(lines), "total": len(incident.transcript)}
+
+
 @app.post("/incident/{incident_id}/end")
 def incident_end(
     incident_id: str,
@@ -1625,6 +1651,7 @@ def guardian_incident(
     ]
     info = _hls_info(incident, files)
     detail["hls"] = info and {**info, "url": _signed_media_url(incident.id, PLAYLIST_NAME)}
+    detail["transcript_lines"] = len(incident.transcript)
     present = {entry["name"] for entry in files}
     detail["items"] = [
         {**item, "shot_url": _signed_media_url(incident.id, item["shot"])}
@@ -1671,6 +1698,75 @@ def guardian_ask(
         raise HTTPException(status_code=503, detail="Muse is unavailable right now")
     logger.info("guardian ask answered ms=%d", int(latency * 1000))
     return {"answer": answer, "latency_ms": round(latency * 1000)}
+
+
+class ChatTurn(BaseModel):
+    role: str = Field(pattern="^(user|assistant)$")
+    content: str = Field(min_length=1, max_length=1700)
+
+
+class ChatBody(BaseModel):
+    question: str = Field(min_length=3, max_length=400)
+    history: list[ChatTurn] = Field(default_factory=list, max_length=8)
+    frames: list[str] = Field(default_factory=list, max_length=6)
+
+    @field_validator("frames")
+    @classmethod
+    def _frames_are_small_base64(cls, value):
+        for frame in value:
+            if len(frame) > 160_000 or not re.fullmatch(r"[A-Za-z0-9+/=]+", frame):
+                raise ValueError("bad frame")
+        return value
+
+
+def _chat_context(incident) -> str:
+    started = incident.created_at
+    lines = [f"[{int(max(0, line['t'] - started))}s] {line['text']}" for line in incident.transcript]
+    transcript = "\n".join(lines)[-7000:] or "(nothing was transcribed)"
+    noted = [
+        f"- {item['type']}: {item['text']} ({item['rating']}, seen {item.get('count', 1)}x)"
+        for item in incident.items
+    ] or ["- nothing noted"]
+    kind = {"live": "live stream", "watch": "protection session"}.get(incident.mode, "SOS")
+    return (
+        f"Type: {kind}. Wearer first name: {incident.wearer_name or 'unknown'}.\n"
+        f"Location points recorded: {len(incident.points)}.\n"
+        "Noted by the app:\n" + "\n".join(noted[:40]) + "\nTranscription:\n" + transcript
+    )
+
+
+_chat_limiters: dict[str, RateLimiter] = {}
+_chat_global_limiter = RateLimiter(120, 3600.0)
+
+CHAT_DISCLAIMER = "This is a suggestion from an AI and it can make mistakes."
+
+
+@app.post("/guardian/api/incidents/{incident_id}/chat")
+def guardian_chat(
+    incident_id: str,
+    body: ChatBody,
+    request: Request,
+    x_guardian_code: str | None = Header(default=None),
+) -> dict:
+    code = _guardian_from_header(request, x_guardian_code)
+    incident = get_incidents().get(incident_id)
+    if incident is None or incident.guardian_code != code:
+        raise HTTPException(status_code=404, detail="no such incident")
+    per_ip = _chat_limiters.setdefault(_client_ip(request), RateLimiter(10, 60.0))
+    if not per_ip.allow() or not _chat_global_limiter.allow():
+        raise HTTPException(status_code=429, detail="too many questions, wait a minute")
+    history = [{"role": turn.role, "content": turn.content} for turn in body.history]
+    try:
+        answer, latency = _muse_client.chat_about_incident(
+            _chat_context(incident), history, " ".join(body.question.split()), body.frames
+        )
+    except MuseError as exc:
+        logger.warning("Muse chat failed: %s", exc)
+        raise HTTPException(status_code=503, detail="Muse is unavailable right now")
+    if CHAT_DISCLAIMER.lower() not in answer.lower():
+        answer = answer.rstrip() + "\n" + CHAT_DISCLAIMER
+    logger.info("guardian chat answered ms=%d", int(latency * 1000))
+    return {"answer": answer, "latency_ms": round(latency * 1000), "lines": len(incident.transcript)}
 
 
 @app.get("/guardian/media/{incident_id}/{name}")
