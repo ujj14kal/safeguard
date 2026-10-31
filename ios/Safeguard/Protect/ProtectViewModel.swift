@@ -412,14 +412,19 @@ final class ProtectViewModel: ObservableObject {
         scheduleLogFlush()
     }
 
+    private var logIncidentID: String? {
+        if sosActive, let id = incidentID { return id }
+        return liveStreaming ? liveIncidentID : nil
+    }
+
     private func scheduleLogFlush() {
-        guard sosActive, incidentID != nil, !logFlushScheduled else { return }
+        guard logIncidentID != nil, !logFlushScheduled else { return }
         logFlushScheduled = true
         Task { @MainActor [weak self] in
             try? await Task.sleep(for: .seconds(2))
             guard let self else { return }
             self.logFlushScheduled = false
-            if let id = self.incidentID, let session = self.evidenceSessionID {
+            if let id = self.logIncidentID, let session = self.evidenceSessionID {
                 await self.flushEvidenceLog(incident: id, session: session)
             }
         }

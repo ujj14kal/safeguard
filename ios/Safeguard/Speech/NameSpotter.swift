@@ -25,7 +25,7 @@ public enum NameSpotter {
             make(#"\bmain\s+"# + word + #"\s+(?:hoon|hun|hu|hoo)\b"#, capitalised: true),
             make(#"मैं\s+"# + word + #"\s+(?:हूँ|हूं|हु)"#, strong: true),
             make(#"\b(?:i\s+am|i['’]m|this\s+is|it['’]s)\s+"# + word, capitalised: true),
-            make(#"\b(?:hey|hi|hello|hii|oye|arre|are|oi|listen|excuse\s+me|thanks|thank\s+you|bye|sorry|please|okay|ok)\s*,?\s+"# + word),
+            make(#"\b(?:hey|hi|hello|hii|oye|arre|oi|thanks|thank\s+you|bye)\s*,?\s+"# + word),
             make(#"\b(?:are\s+you|you\s+are|tum|aap|tu)\s+"# + word + #"(?:\s+(?:ho|hai|hain)\b|\?)"#),
         ]
     }()
@@ -38,7 +38,7 @@ public enum NameSpotter {
     out over own please really right said same say see she should so some something sorry still such sure take tell than that \
     the their them then there these they thing think this those through to today tomorrow too under until up us very want was \
     we well were what when where which while who why will with would yes yet you your yours thanks thank bye hey listen \
-    maam ma'am mam sister uncle aunty bro boss beta excuse coming looking trying waiting talking calling standing walking driving feeling ready late early back home outside \
+    maam ma'am mam sister uncle aunty bro boss beta call calls stop wait help leave send open pick bring show follow move sit stand speak talk ask turn put keep stay move excuse coming looking trying waiting talking calling standing walking driving feeling ready late early back home outside \
     inside alone safe scared worried angry happy sad tired hungry busy free sorry fine okay alright
     kya hai hain hoon hun hu ho tha thi the hum tum aap tu main mai mujhe mujhko tumhe tumhara aapka mera meri mere hamara \
     nahi nahin haan ha ji bhai bhaiya didi madam sir sirji yaar dost bhaiyya arre are oye oi abhi bas bahut thoda kuch kuchh \
@@ -72,7 +72,23 @@ public enum NameSpotter {
                 found[key] = SpokenName(name: name, rating: strong ? "strongly possible" : "possible")
             }
         }
+        for name in capitalisedWords(in: text) where found[name.lowercased()] == nil {
+            found[name.lowercased()] = SpokenName(name: name, rating: "possible")
+        }
         return Array(found.values).sorted { $0.name < $1.name }
+    }
+
+    private static func capitalisedWords(in text: String) -> [String] {
+        let tokens = text
+            .components(separatedBy: CharacterSet.letters.union(.nonBaseCharacters).inverted)
+            .filter { !$0.isEmpty }
+        var names: [String] = []
+        for (index, token) in tokens.enumerated() {
+            guard token.first?.isUppercase == true, token != "I", token.count >= 3 else { continue }
+            guard index > 0 || tokens.count <= 4 else { continue }
+            if let name = clean(token) { names.append(name) }
+        }
+        return names
     }
 
     private static func clean(_ raw: String) -> String? {

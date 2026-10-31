@@ -31,4 +31,14 @@ final class NameSpotterTests: XCTestCase {
     func testHindiIntroduction() {
         XCTAssertEqual(rated("मेरा नाम राहुल है"), ["राहुल": "strongly possible"])
     }
+
+    func testBareCapitalisedNamesArePossible() {
+        XCTAssertEqual(rated("Ujjwal Deepika"), ["Ujjwal": "possible", "Deepika": "possible"])
+        XCTAssertEqual(rated("please call Deepika now"), ["Deepika": "possible"])
+    }
+
+    func testSentenceStartAndLowercaseWordsAreIgnored() {
+        XCTAssertTrue(rated("Walking home from the market today now").isEmpty)
+        XCTAssertTrue(rated("where is the station").isEmpty)
+    }
 }
