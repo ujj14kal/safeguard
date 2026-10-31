@@ -568,3 +568,21 @@ def test_chat_passes_video_frames_and_rejects_bad_ones(api, monkeypatch):
     assert good.status_code == 200 and seen["frames"] == ["QUJD"]
     bad = api.post(url, json={"question": "What happened?", "frames": ["not base64!"]}, headers=headers)
     assert bad.status_code == 422
+
+
+def test_chat_refuses_off_topic_questions_and_states_its_scope(api, monkeypatch):
+    from app.muse import CHAT_SYSTEM_PROMPT
+
+    assert "[OFF_TOPIC]" in CHAT_SYSTEM_PROMPT and "general personal-safety" in CHAT_SYSTEM_PROMPT
+    code = new_code(api)
+    incident_id = start(api, guardian_code=code)["id"]
+    monkeypatch.setattr(
+        main._muse_client, "chat_about_incident",
+        lambda context, history, question, frames=None: ("[OFF_TOPIC]", 0.1),
+    )
+    out = api.post(
+        f"/guardian/api/incidents/{incident_id}/chat",
+        json={"question": "Write me a poem about cats"},
+        headers={"X-Guardian-Code": code},
+    ).json()
+    assert out["answer"] == main.CHAT_OFF_TOPIC

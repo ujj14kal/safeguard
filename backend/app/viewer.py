@@ -383,7 +383,7 @@ _GUARDIAN_PAGE = """<!DOCTYPE html>
     </div>
     <div class="card" id="chatCard">
       <h2>Ask Muse about this recording</h2>
-      <p class="warnbox"><b>Suggestion only.</b> Muse reads the transcription of this recording and explains what it thinks happened and what you could do. It can make mistakes: speech-to-text can mishear, and an AI can misjudge. Use it to help you decide, never as proof, and call 112 if someone may be in danger.</p>
+      <p class="warnbox"><b>Suggestion only.</b> Muse reads the transcription of this recording and explains what it thinks happened and what you could do. It can make mistakes: speech-to-text can mishear, and an AI can misjudge. It only answers about this recording and general safety precautions. Use it to help you decide, never as proof, and call 112 if someone may be in danger.</p>
       <p class="sub" id="chatInfo"></p>
       <div class="chips" id="chatChips"></div>
       <div id="chatLog"></div>

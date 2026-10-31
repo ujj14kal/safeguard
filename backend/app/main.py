@@ -1739,6 +1739,10 @@ _chat_limiters: dict[str, RateLimiter] = {}
 _chat_global_limiter = RateLimiter(120, 3600.0)
 
 CHAT_DISCLAIMER = "This is a suggestion from an AI and it can make mistakes."
+CHAT_OFF_TOPIC = (
+    "I can only help with what happened in this recording and with general safety precautions. "
+    "Please ask about those."
+)
 
 
 @app.post("/guardian/api/incidents/{incident_id}/chat")
@@ -1763,6 +1767,8 @@ def guardian_chat(
     except MuseError as exc:
         logger.warning("Muse chat failed: %s", exc)
         raise HTTPException(status_code=503, detail="Muse is unavailable right now")
+    if "[OFF_TOPIC]" in answer:
+        return {"answer": CHAT_OFF_TOPIC, "latency_ms": round(latency * 1000), "lines": len(incident.transcript)}
     if CHAT_DISCLAIMER.lower() not in answer.lower():
         answer = answer.rstrip() + "\n" + CHAT_DISCLAIMER
     logger.info("guardian chat answered ms=%d", int(latency * 1000))
