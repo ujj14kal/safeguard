@@ -117,9 +117,9 @@ class TelegramNotifier(Notifier):
     def send_text(self, chat_id, text, url_button=None) -> NotifyResult:
         payload = {"chat_id": chat_id, "text": text}
         if url_button is not None:
-            label, url = url_button
+            buttons = [url_button] if isinstance(url_button[0], str) else list(url_button)
             payload["reply_markup"] = {
-                "inline_keyboard": [[{"text": label, "url": url}]]
+                "inline_keyboard": [[{"text": label, "url": url}] for label, url in buttons]
             }
         return self._call("sendMessage", payload)
 

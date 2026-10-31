@@ -845,7 +845,10 @@ def _alert_guardian(incident, text: str, live: str, pin) -> dict:
     if chat is None:
         return {"code": "guardian", "name": "Guardian", "status": "skipped", "detail": "not linked"}
     notifier = _notifier_for(incident.dry_run)
-    result = notifier.send_text(chat, text, url_button=("Open live view", live))
+    portal = SETTINGS.public_base_url.rstrip("/") + "/"
+    result = notifier.send_text(
+        chat, text, url_button=[("Open live view", live), ("Open guardian portal", portal)]
+    )
     if result.ok and pin is not None:
         notifier.send_location(chat, *pin)
     return {"code": "guardian", "name": "Guardian", "status": result.status, "detail": result.detail}

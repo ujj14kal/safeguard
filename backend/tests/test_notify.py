@@ -210,3 +210,14 @@ def test_alert_text_adds_the_ride_line_only_when_given():
     assert "Send a cab to them (Uber): https://m.uber.com/ul/" in with_ride
     hindi = notify.alert_text("Aarav", live, lang="hi", ride_url="https://m.uber.com/ul/?x=1")
     assert "Uber" in hindi and "https://m.uber.com/ul/?x=1" in hindi
+
+
+def test_telegram_sends_one_row_per_button(monkeypatch):
+    from app import notify
+
+    seen = {}
+    sender = notify.TelegramNotifier.__new__(notify.TelegramNotifier)
+    monkeypatch.setattr(sender, "_call", lambda method, payload: seen.update(payload) or notify.NotifyResult(True, "sent"), raising=False)
+    sender.send_text(1, "hi", url_button=[("Live", "https://a.test/live/x"), ("Portal", "https://a.test/")])
+    rows = seen["reply_markup"]["inline_keyboard"]
+    assert [row[0]["text"] for row in rows] == ["Live", "Portal"]
