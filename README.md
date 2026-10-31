@@ -129,6 +129,17 @@ A recording tells a guardian what happened. The evidence log tells them who and 
 
 <table>
 <tr>
+<td width="400" valign="top"><img src="docs/images/guardian-plates.jpg" width="380" alt="Evidence log with two number plates read from parked cars, each with the frame it was read from"></td>
+<td valign="top">
+
+**A real capture.** Pointed at parked cars across a courtyard, the phone read two plates on its own. Each is "strongly possible" because it was read twice, at least a second apart, and each keeps the exact frame it was read from, with an **Ask Muse about this moment** button beside it. The plate numbers are blurred here to protect the cars' owners; a guardian sees them in full.
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
 <td width="330" valign="top"><img src="docs/images/guardian-ask.jpg" width="310" alt="A guardian asking Muse about a captured moment and reading its answer"></td>
 <td valign="top">
 
