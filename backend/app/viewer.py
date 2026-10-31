@@ -433,7 +433,7 @@ function label(type) { return type === "plate" ? "Plate" : type === "name" ? "Na
 function renderLog(items, incidentId) {
   const box = $("logBody");
   if (!items || !items.length) {
-    box.innerHTML = '<p class="sub">Nothing captured yet. Names, plates and gesture moments appear here during an SOS.</p>';
+    box.innerHTML = '<p class="sub">Nothing captured yet. Names, plates and gesture moments appear here while protection is on.</p>';
     return;
   }
   let html = '<table class="log"><tr><th>Time</th><th>Type</th><th>Detail</th><th>Confidence</th></tr>';
