@@ -192,7 +192,7 @@ Below the video is a chat for the whole recording. A guardian who is not sure wh
 
 ## The whole flow, start to finish
 
-1. **She signs in** (or continues offline) and taps **Start protecting**. A loading screen shows the camera, microphone and Muse connection coming up.
+1. **She signs in** (or continues offline) and taps **Start protecting**. A loading screen shows the camera, microphone, Muse connection and location coming up.
 2. **The phone watches and listens.** People, gestures, expressions and plates are read on the device. Speech is recognised on the device and, when she allows it, by Meta's speech model for Hindi and Hinglish.
 3. **A protection session opens** on the guardian portal. Names Muse hears, plates the phone reads and gesture screenshots flow into the evidence log, and the transcription of what was said is saved for the guardian's chat.
 4. **Muse judges.** Short bursts of frames and the last seconds of conversation go to Muse through the backend. It returns a threat level, the object held, the names spoken and a reason, and the on-device checks and Muse are combined.
