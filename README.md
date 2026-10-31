@@ -100,7 +100,7 @@ The web page the person she trusts opens. It lives at the main address of the se
 
 *Right:* inside an incident. The red line is her trail, drawn from the location points the phone sent while she moved, fitted to the map so the whole walk is visible at a glance. Below the map sits the video player.
 
-*Staged demo data.*
+*Example data from a demonstration account.*
 
 </td>
 </tr>
@@ -162,7 +162,7 @@ Below the video is a chat for the whole recording. A guardian who is not sure wh
 <td width="480" valign="top"><img src="docs/images/guardian-chat.jpg" width="460" alt="The guardian chat with its suggestion-only warning, three ready questions and Muse's answer"></td>
 <td valign="top">
 
-**What you are seeing.** A guardian tapping "How worried should I be?" on a test recording. Muse answers in everyday language: the SOS came from the wearer, so it is worth checking, but there is very little to go on; no words were transcribed; of the sampled frames, the first four are black and the last two show a quiet indoor room. It does not pretend to know more than it can see.
+**What you are seeing.** A guardian asking "How worried should I be?" about a recording that contained no speech and a dark camera view. Muse answers in everyday language and is candid about the limits: the alert came from the wearer, so it is worth checking, but with no words transcribed and only a quiet indoor room visible in the last frames, there is very little to go on. It does not claim to know more than the evidence shows.
 
 - **What Muse reads.** The transcription of the recording, the names, plates and moments noted, the kind of incident, and, if the guardian leaves the box ticked, six frames sampled evenly from the video.
 - **What it says.** What the recording suggests happened, how worried to be, and what could be done next, such as calling her, opening the live location, contacting someone nearby or calling 112. These are suggestions, never orders, and it says what it is unsure of.
