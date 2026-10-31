@@ -203,6 +203,7 @@ def live_url_for(share_token: str) -> str:
     return f"{SETTINGS.public_base_url.rstrip('/')}/live/{share_token}"
 
 
+
 def _telegram_webhook_secret() -> str:
     return hashlib.sha256(("safeguard-tg:" + SETTINGS.telegram_bot_token).encode()).hexdigest()[:48]
 
@@ -527,6 +528,7 @@ async def upload_evidence(
     declared = request.headers.get("content-length")
     if declared and declared.isdigit() and int(declared) > limit:
         raise HTTPException(status_code=413, detail="segment too large")
+    get_incidents().touch(session=session)
     body = await request.body()
     if not body:
         raise HTTPException(status_code=422, detail="empty segment")
@@ -1513,6 +1515,7 @@ def live_channel_revoke(
     return {"revoked": get_channels().revoke(device_id)}
 
 
+@app.get("/", response_class=HTMLResponse, include_in_schema=False)
 @app.get("/guardian", response_class=HTMLResponse)
 def guardian_page() -> str:
     return render_guardian_page()

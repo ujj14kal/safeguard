@@ -25,7 +25,7 @@ def make_store(path, clock, **kwargs):
 
 def test_active_link_expires_after_the_maximum(tmp_path):
     clock = Clock()
-    store = make_store(tmp_path / "i.json", clock, max_active_s=3600)
+    store = make_store(tmp_path / "i.json", clock, max_active_s=3600, stale_after_s=10**9)
     incident, _ = store.start("sos-aaaaaaaa", "A", [])
     assert store.get_by_token(incident.share_token) is incident
     clock.now += 3601

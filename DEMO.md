@@ -5,7 +5,7 @@ One story: **fast checks on the phone, a Meta model for judgment, and a guardian
 ## Before you go on stage (5 minutes)
 
 - [ ] Phone charged, unlocked, plugged in; app reinstalled this week (a free Apple ID build lasts 7 days).
-- [ ] Open the guardian page once to wake the server: https://safeguard-backend-1067547469878.asia-south1.run.app/guardian
+- [ ] Open the guardian page once to wake the server: https://safeguard-backend-1067547469878.asia-south1.run.app (opens the guardian page)
 - [ ] Supabase project not paused (the guardian page loads and sign-in works).
 - [ ] Telegram: the guardian and one contact have pressed Start in @SafeguardAlertsUjjwalBot.
 - [ ] Settings: "Send real alerts" on; standing live link on; guardian code entered.

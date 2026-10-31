@@ -41,6 +41,8 @@ class Incident:
     mode: str = "sos"
     guardian_code: str = ""
     items: list = field(default_factory=list)
+    last_seen: float = 0
+    stale: bool = False
 
     def latest(self):
         return self.points[-1] if self.points else None
@@ -61,6 +63,7 @@ DEFAULT_TTL_AFTER_END_S = 6 * 3600
 DEFAULT_GUARDIAN_TTL_AFTER_END_S = 30 * 86400
 DEFAULT_MAX_ACTIVE_S = 24 * 3600
 _SAVE_EVERY_S = 5
+DEFAULT_STALE_AFTER_S = 90
 
 
 class IncidentStore:
@@ -71,7 +74,9 @@ class IncidentStore:
         max_active_s=DEFAULT_MAX_ACTIVE_S,
         clock=time.time,
         guardian_ttl_after_end_s=DEFAULT_GUARDIAN_TTL_AFTER_END_S,
+        stale_after_s=DEFAULT_STALE_AFTER_S,
     ):
+        self._stale_after_s = stale_after_s
         self._start_lock = threading.Lock()
         self._by_id = {}
         self._by_session = {}
@@ -92,6 +97,30 @@ class IncidentStore:
             return now - incident.ended_at > keep
         return now - incident.created_at > self._max_active_s
 
+
+    def _settle(self, incident):
+        if incident is None or incident.status != "active":
+            return incident
+        seen = incident.last_seen or incident.created_at
+        if self._clock() - seen > self._stale_after_s:
+            incident.status = "ended"
+            incident.ended_at = seen
+            incident.stale = True
+            self.save(force=False)
+        return incident
+
+    def touch(self, incident_id=None, session=None):
+        incident = self._by_id.get(incident_id) if incident_id else self._by_session.get(session)
+        if incident is not None:
+            self._revive(incident)
+            if incident.status == "active":
+                incident.last_seen = self._clock()
+
+    def _revive(self, incident):
+        if incident.status == "ended" and incident.stale and not self.expired(incident):
+            incident.status = "active"
+            incident.ended_at = 0
+            incident.stale = False
 
     def _load(self):
         if self._file is None:
@@ -140,7 +169,7 @@ class IncidentStore:
                 for key in (
                     "id", "session", "wearer_name", "contact_codes", "share_token",
                     "test", "dry_run", "lang", "status", "created_at", "ended_at",
-                    "alerted", "end_sent", "mode", "guardian_code", "items",
+                    "alerted", "end_sent", "mode", "guardian_code", "items", "last_seen",
                 )
             }
             record["points"] = list(incident.points)
@@ -167,6 +196,10 @@ class IncidentStore:
         existing = self._by_session.get(session)
         if existing is not None and existing.status == "active" and not self.expired(existing):
             return existing, False
+        for other in list(self._by_id.values()):
+            if other.status == "active" and other.share_token == (share_token or ""):
+                other.status = "ended"
+                other.ended_at = self._clock()
         incident = Incident(
             id=make_incident_id(),
             session=session,
@@ -177,6 +210,7 @@ class IncidentStore:
             dry_run=dry_run,
             lang=lang if lang in ("en", "hi") else "en",
             created_at=self._clock(),
+            last_seen=self._clock(),
             mode=mode if mode in ("sos", "live") else "sos",
             guardian_code=guardian_code,
         )
@@ -185,7 +219,7 @@ class IncidentStore:
         return incident, True
 
     def get(self, incident_id):
-        return self._by_id.get(incident_id)
+        return self._settle(self._by_id.get(incident_id))
 
     def upsert_items(self, incident_id, items):
         incident = self._by_id.get(incident_id)
@@ -213,13 +247,13 @@ class IncidentStore:
 
     def for_guardian(self, guardian_code):
         found = [
-            incident for incident in self._by_id.values()
+            incident for incident in map(self._settle, list(self._by_id.values()))
             if incident.guardian_code == guardian_code and not self.expired(incident)
         ]
         return sorted(found, key=lambda item: item.created_at, reverse=True)
 
     def get_by_token(self, share_token):
-        incident = self._by_token.get(share_token)
+        incident = self._settle(self._by_token.get(share_token))
         if incident is None or self.expired(incident):
             return None
         return incident
@@ -228,12 +262,14 @@ class IncidentStore:
         incident = self._by_id.get(incident_id)
         if incident is None:
             return False
+        self._revive(incident)
         incident.points.append({
             "lat": lat,
             "lon": lon,
             "accuracy": accuracy,
             "ts": ts if ts is not None else time.time(),
         })
+        incident.last_seen = self._clock()
         self.save(force=False)
         return True
 

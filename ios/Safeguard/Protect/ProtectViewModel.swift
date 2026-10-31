@@ -276,6 +276,7 @@ final class ProtectViewModel: ObservableObject {
         stopEvidence()
         stopEgoMotion()
         evidenceLog.clear()
+        namesRecorded.removeAll()
         plateTracker.reset()
         hapticGate.reset()
         source?.stop()
@@ -912,6 +913,7 @@ final class ProtectViewModel: ObservableObject {
         }
         if feedsConversation {
             rateAndFlag(text)
+            spotNames(text)
             if listenerOptIn, aiJudgeEnabled { judgeConversation(partial: text) }
         }
         guard let reply = partialGate.consume(phraseMatcher.match(text)) else { return }
@@ -983,6 +985,7 @@ final class ProtectViewModel: ObservableObject {
         guard listenerOptIn else { return }
         guard source == .cloud || sourcePolicy.appleMayFeedConversation(at: Self.now) else { return }
         rateAndFlag(text)
+        spotNames(text)
         window.append(text, at: Self.now)
         if aiJudgeEnabled {
             judgeConversation()
@@ -1074,10 +1077,24 @@ final class ProtectViewModel: ObservableObject {
         }
     }
 
+    private var namesRecorded: [String: String] = [:]
+
+    private func spotNames(_ text: String) {
+        guard isProtecting, listenerOptIn else { return }
+        let fresh = NameSpotter.names(in: text).filter {
+            let key = $0.name.lowercased()
+            if let seen = namesRecorded[key], seen == "strongly possible" || seen == $0.rating { return false }
+            namesRecorded[key] = $0.rating
+            return true
+        }
+        recordNames(fresh, snippet: text)
+    }
+
     private func recordNames(_ names: [SpokenName], snippet: String) {
         guard isProtecting, !names.isEmpty else { return }
         let source = String(snippet.suffix(120))
         for name in names {
+            namesRecorded[name.name.lowercased()] = name.rating
             evidenceLog.add(LogItem(type: "name", text: name.name, rating: name.rating, source: source))
         }
         AppLog.shared.event("names_heard", ["count": String(names.count)])

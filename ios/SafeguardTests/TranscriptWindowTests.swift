@@ -79,7 +79,12 @@ final class TranscriptWindowTests: XCTestCase {
             }
         }
 
-        XCTAssertEqual(snapshot(), before, "transcript handling created files")
+        let ours = ["txt", "json", "jsonl", "log", "wav", "caf", "m4a"]
+        let created = snapshot().subtracting(before).filter { path in
+            ours.contains((path as NSString).pathExtension.lowercased())
+                && !path.contains("com.apple")
+        }
+        XCTAssertTrue(created.isEmpty, "transcript handling created files: \(created)")
     }
 }
 

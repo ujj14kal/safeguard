@@ -68,9 +68,7 @@ When unsure between low and medium because the speaker may be a stranger address
 Classify what was SAID only. NEVER consider or mention the appearance, identity, age, ethnicity, gender \
 presentation, or clothing of any speaker.
 
-Also list the personal names of people that are spoken in the text (someone addressing or naming a person, including \
-the wearer), as written in English letters. Only real personal names, never common words, places or brands. Give each \
-name a confidence from 0 to 1 for how sure you are it is a name that was really said, because the text may be misheard.
+Also list EVERY personal name spoken in the text, whether someone introduces themselves ("my name is", "I am", "mera naam", "main ... hoon"), addresses a person ("hey Priya", "Rohan, listen"), or mentions a third person. Include the wearer's name and nicknames. Names may be in Hindi (Devanagari) or Hinglish: always write them in English letters (for example "Rahul"). Because the text is speech-to-text, a name may be misspelled or split: give your best spelling. Only real personal names, never common words, places, brands or titles like sir, madam, bhai. Give each name a confidence from 0 to 1: 0.85 or more when the person clearly introduces or addresses someone by it, around 0.5 when it may be misheard.
 
 Reply with STRICT JSON only, no other text:
 {"severity": "low|medium|high", "categories": ["threat|coercion|pursuit|proposition|abuse|distress|anger"],

@@ -199,7 +199,7 @@ def test_unknown_channel_token_falls_back_to_a_fresh_link(api):
 
 def test_expiring_one_incident_keeps_the_channel_token_for_the_newer_one():
     now = [1000.0]
-    store = IncidentStore(clock=lambda: now[0], ttl_after_end_s=60)
+    store = IncidentStore(clock=lambda: now[0], ttl_after_end_s=60, stale_after_s=10**9)
     old, _ = store.start("sos-old00001", "A", [], share_token="shared-token-xyz")
     store.end(old.id)
     now[0] += 30
@@ -479,3 +479,32 @@ def test_concurrent_starts_share_one_incident():
     [t.start() for t in threads]
     [t.join() for t in threads]
     assert len(set(ids)) == 1
+
+
+def test_silent_incident_is_marked_ended_and_revives_on_activity():
+    from app.incidents import IncidentStore
+
+    now = [1000.0]
+    store = IncidentStore(clock=lambda: now[0], stale_after_s=90)
+    incident, _ = store.start("sess", "A", [], share_token="tok", mode="live", guardian_code="G")
+    now[0] += 60
+    assert store.get(incident.id).status == "active"
+    now[0] += 120
+    assert store.get(incident.id).status == "ended"
+    assert store.for_guardian("G")[0].status == "ended"
+    store.add_point(incident.id, 1.0, 2.0)
+    assert store.get(incident.id).status == "active"
+
+
+def test_new_start_on_same_link_ends_the_old_one():
+    from app.incidents import IncidentStore
+
+    store = IncidentStore()
+    old, _ = store.start("one", "A", [], share_token="tok", mode="live")
+    new, _ = store.start("two", "A", [], share_token="tok")
+    assert old.status == "ended" and new.status == "active"
+
+
+def test_site_root_opens_the_guardian_page(api):
+    res = api.get("/")
+    assert res.status_code == 200 and "Safeguard" in res.text

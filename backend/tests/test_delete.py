@@ -80,7 +80,7 @@ def test_delete_contact_rejects_bad_codes(client):
             f"/contacts/{bad}",
             headers=auth_headers(),
         )
-        assert response.status_code in (404, 422), bad
+        assert response.status_code in (404, 405, 422), bad
 
 
 def test_delete_evidence_needs_app_token(client):
@@ -112,7 +112,7 @@ def test_delete_evidence_rejects_bad_sessions(client):
             f"/evidence/{bad}",
             headers=auth_headers(),
         )
-        assert response.status_code in (404, 422), bad
+        assert response.status_code in (404, 405, 422), bad
 
 
 def test_delete_evidence_cannot_escape_root(client, tmp_path):
