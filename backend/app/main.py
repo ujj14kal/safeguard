@@ -987,7 +987,7 @@ class EvidenceItem(BaseModel):
     t: float
     source: str | None = Field(default=None, max_length=160)
     shot: str | None = Field(default=None, pattern=_SHOT_RE)
-    count: int = Field(default=1, ge=1, le=50)
+    count: int = Field(default=1, ge=1, le=100000)
 
 
 class EvidenceItemsBody(BaseModel):
@@ -1006,7 +1006,7 @@ def _clean_item(item: EvidenceItem) -> dict | None:
         return None
     now = time.time()
     t = item.t if now - 86400 <= item.t <= now + 300 else now
-    cleaned = {"type": item.type, "text": text, "rating": item.rating, "t": t, "count": item.count}
+    cleaned = {"type": item.type, "text": text, "rating": item.rating, "t": t, "count": min(item.count, 999)}
     if item.source:
         cleaned["source"] = " ".join(item.source.split())
     if item.shot:

@@ -604,3 +604,10 @@ def test_one_chat_that_is_guardian_and_contact_gets_a_single_alert(api, monkeypa
     sent = [d for d in res["delivery"] if d["status"] == "dry-run"]
     assert [d["code"] for d in sent] == ["guardian"]
     assert any(d["status"] == "skipped" and d["code"] == contact_code for d in res["delivery"])
+
+
+def test_items_with_a_high_mention_count_are_accepted(api):
+    iid = start(api)["id"]
+    item = {"type": "name", "text": "Ujjwal", "rating": "possible", "t": time.time(), "count": 80}
+    res = api.post(f"/incident/{iid}/items", json={"items": [item]})
+    assert res.status_code == 200 and res.json()["stored"] == 1

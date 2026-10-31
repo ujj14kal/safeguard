@@ -280,6 +280,7 @@ final class ProtectViewModel: ObservableObject {
         evidenceLog.clear()
         pendingTranscript.removeAll()
         namesRecorded.removeAll()
+        nameLastCounted.removeAll()
         plateTracker.reset()
         hapticGate.reset()
         source?.stop()
@@ -525,7 +526,12 @@ final class ProtectViewModel: ObservableObject {
             try await incidentClient.postItems(incidentID: incident, items: batch)
             pendingItemPayload.removeFirst(batch.count)
         } catch {
-            AppLog.shared.event("items_failed", ["pending": String(pendingItemPayload.count)])
+            if case VerifierError.serverStatus(let code) = error, (400..<500).contains(code), code != 429 {
+                pendingItemPayload.removeFirst(min(batch.count, pendingItemPayload.count))
+            }
+            AppLog.shared.event("items_failed", [
+                "pending": String(pendingItemPayload.count), "error": error.localizedDescription,
+            ])
         }
     }
 
@@ -1168,6 +1174,7 @@ final class ProtectViewModel: ObservableObject {
     }
 
     private var namesRecorded: [String: String] = [:]
+    private var nameLastCounted: [String: TimeInterval] = [:]
 
     private func spotNames(_ text: String) {
         guard isProtecting, listenerOptIn else { return }
@@ -1183,8 +1190,14 @@ final class ProtectViewModel: ObservableObject {
     private func recordNames(_ names: [SpokenName], snippet: String) {
         guard isProtecting, !names.isEmpty else { return }
         let source = String(snippet.suffix(120))
+        let now = Self.now
+        let rank = ["possible": 1, "strongly possible": 2]
         for name in names {
-            namesRecorded[name.name.lowercased()] = name.rating
+            let key = name.name.lowercased()
+            let upgraded = (rank[name.rating] ?? 0) > (rank[namesRecorded[key] ?? ""] ?? 0)
+            if let last = nameLastCounted[key], now - last < 15, !upgraded { continue }
+            nameLastCounted[key] = now
+            if upgraded || namesRecorded[key] == nil { namesRecorded[key] = name.rating }
             evidenceLog.add(LogItem(type: "name", text: name.name, rating: name.rating, source: source))
         }
         AppLog.shared.event("names_heard", ["count": String(names.count)])

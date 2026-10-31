@@ -68,8 +68,11 @@ public struct IncidentClient: Sendable {
     public func postItems(incidentID: String, items: [[String: Any]]) async throws {
         let request = try post("incident/\(incidentID)/items", json: ["items": items])
         let (_, response) = try await session.data(for: request)
-        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+        guard let http = response as? HTTPURLResponse else {
             throw VerifierError.invalidResponse("items not stored")
+        }
+        guard (200...299).contains(http.statusCode) else {
+            throw VerifierError.serverStatus(http.statusCode)
         }
     }
 
