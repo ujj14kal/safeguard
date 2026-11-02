@@ -196,7 +196,7 @@ Below the video is a chat for the whole recording. A guardian who is not sure wh
 
 **She is never more than a tap from help.** The Dashboard carries 112, the women's helpline 1091 and the 181 line for women in distress, and "Police near me" and "Hospitals near me" open the map straight away.
 
-**It keeps working when the network does not.** Detection, the voice check-in, the countdown, the helplines and the timer all run on the device. If the server cannot be reached, she can carry on in offline mode, and alerts and recordings are sent as soon as the connection returns.
+**It keeps working when the network does not.** Detection, the voice check-in, the countdown, the helplines and the timer all run on the device. If the server cannot be reached, she can carry on in offline mode. During an SOS, each step that needs the network is retried automatically for about 40 seconds, and recording parts that could not be uploaded stay on the phone and are retried the next time recording starts.
 
 **It speaks her language.** The whole app, the alerts and the spoken prompts work in English and Hindi.
 
