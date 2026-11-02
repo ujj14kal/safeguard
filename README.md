@@ -1,6 +1,6 @@
 # Safeguard
 
-**Demo video:** <!-- add link here -->
+**Demo video:** https://www.youtube.com/watch?v=NyknXy9MfWc
 
 **Guardian portal:** https://safeguard-backend-1067547469878.asia-south1.run.app (opens at the main address, no app needed, sign in with a guardian code)
 
