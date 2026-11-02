@@ -152,6 +152,9 @@ class Settings:
     guardians_path: str = field(
         default_factory=lambda: os.environ.get("GUARDIANS_PATH", "data/guardians.json")
     )
+    owners_path: str = field(
+        default_factory=lambda: os.environ.get("OWNERS_PATH", "data/owners.json")
+    )
     channels_path: str = field(
         default_factory=lambda: os.environ.get("CHANNELS_PATH", "data/channels.json")
     )

@@ -36,7 +36,7 @@ from .contacts import (
 )
 from . import hls
 from .incidents import IncidentStore
-from .links import ChannelStore, GuardianStore, normalize_code
+from .links import ChannelStore, GuardianStore, OwnerLinks, normalize_code
 from .muse import _NAME_RE as _NAME_PATTERN
 from .muse import MuseClient, MuseError
 from .notify import (
@@ -179,6 +179,29 @@ def get_incidents() -> IncidentStore:
 
 _guardians: GuardianStore | None = None
 _channels: ChannelStore | None = None
+
+
+_owner_links: OwnerLinks | None = None
+
+
+def get_owner_links() -> OwnerLinks:
+    global _owner_links
+    if _owner_links is None:
+        _owner_links = OwnerLinks(make_state_file(SETTINGS, "owners.json", SETTINGS.owners_path))
+    return _owner_links
+
+
+def _owner_of(token: str | None) -> str:
+    if token and device_token_ok(token):
+        return token.split(".")[1]
+    return ""
+
+
+def _link_owner(owner: str, code: str) -> None:
+    code = normalize_code(code or "")
+    if owner and code and get_guardians().exists(code):
+        get_owner_links().link(owner, code)
+        get_incidents().adopt(code, owner)
 
 
 def get_guardians() -> GuardianStore:
@@ -911,7 +934,9 @@ def incident_start(
         share_token=channel["token"] if channel else None,
         mode=body.mode,
         guardian_code=guardian,
+        owner=_owner_of(x_safeguard_token),
     )
+    _link_owner(incident.owner, guardian)
     live = live_url_for(incident.share_token)
     if not fresh:
         if body.test:
@@ -1594,7 +1619,10 @@ def guardian_register(request: Request) -> dict:
 @app.get("/guardian/check/{code}")
 def guardian_check(code: str, x_safeguard_token: str | None = Header(default=None)) -> dict:
     require_app_token(x_safeguard_token)
-    return {"valid": get_guardians().exists(code)}
+    valid = get_guardians().exists(code)
+    if valid:
+        _link_owner(_owner_of(x_safeguard_token), code)
+    return {"valid": valid}
 
 
 def _guardian_from_header(request: Request, code: str | None) -> str:
@@ -1664,7 +1692,10 @@ def guardian_incidents(
     request: Request, x_guardian_code: str | None = Header(default=None)
 ) -> dict:
     code = _guardian_from_header(request, x_guardian_code)
-    items = [_guardian_summary(i) for i in get_incidents().for_guardian(code)]
+    items = [
+        _guardian_summary(i)
+        for i in get_incidents().for_guardian(code, get_owner_links().code_of)
+    ]
     return {"incidents": items}
 
 
@@ -1674,7 +1705,7 @@ def guardian_incident(
 ) -> dict:
     code = _guardian_from_header(request, x_guardian_code)
     incident = get_incidents().get(incident_id)
-    if incident is None or incident.guardian_code != code:
+    if incident is None or not get_incidents().can_view(incident, code, get_owner_links().code_of):
         raise HTTPException(status_code=404, detail="no such incident")
     files = _hls_entries(incident)
     detail = _guardian_summary(incident, files)
@@ -1713,7 +1744,7 @@ def guardian_ask(
 ) -> dict:
     code = _guardian_from_header(request, x_guardian_code)
     incident = get_incidents().get(incident_id)
-    if incident is None or incident.guardian_code != code:
+    if incident is None or not get_incidents().can_view(incident, code, get_owner_links().code_of):
         raise HTTPException(status_code=404, detail="no such incident")
     if body.shot not in {item.get("shot") for item in incident.items}:
         raise HTTPException(status_code=404, detail="no such moment")
@@ -1788,7 +1819,7 @@ def guardian_chat(
 ) -> dict:
     code = _guardian_from_header(request, x_guardian_code)
     incident = get_incidents().get(incident_id)
-    if incident is None or incident.guardian_code != code:
+    if incident is None or not get_incidents().can_view(incident, code, get_owner_links().code_of):
         raise HTTPException(status_code=404, detail="no such incident")
     per_ip = _chat_limiters.setdefault(_client_ip(request), RateLimiter(10, 60.0))
     if not per_ip.allow() or not _chat_global_limiter.allow():
@@ -1814,7 +1845,7 @@ def guardian_media(incident_id: str, name: str, request: Request, exp: int = 0, 
     if exp < time.time() or not hmac.compare_digest(sig, _media_sig(incident_id, name, exp)):
         raise HTTPException(status_code=403, detail="link expired, reload the page")
     incident = get_incidents().get(incident_id)
-    if incident is None or not incident.guardian_code:
+    if incident is None or not (incident.guardian_code or incident.owner):
         raise HTTPException(status_code=404, detail="no such recording")
     if name == PLAYLIST_NAME:
         return _hls_playlist_response(

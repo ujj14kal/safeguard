@@ -82,6 +82,17 @@ class GuardianStore(_JsonMap):
         return False
 
 
+class OwnerLinks(_JsonMap):
+    def link(self, owner: str, code: str) -> None:
+        key = normalize_code(code)
+        if owner and key and self._data.get(owner, {}).get("code") != key:
+            self._data[owner] = {"code": key, "since": time.time()}
+            self._save()
+
+    def code_of(self, owner: str) -> str:
+        return self._data.get(owner, {}).get("code", "") if owner else ""
+
+
 class ChannelStore(_JsonMap):
 
     def get_or_create(self, device_id: str, wearer_name: str) -> dict:

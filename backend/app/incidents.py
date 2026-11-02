@@ -42,6 +42,7 @@ class Incident:
     guardian_code: str = ""
     items: list = field(default_factory=list)
     transcript: list = field(default_factory=list)
+    owner: str = ""
     last_seen: float = 0
     stale: bool = False
 
@@ -171,7 +172,7 @@ class IncidentStore:
                 for key in (
                     "id", "session", "wearer_name", "contact_codes", "share_token",
                     "test", "dry_run", "lang", "status", "created_at", "ended_at",
-                    "alerted", "end_sent", "mode", "guardian_code", "items", "transcript", "last_seen",
+                    "alerted", "end_sent", "mode", "guardian_code", "items", "transcript", "owner", "last_seen",
                 )
             }
             record["points"] = list(incident.points)
@@ -183,17 +184,17 @@ class IncidentStore:
 
     def start(
         self, session, wearer_name, contact_codes, test=False, dry_run=True, lang="en",
-        share_token=None, mode="sos", guardian_code="",
+        share_token=None, mode="sos", guardian_code="", owner="",
     ):
         with self._start_lock:
             return self._start_locked(
                 session, wearer_name, contact_codes, test, dry_run, lang,
-                share_token, mode, guardian_code,
+                share_token, mode, guardian_code, owner,
             )
 
     def _start_locked(
         self, session, wearer_name, contact_codes, test, dry_run, lang,
-        share_token, mode, guardian_code,
+        share_token, mode, guardian_code, owner="",
     ):
         existing = self._by_session.get(session)
         if existing is not None and existing.status == "active" and not self.expired(existing):
@@ -215,6 +216,7 @@ class IncidentStore:
             last_seen=self._clock(),
             mode=mode if mode in ("sos", "live", "watch") else "sos",
             guardian_code=guardian_code,
+            owner=owner,
         )
         self._index(incident)
         self.save()
@@ -265,10 +267,24 @@ class IncidentStore:
         self.save(force=False)
         return incident
 
-    def for_guardian(self, guardian_code):
+    def adopt(self, guardian_code, owner):
+        changed = False
+        for incident in self._by_id.values():
+            if incident.guardian_code == guardian_code and not incident.owner:
+                incident.owner = owner
+                changed = True
+        if changed:
+            self.save()
+
+    def can_view(self, incident, guardian_code, owner_code=lambda owner: ""):
+        return bool(guardian_code) and (
+            incident.guardian_code == guardian_code or owner_code(incident.owner) == guardian_code
+        )
+
+    def for_guardian(self, guardian_code, owner_code=lambda owner: ""):
         found = [
             incident for incident in map(self._settle, list(self._by_id.values()))
-            if incident.guardian_code == guardian_code and not self.expired(incident)
+            if self.can_view(incident, guardian_code, owner_code) and not self.expired(incident)
         ]
         return sorted(found, key=lambda item: item.created_at, reverse=True)
 

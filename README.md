@@ -85,7 +85,7 @@ Most recordings die with the phone. Safeguard's does not. From the moment the SO
 
 The web page the person she trusts opens. It lives at the main address of the service, so nobody has to type a path, and it needs only a private guardian code. No app, no account, nothing that can be changed or deleted.
 
-- **Sign in with a code.** Anyone can create a guardian code on the page. Codes can be shared with a parent, a sibling or a friend, and each person sees the same incidents.
+- **Sign in with a code.** Anyone can create a guardian code on the page. Codes can be shared with a parent, a sibling or a friend, and each person sees the same incidents. The history belongs to the person being protected, not to the code: when she registers a new code on her phone, the guardian who holds it sees every past recording of hers as well as new ones, and one person's recordings are never visible to another person's guardian.
 - **Three kinds of entry.** An **SOS**, a **Live stream** she started on purpose, and a **Protection session**, a quiet record kept while she is protected even if no SOS ever happens. Each is marked live or ended. A stream that falls silent for about a minute and a half is marked ended on its own, and returns to live if the phone starts sending again.
 - **Telegram alerts.** One tap links the guardian's Telegram. The moment an SOS starts they receive the alert with two buttons: **Open live view** and **Open guardian portal**.
 - **Everything about an incident in one place:** the map and trail, the continuous video with sound, the evidence log, and the two ways of asking Muse.

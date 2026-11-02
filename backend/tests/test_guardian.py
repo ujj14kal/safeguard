@@ -9,6 +9,7 @@ from app.config import Settings
 from app.contacts import ContactStore
 from app.incidents import IncidentStore
 from app.links import ChannelStore, GuardianStore, make_guardian_code, normalize_code
+from app.links import OwnerLinks
 from app.ratelimit import RateLimiter
 
 DEVICE = "device-1234-abcd"
@@ -19,6 +20,7 @@ def api(tmp_path, monkeypatch):
     monkeypatch.setattr(main, "_contact_store", ContactStore(path=str(tmp_path / "contacts.json")))
     monkeypatch.setattr(main, "_incidents", IncidentStore(path=str(tmp_path / "inc.json")))
     monkeypatch.setattr(main, "_guardians", GuardianStore(str(tmp_path / "g.json")))
+    monkeypatch.setattr(main, "_owner_links", OwnerLinks(str(tmp_path / "o.json")))
     monkeypatch.setattr(main, "_channels", ChannelStore(str(tmp_path / "c.json")))
     monkeypatch.setattr(main, "_incident_limiter", RateLimiter(1000))
     monkeypatch.setattr(main, "_guardian_register_limiter", RateLimiter(1000))
@@ -634,3 +636,46 @@ def test_bot_replies_to_a_plain_start_and_confirms_a_guardian_link(api, monkeypa
     assert [chat for chat, _, _ in sent] == [56]
     assert sent[0][2][0] == "Open guardian portal"
     assert main.get_guardians().chat_id(code) == 56
+
+
+def _as_person(api, token, **over):
+    body = {"session": over.pop("session"), "wearer_name": "Samantha", "dry_run": True}
+    body.update(over)
+    res = api.post("/incident/start", json=body, headers={"X-Safeguard-Token": token})
+    assert res.status_code == 200, res.text
+    return res.json()["id"]
+
+
+def _listed(api, code):
+    res = api.get("/guardian/api/incidents", headers={"X-Guardian-Code": code})
+    return {i["id"] for i in res.json()["incidents"]}
+
+
+def test_a_new_guardian_code_sees_all_past_recordings_of_the_same_person(api):
+    samantha = main.make_device_token()
+    old_code, new_code_ = new_code(api), new_code(api)
+    first = _as_person(api, samantha, session="sos-aaaaaaa1", guardian_code=old_code)
+    assert _listed(api, old_code) == {first}
+    second = _as_person(api, samantha, session="sos-aaaaaaa2", guardian_code=new_code_)
+    assert _listed(api, new_code_) == {first, second}
+    assert _listed(api, old_code) == {first}
+    detail = api.get(f"/guardian/api/incidents/{first}", headers={"X-Guardian-Code": new_code_})
+    assert detail.status_code == 200
+
+
+def test_entering_a_code_in_the_app_links_it_and_adopts_earlier_recordings(api):
+    samantha = main.make_device_token()
+    old_code, new_code_ = new_code(api), new_code(api)
+    first = _as_person(api, samantha, session="sos-bbbbbbb1", guardian_code=old_code)
+    check = api.get(f"/guardian/check/{new_code_}", headers={"X-Safeguard-Token": samantha})
+    assert check.json() == {"valid": True}
+    assert _listed(api, new_code_) == {first}
+
+
+def test_a_guardian_never_sees_another_persons_recordings(api):
+    samantha, someone_else = main.make_device_token(), main.make_device_token()
+    code_a, code_b = new_code(api), new_code(api)
+    mine = _as_person(api, samantha, session="sos-ccccccc1", guardian_code=code_a)
+    other = _as_person(api, someone_else, session="sos-ccccccc2", guardian_code=code_b)
+    assert _listed(api, code_a) == {mine} and _listed(api, code_b) == {other}
+    assert api.get(f"/guardian/api/incidents/{other}", headers={"X-Guardian-Code": code_a}).status_code == 404
