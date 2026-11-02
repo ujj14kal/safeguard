@@ -290,6 +290,22 @@ class IncidentStore:
             self.save()
             return incident
 
+    def claimable(self, wearer_name):
+        name = wearer_name.strip().lower()
+        return [
+            i for i in self._by_id.values()
+            if not i.test and i.wearer_name.strip().lower() == name
+            and (not i.owner or i.owner.startswith("person:"))
+        ]
+
+    def claim(self, wearer_name, owner):
+        found = self.claimable(wearer_name)
+        for incident in found:
+            incident.owner = owner
+        if found:
+            self.save()
+        return len(found)
+
     def known_sessions(self):
         return set(self._by_session)
 
@@ -302,7 +318,7 @@ class IncidentStore:
         }
         changed = False
         for incident in self._by_id.values():
-            if incident.owner:
+            if incident.owner and not incident.owner.startswith("person:"):
                 continue
             if (
                 incident.guardian_code == guardian_code

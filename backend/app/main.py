@@ -1134,12 +1134,21 @@ def recover_recordings(
         if not times:
             continue
         found.append((session, min(times), max(times)))
-    restored = 0
+    name = " ".join(body.wearer_name.split())
+    person = owner or "person:" + name.lower().replace(" ", "-")
+    claimable = len(store.claimable(name))
+    restored = claimed = 0
     if body.apply:
+        if not owner:
+            get_owner_links().link(person, code)
         for session, started, ended in found:
-            if store.restore(session, " ".join(body.wearer_name.split()), started, ended, code, owner):
+            if store.restore(session, name, started, ended, code, person):
                 restored += 1
-    return {"found": len(found), "restored": restored, "applied": body.apply}
+        claimed = store.claim(name, person)
+    return {
+        "found": len(found), "claimable": claimable, "restored": restored,
+        "claimed": claimed, "applied": body.apply,
+    }
 
 
 @app.post("/incident/{incident_id}/end")

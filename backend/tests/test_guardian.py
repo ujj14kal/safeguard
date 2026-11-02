@@ -714,7 +714,7 @@ def test_orphan_recordings_can_be_restored_by_the_owner_only(api):
     known = start(api, session="sos-live00001", guardian_code=code)["id"]
     body = {"guardian_code": code, "wearer_name": "Samantha"}
     preview = api.post("/admin/recover-recordings", json=body).json()
-    assert preview == {"found": 1, "restored": 0, "applied": False}
+    assert preview["found"] == 1 and preview["restored"] == 0 and not preview["applied"]
     done = api.post("/admin/recover-recordings", json={**body, "apply": True}).json()
     assert done["restored"] == 1
     listed = api.get("/guardian/api/incidents", headers={"X-Guardian-Code": code}).json()["incidents"]
@@ -732,3 +732,21 @@ def test_restoring_needs_the_owner_token(api, monkeypatch):
     assert api.post("/admin/recover-recordings", json=body, headers={"X-Safeguard-Token": "d1.a.b"}).status_code == 401
     ok = api.post("/admin/recover-recordings", json=body, headers={"X-Safeguard-Token": "owner-secret"})
     assert ok.status_code == 200
+
+
+def test_restore_attaches_every_recording_of_a_person_to_the_current_code(api):
+    old_code, new_code_ = new_code(api), new_code(api)
+    start(api, session="sos-ggggggg1", wearer_name="Samantha", guardian_code=old_code)
+    start(api, session="sos-ggggggg2", wearer_name="Samantha")
+    other = start(api, session="sos-ggggggg3", wearer_name="Priya", guardian_code=old_code)["id"]
+    body = {"guardian_code": new_code_, "wearer_name": "samantha"}
+    preview = api.post("/admin/recover-recordings", json=body).json()
+    assert preview["claimable"] == 2 and preview["claimed"] == 0
+    done = api.post("/admin/recover-recordings", json={**body, "apply": True}).json()
+    assert done["claimed"] == 2
+    listed = {i["id"] for i in api.get("/guardian/api/incidents", headers={"X-Guardian-Code": new_code_}).json()["incidents"]}
+    assert len(listed) == 2 and other not in listed
+    later_code = new_code(api)
+    token = main.make_device_token()
+    _as_person(api, token, session="sos-ggggggg4", guardian_code=later_code)
+    assert len(_listed(api, later_code)) == 3
