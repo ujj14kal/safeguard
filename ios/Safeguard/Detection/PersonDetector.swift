@@ -17,6 +17,16 @@ public final class PersonDetector {
         in pixelBuffer: CVPixelBuffer,
         orientation: CGImagePropertyOrientation = .up
     ) throws -> [DetectedPerson] {
+        let engine = cueEngine
+        let handsAndFaces = CueResult()
+        let group = DispatchGroup()
+        if let engine {
+            group.enter()
+            Self.cueQueue.async {
+                handsAndFaces.frame = LatencyMeter.shared.measure("hands+face") { engine.process(pixelBuffer) }
+                group.leave()
+            }
+        }
         let rectRequest = VNDetectHumanRectanglesRequest()
         rectRequest.upperBodyOnly = true
         let poseRequest = VNDetectHumanBodyPoseRequest()
@@ -45,15 +55,25 @@ public final class PersonDetector {
                 )
             }
         }
-        attachCues(to: &detections, handler: handler, pixelBuffer: pixelBuffer)
+        group.wait()
+        attachCues(
+            to: &detections, handler: handler, pixelBuffer: pixelBuffer,
+            engineAnswered: engine != nil, frame: handsAndFaces.frame
+        )
         return detections
+    }
+
+    private static let cueQueue = DispatchQueue(label: "app.safeguard.cues", qos: .userInitiated)
+
+    private final class CueResult: @unchecked Sendable {
+        var frame: MPFrame?
     }
 
     private func attachCues(
         to detections: inout [DetectedPerson], handler: VNImageRequestHandler,
-        pixelBuffer: CVPixelBuffer
+        pixelBuffer: CVPixelBuffer, engineAnswered: Bool, frame engineFrame: MPFrame?
     ) {
-        if let engine = cueEngine, let frame = engine.process(pixelBuffer) {
+        if engineAnswered, let frame = engineFrame {
             lastFrameCues = Self.frameCues(from: frame)
             if !detections.isEmpty {
                 attachMediaPipeCues(frame, to: &detections, pixelBuffer: pixelBuffer)

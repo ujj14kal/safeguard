@@ -504,6 +504,15 @@ final class ProtectViewModel: ObservableObject {
         return !code.isEmpty
     }
 
+    private var plateScanCount = 0
+
+    fileprivate func notePlateScanTime(_ milliseconds: Int) {
+        plateScanCount += 1
+        if plateScanCount % 10 == 0 {
+            AppLog.shared.event("plate_scan_ms", ["ms": String(milliseconds)])
+        }
+    }
+
     fileprivate func publishPlates(_ plates: [String], at time: TimeInterval) {
         guard isProtecting else { return }
         for plate in plates {
@@ -2354,6 +2363,8 @@ private final class DetectionPipeline {
     var verifyThrottle: VerifyThrottle
     let frameBuffer = FrameBuffer()
     let plateScanner = PlateScanner()
+    let plateQueue = DispatchQueue(label: "app.safeguard.plates", qos: .utility)
+    let plateGate = ConversionGate()
     nonisolated(unsafe) var nightAssist = true
     var lastPlateScan = Date.distantPast
     var lastDetect = Date.distantPast
@@ -2397,14 +2408,24 @@ private final class DetectionPipeline {
         guard let people = try? detector.detect(in: frame.pixelBuffer) else { return }
         let frameCues = detector.lastFrameCues
         Task { await owner.publishFrameCues(frameCues, at: nowSeconds) }
-        if now.timeIntervalSince(lastPlateScan) >= 0.8 {
+        if now.timeIntervalSince(lastPlateScan) >= 0.8, plateGate.tryEnter() {
             lastPlateScan = now
-            let brightness = NightVision.averageBrightness(frame.pixelBuffer)
+            let buffer = frame.pixelBuffer
+            let brightness = NightVision.averageBrightness(buffer)
             let dark = brightness < NightVision.brightAbove && nightAssist
+            let scanner = plateScanner
             Task { await owner.noteBrightness(brightness) }
-            let scan = plateScanner.scanWithHint(dark ? NightVision.brighten(frame.pixelBuffer) : frame.pixelBuffer)
-            if !scan.plates.isEmpty { Task { await owner.publishPlates(scan.plates, at: nowSeconds) } }
-            Task { await owner.autoZoom(hint: scan.hint, plateRead: !scan.plates.isEmpty) }
+            plateQueue.async { [plateGate] in
+                defer { plateGate.leave() }
+                let started = ProcessInfo.processInfo.systemUptime
+                let scan = scanner.scanWithHint(dark ? NightVision.brighten(buffer) : buffer)
+                let took = Int((ProcessInfo.processInfo.systemUptime - started) * 1000)
+                Task { @MainActor in
+                    if !scan.plates.isEmpty { owner.publishPlates(scan.plates, at: nowSeconds) }
+                    owner.autoZoom(hint: scan.hint, plateRead: !scan.plates.isEmpty)
+                    owner.notePlateScanTime(took)
+                }
+            }
         }
         let tracks = tracker.update(detections: people)
         let live = tracks.filter { $0.missed == 0 }
