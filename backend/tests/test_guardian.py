@@ -611,3 +611,26 @@ def test_items_with_a_high_mention_count_are_accepted(api):
     item = {"type": "name", "text": "Ujjwal", "rating": "possible", "t": time.time(), "count": 80}
     res = api.post(f"/incident/{iid}/items", json={"items": [item]})
     assert res.status_code == 200 and res.json()["stored"] == 1
+
+
+def test_bot_replies_to_a_plain_start_and_confirms_a_guardian_link(api, monkeypatch):
+    sent = []
+
+    class Recorder:
+        def send_text(self, chat_id, text, url_button=None):
+            sent.append((chat_id, text, url_button))
+
+        def send_location_request(self, *args, **kwargs):
+            pass
+
+    monkeypatch.setattr(main, "make_notifier", lambda settings: Recorder())
+    code = new_code(api)
+    plain = {"update_id": 1, "message": {"text": "/start", "chat": {"id": 55}}}
+    main._handle_telegram_updates({"result": [plain]})
+    assert sent and sent[0][0] == 55 and "link" in sent[0][1]
+    sent.clear()
+    guardian = {"update_id": 2, "message": {"text": f"/start g_{code}", "chat": {"id": 56}}}
+    main._handle_telegram_updates({"result": [guardian]})
+    assert [chat for chat, _, _ in sent] == [56]
+    assert sent[0][2][0] == "Open guardian portal"
+    assert main.get_guardians().chat_id(code) == 56

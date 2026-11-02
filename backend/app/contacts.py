@@ -143,6 +143,20 @@ def apply_locations(payload, store, now):
     return stored
 
 
+def plain_starts(payload):
+    chats = []
+    results = payload.get("result") if isinstance(payload, dict) else None
+    for update in results if isinstance(results, list) else []:
+        message = update.get("message") if isinstance(update, dict) else None
+        if not isinstance(message, dict):
+            continue
+        parts = (message.get("text") or "").split()
+        chat_id = (message.get("chat") or {}).get("id")
+        if len(parts) == 1 and parts[0].startswith("/start") and chat_id is not None:
+            chats.append(chat_id)
+    return chats
+
+
 def link_from_updates(payload, store, guardians=None):
     linked = []
     offset = None

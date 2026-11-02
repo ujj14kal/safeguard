@@ -31,8 +31,8 @@ from .accounts import (
 )
 from .config import SETTINGS
 from .contacts import (
-    ContactLimitError, ContactStore, apply_locations, guardian_invite_link, invite_link,
-    link_from_updates,
+    GUARDIAN_START_PREFIX, ContactLimitError, ContactStore, apply_locations, guardian_invite_link,
+    invite_link, link_from_updates, plain_starts,
 )
 from . import hls
 from .incidents import IncidentStore
@@ -248,6 +248,17 @@ _SHARE_PROMPT = {
     "en": "You are now an emergency contact. Tap the button below to share your location once, so Safeguard can tell who is nearest if someone needs help. You can stop sharing any time.",
     "hi": "अब आप आपातकालीन संपर्क हैं। अपनी लोकेशन एक बार साझा करने के लिए नीचे का बटन दबाएँ, ताकि ज़रूरत पड़ने पर Safeguard बता सके कि सबसे नज़दीक कौन है।",
 }
+_GUARDIAN_LINKED = (
+    "You are now a Safeguard guardian. The moment an SOS starts you will get a message here with a live link "
+    "and a button to open the guardian portal, where you can watch the video, the map and the evidence log.\n\n"
+    "अब आप Safeguard अभिभावक हैं। SOS शुरू होते ही आपको यहाँ लाइव लिंक और गार्जियन पोर्टल खोलने का बटन मिलेगा।"
+)
+_START_HELP = (
+    "Hello from Safeguard. To get alerts, open the link from the Safeguard app (emergency contacts) or from the "
+    "guardian page (guardians). The link carries your code, so just tap it and press Start.\n\n"
+    "Safeguard में आपका स्वागत है। अलर्ट पाने के लिए ऐप (आपातकालीन संपर्क) या गार्जियन पेज (अभिभावक) का लिंक खोलें "
+    "और Start दबाएँ।"
+)
 _SHARE_BUTTON = "Share my location / लोकेशन साझा करें"
 _SHARE_THANKS = "Thanks, your location is saved. / धन्यवाद, आपकी लोकेशन सहेज ली गई।"
 
@@ -261,12 +272,20 @@ def _handle_telegram_updates(payload: dict) -> None:
         notifier = make_notifier(SETTINGS)
     except NotifyConfigError:
         return
+    portal = SETTINGS.public_base_url.rstrip("/") + "/"
     for code in linked:
+        if code.startswith(GUARDIAN_START_PREFIX):
+            chat = get_guardians().chat_id(code[len(GUARDIAN_START_PREFIX):])
+            if chat is not None:
+                notifier.send_text(chat, _GUARDIAN_LINKED, url_button=("Open guardian portal", portal))
+            continue
         record = store.get(code)
         if record and record.get("chat_id") is not None:
             notifier.send_location_request(
                 record["chat_id"], _SHARE_PROMPT["en"] + "\n\n" + _SHARE_PROMPT["hi"], _SHARE_BUTTON
             )
+    for chat_id in plain_starts(payload):
+        notifier.send_text(chat_id, _START_HELP)
     for chat_id, is_edit in apply_locations(payload, store, time.time()):
         if not is_edit:
             notifier.send_text(chat_id, _SHARE_THANKS)
