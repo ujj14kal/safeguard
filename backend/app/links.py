@@ -89,6 +89,13 @@ class OwnerLinks(_JsonMap):
             self._data[owner] = {"code": key, "since": time.time()}
             self._save()
 
+    def owner_of_code(self, code: str) -> str:
+        key = normalize_code(code)
+        for owner, entry in self._data.items():
+            if entry.get("code") == key:
+                return owner
+        return ""
+
     def code_of(self, owner: str) -> str:
         return self._data.get(owner, {}).get("code", "") if owner else ""
 

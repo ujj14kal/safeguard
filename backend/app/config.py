@@ -159,7 +159,7 @@ class Settings:
         default_factory=lambda: os.environ.get("CHANNELS_PATH", "data/channels.json")
     )
     guardian_retention_days: int = field(
-        default_factory=lambda: int(os.environ.get("GUARDIAN_RETENTION_DAYS", "30"))
+        default_factory=lambda: int(os.environ.get("GUARDIAN_RETENTION_DAYS", "0"))
     )
     auth_rate_per_min: int = field(
         default_factory=lambda: int(os.environ.get("AUTH_RATE_LIMIT_PER_MIN", "10"))

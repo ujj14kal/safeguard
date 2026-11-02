@@ -62,9 +62,10 @@ def _item_key(item):
     return (item["type"], text.replace(" ", "") if item["type"] == "plate" else text)
 
 
-DEFAULT_TTL_AFTER_END_S = 6 * 3600
-DEFAULT_GUARDIAN_TTL_AFTER_END_S = 30 * 86400
-DEFAULT_MAX_ACTIVE_S = 24 * 3600
+DEFAULT_TTL_AFTER_END_S = None
+DEFAULT_LINK_TTL_AFTER_END_S = 6 * 3600
+DEFAULT_GUARDIAN_TTL_AFTER_END_S = None
+DEFAULT_MAX_ACTIVE_S = None
 _SAVE_EVERY_S = 5
 DEFAULT_STALE_AFTER_S = 90
 
@@ -78,7 +79,12 @@ class IncidentStore:
         clock=time.time,
         guardian_ttl_after_end_s=DEFAULT_GUARDIAN_TTL_AFTER_END_S,
         stale_after_s=DEFAULT_STALE_AFTER_S,
+        link_ttl_after_end_s=None,
     ):
+        self._link_ttl_after_end_s = (
+            link_ttl_after_end_s if link_ttl_after_end_s is not None
+            else ttl_after_end_s if ttl_after_end_s is not None else DEFAULT_LINK_TTL_AFTER_END_S
+        )
         self._stale_after_s = stale_after_s
         self._start_lock = threading.Lock()
         self._by_id = {}
@@ -100,8 +106,8 @@ class IncidentStore:
                 self._guardian_ttl_after_end_s
                 if incident.guardian_code or incident.owner else self._ttl_after_end_s
             )
-            return now - incident.ended_at > keep
-        return now - incident.created_at > self._max_active_s
+            return keep is not None and now - incident.ended_at > keep
+        return self._max_active_s is not None and now - incident.created_at > self._max_active_s
 
 
     def _settle(self, incident):
@@ -270,6 +276,23 @@ class IncidentStore:
         self.save(force=False)
         return incident
 
+    def restore(self, session, wearer_name, created_at, ended_at, guardian_code, owner=""):
+        with self._start_lock:
+            if session in self._by_session:
+                return None
+            incident = Incident(
+                id=make_incident_id(), session=session, wearer_name=wearer_name, contact_codes=[],
+                share_token=make_share_token(), test=False, dry_run=True, status="ended",
+                created_at=created_at, ended_at=ended_at, alerted=True, end_sent=True,
+                mode="sos", guardian_code=guardian_code, owner=owner, last_seen=ended_at,
+            )
+            self._index(incident)
+            self.save()
+            return incident
+
+    def known_sessions(self):
+        return set(self._by_session)
+
     def adopt(self, guardian_code, owner):
         mine = [i for i in self._by_id.values() if i.owner == owner]
         tokens = {i.share_token for i in mine if i.mode != "watch"}
@@ -306,6 +329,8 @@ class IncidentStore:
     def get_by_token(self, share_token):
         incident = self._settle(self._by_token.get(share_token))
         if incident is None or self.expired(incident):
+            return None
+        if incident.status == "ended" and self._clock() - incident.ended_at > self._link_ttl_after_end_s:
             return None
         return incident
 

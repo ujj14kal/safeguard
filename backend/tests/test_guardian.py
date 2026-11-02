@@ -704,3 +704,31 @@ def test_recordings_of_a_person_are_kept_as_long_as_guardian_recordings(api):
     incident.status, incident.ended_at = "ended", time.time() - 7 * 3600
     incident.guardian_code = ""
     assert not main.get_incidents().expired(incident)
+
+
+def test_orphan_recordings_can_be_restored_by_the_owner_only(api):
+    code = new_code(api)
+    seed(api, "sos-orphan001", {"init.mp4": b"i", "seg-00001-2000.m4s": b"s"})
+    seed(api, "sos-orphan002", {"shot-00001.jpg": b"j"})
+    seed(api, "sos-live00001", {"init.mp4": b"i", "seg-00001-2000.m4s": b"s"})
+    known = start(api, session="sos-live00001", guardian_code=code)["id"]
+    body = {"guardian_code": code, "wearer_name": "Samantha"}
+    preview = api.post("/admin/recover-recordings", json=body).json()
+    assert preview == {"found": 1, "restored": 0, "applied": False}
+    done = api.post("/admin/recover-recordings", json={**body, "apply": True}).json()
+    assert done["restored"] == 1
+    listed = api.get("/guardian/api/incidents", headers={"X-Guardian-Code": code}).json()["incidents"]
+    assert len(listed) == 2 and known in {i["id"] for i in listed}
+    assert api.post("/admin/recover-recordings", json={**body, "apply": True}).json()["found"] == 0
+
+
+def test_restoring_needs_the_owner_token(api, monkeypatch):
+    import dataclasses
+
+    monkeypatch.setattr(main, "SETTINGS", dataclasses.replace(main.SETTINGS, app_token="owner-secret"))
+    code = new_code(api)
+    body = {"guardian_code": code, "wearer_name": "Samantha"}
+    assert api.post("/admin/recover-recordings", json=body).status_code == 401
+    assert api.post("/admin/recover-recordings", json=body, headers={"X-Safeguard-Token": "d1.a.b"}).status_code == 401
+    ok = api.post("/admin/recover-recordings", json=body, headers={"X-Safeguard-Token": "owner-secret"})
+    assert ok.status_code == 200

@@ -170,9 +170,10 @@ def get_incidents() -> IncidentStore:
     if _incidents is None:
         _incidents = IncidentStore(
             path=make_state_file(SETTINGS, "incidents.json", SETTINGS.incidents_path),
-            ttl_after_end_s=SETTINGS.incident_token_ttl_hours * 3600,
-            max_active_s=SETTINGS.incident_max_active_hours * 3600,
-            guardian_ttl_after_end_s=SETTINGS.guardian_retention_days * 86400,
+            ttl_after_end_s=None,
+            max_active_s=None,
+            guardian_ttl_after_end_s=_keep_for(SETTINGS.guardian_retention_days * 86400),
+            link_ttl_after_end_s=SETTINGS.incident_token_ttl_hours * 3600,
         )
     return _incidents
 
@@ -202,6 +203,10 @@ def _link_owner(owner: str, code: str) -> None:
     if owner and code and get_guardians().exists(code):
         get_owner_links().link(owner, code)
         get_incidents().adopt(code, owner)
+
+
+def _keep_for(seconds: float):
+    return seconds if seconds and seconds > 0 else None
 
 
 def get_guardians() -> GuardianStore:
@@ -1096,6 +1101,45 @@ def incident_transcript(
     if incident is None:
         raise HTTPException(status_code=404, detail="no such incident")
     return {"stored": len(lines), "total": len(incident.transcript)}
+
+
+class RecoverBody(BaseModel):
+    guardian_code: str
+    wearer_name: str = Field(min_length=1, max_length=60)
+    apply: bool = False
+
+
+@app.post("/admin/recover-recordings")
+def recover_recordings(
+    body: RecoverBody, x_safeguard_token: str | None = Header(default=None)
+) -> dict:
+    if SETTINGS.app_token and not secrets.compare_digest(x_safeguard_token or "", SETTINGS.app_token):
+        raise HTTPException(status_code=401, detail="owner token required")
+    code = normalize_code(body.guardian_code)
+    if not code or not get_guardians().exists(code):
+        raise HTTPException(status_code=422, detail="unknown guardian code")
+    evidence = get_evidence()
+    store = get_incidents()
+    owner = get_owner_links().owner_of_code(code)
+    known = store.known_sessions()
+    found = []
+    for session in evidence.list_sessions():
+        if session in known or not _SESSION_RE.match(session):
+            continue
+        files = evidence.segments(session) or []
+        media = [f for f in files if f["name"].endswith((".m4s", ".mp4", ".m4a"))]
+        if not media:
+            continue
+        times = [f["mtime"] for f in files if f.get("mtime")]
+        if not times:
+            continue
+        found.append((session, min(times), max(times)))
+    restored = 0
+    if body.apply:
+        for session, started, ended in found:
+            if store.restore(session, " ".join(body.wearer_name.split()), started, ended, code, owner):
+                restored += 1
+    return {"found": len(found), "restored": restored, "applied": body.apply}
 
 
 @app.post("/incident/{incident_id}/end")

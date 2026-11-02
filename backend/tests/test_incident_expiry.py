@@ -116,3 +116,15 @@ def test_health_only_reveals_the_key_state_to_the_app(monkeypatch):
     assert client.get("/health", headers={"X-Safeguard-Token": "wrong"}).json() == {"status": "ok"}
     full = client.get("/health", headers={"X-Safeguard-Token": fake_app_token}).json()
     assert full == {"status": "ok", "muse_configured": False}
+
+
+def test_recordings_are_kept_forever_while_the_public_link_still_expires(tmp_path):
+    clock = Clock()
+    store = make_store(tmp_path / "i.json", clock)
+    incident, _ = store.start("sos-fffffff1", "A", [], share_token="tok", guardian_code="AAAA-BBBB-CCCC")
+    store.end(incident.id)
+    clock.now += 400 * 86400
+    store.save()
+    assert store.get(incident.id) is incident
+    assert store.for_guardian("AAAA-BBBB-CCCC") == [incident]
+    assert store.get_by_token("tok") is None

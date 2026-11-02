@@ -178,6 +178,7 @@ def _epoch(iso: str | None) -> float:
 class EvidenceBackend:
     def put(self, session: str, name: str, data: bytes) -> None: ...
     def segments(self, session: str) -> list[dict] | None: ...
+    def list_sessions(self) -> list[str]: ...
     def delete_session(self, session: str) -> bool: ...
     def exists(self, session: str, name: str) -> bool: ...
     def response(self, session: str, name: str, media_type: str, range_header: str | None): ...
@@ -205,6 +206,11 @@ class LocalEvidence(EvidenceBackend):
             {"name": f.name, "bytes": f.stat().st_size, "mtime": f.stat().st_mtime}
             for f in sorted(folder.iterdir())
         ]
+
+    def list_sessions(self):
+        if not self.root.is_dir():
+            return []
+        return sorted(f.name for f in self.root.iterdir() if f.is_dir())
 
     def delete_session(self, session):
         folder = self.root / session
@@ -248,6 +254,9 @@ class SupabaseEvidence(EvidenceBackend):
             }
             for i in sorted(items, key=lambda i: i["name"])
         ]
+
+    def list_sessions(self):
+        return sorted(i["name"] for i in self._o.list_objects("") if not i.get("id") and i.get("name"))
 
     def delete_session(self, session):
         items = self.segments(session)
