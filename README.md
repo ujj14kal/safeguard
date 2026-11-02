@@ -187,6 +187,7 @@ Below the video is a chat for the whole recording. A guardian who is not sure wh
 - **Asking.** When something looks wrong, the app does not jump to alarm. It asks aloud whether she is safe. A safe phrase or a tap cancels it at once. If she says nothing, a countdown begins, and she can still cancel it.
 - **Reading plates and names.** Plates are read on the device and names are lifted from conversation, feeding the guardian's evidence log as described above. The screen says so as it happens: "Plate noted: MH 12 AB 1234 · sending to cloud", "Name detected: Ujjwal · sending to cloud", and "Evidence sent to your guardian" once it has arrived. With no guardian code set, it says the evidence is saved on the phone instead, so she is never left guessing.
 - **Seeing better, by herself or by itself.** She can pinch to zoom, or tap 1×, 2× or 3×, on the live view. With **Auto zoom** on, the phone notices text that looks like a plate but is too small to read, focuses on it, zooms in until it can read it, holds the zoom while it does, and returns to the wide view. Her own zoom always wins for twenty seconds, and auto zoom can be switched off. On Meta glasses the same auto zoom runs on the glasses camera. The microphone adjusts its own gain to hear quiet and distant speech, and the camera keeps focus and exposure on what matters.
+- **Night assist.** The phone measures how dark the view is. When it gets dark, it switches on the camera's low-light boost, raises the exposure, and gives the plate reader a brightened copy of each frame, so plates and the scene stay readable after dark. It turns itself off when the light returns, and it can be switched off. A **Light** button turns on the torch by hand; Safeguard never lights it automatically, because a visible light could draw attention to someone who is in danger.
 
 **She can go live on purpose.** A standing private link she shares with whoever she chooses opens the same live map, video and sound, without an SOS. It appears on the guardian portal as a live stream.
 
@@ -232,7 +233,7 @@ Meta's Muse models are the judgment layer. Fast, private checks run on the devic
 | Number plates | Apple Vision text recognition | On-device plate reading with Indian-format validation, joining two-line plates, a zoomed second pass and auto zoom on small text, scanned about twice a second |
 | On-device speech | Apple Speech | Immediate, offline phrase recognition and the fallback name spotter |
 | Names | Muse Spark, with an on-device name spotter as fallback | Names heard, rated possible or strongly possible |
-| Camera and audio capture | AVFoundation | Frames, microphone tap, pinch and auto zoom, focus and exposure control, automatic microphone gain |
+| Camera and audio capture | AVFoundation | Frames, microphone tap, pinch and auto zoom, focus and exposure control, low-light boost and night assist, automatic microphone gain |
 | Recording | AVAssetWriter fragmented MP4 (HLS), H.264 and AAC | One continuous recording with sound, uploaded piece by piece as it is written |
 | Maps and nearby help | MapKit, CoreLocation | Accurate location, nearby police and hospitals, walking routes |
 | Ride | Uber deep link | Prefilled pickup and drop-off, no API approval needed |

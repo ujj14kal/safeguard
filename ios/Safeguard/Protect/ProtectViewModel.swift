@@ -274,6 +274,9 @@ final class ProtectViewModel: ObservableObject {
         zoom = 1
         autoZoomed = false
         evidenceBadge = nil
+        torchOn = false
+        isDark = false
+        darkness = DarknessTracker()
         isStarting = false
         if sosActive {
             endSOS()
@@ -412,6 +415,37 @@ final class ProtectViewModel: ObservableObject {
     }
 
     @Published var evidenceBadge: EvidenceBadge?
+    @Published var isDark = false
+    @Published var torchOn = false
+    @AppStorage("nightAssistEnabled") var nightAssistEnabled = true {
+        didSet { applyNight() }
+    }
+    private var darkness = DarknessTracker()
+
+    var hasTorch: Bool { phoneCamera?.hasTorch ?? false }
+
+    fileprivate func noteBrightness(_ brightness: Double) {
+        guard isProtecting else { return }
+        pipeline.nightAssist = nightAssistEnabled
+        if let dark = darkness.update(brightness) {
+            isDark = dark
+            applyNight()
+            if dark, nightAssistEnabled {
+                showBadge(String(localized: "Low light: night assist is on"), symbol: "moon.stars.fill")
+            }
+        }
+    }
+
+    func applyNight() {
+        pipeline.nightAssist = nightAssistEnabled
+        phoneCamera?.setNight(isDark && nightAssistEnabled)
+    }
+
+    func setTorch(_ on: Bool) {
+        torchOn = on
+        phoneCamera?.setTorch(on)
+    }
+
     @Published var zoom: CGFloat = 1
     @AppStorage("autoZoomEnabled") var autoZoomEnabled = true
     private var manualZoomUntil: TimeInterval = 0
@@ -2320,6 +2354,7 @@ private final class DetectionPipeline {
     var verifyThrottle: VerifyThrottle
     let frameBuffer = FrameBuffer()
     let plateScanner = PlateScanner()
+    nonisolated(unsafe) var nightAssist = true
     var lastPlateScan = Date.distantPast
     var lastDetect = Date.distantPast
     let detectInterval: TimeInterval = 0.1
@@ -2364,7 +2399,10 @@ private final class DetectionPipeline {
         Task { await owner.publishFrameCues(frameCues, at: nowSeconds) }
         if now.timeIntervalSince(lastPlateScan) >= 0.8 {
             lastPlateScan = now
-            let scan = plateScanner.scanWithHint(frame.pixelBuffer)
+            let brightness = NightVision.averageBrightness(frame.pixelBuffer)
+            let dark = brightness < NightVision.brightAbove && nightAssist
+            Task { await owner.noteBrightness(brightness) }
+            let scan = plateScanner.scanWithHint(dark ? NightVision.brighten(frame.pixelBuffer) : frame.pixelBuffer)
             if !scan.plates.isEmpty { Task { await owner.publishPlates(scan.plates, at: nowSeconds) } }
             Task { await owner.autoZoom(hint: scan.hint, plateRead: !scan.plates.isEmpty) }
         }

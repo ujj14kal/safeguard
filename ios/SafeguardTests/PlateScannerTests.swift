@@ -53,4 +53,42 @@ final class PlateScannerTests: XCTestCase {
     func testReadsATwoLinePlate() {
         XCTAssertEqual(scanRotated(["MH 12", "AB 1234"], size: 80), ["MH12AB1234"])
     }
+
+    private func darkFrame(_ lines: [String], size: CGFloat) -> CVPixelBuffer {
+        let source = frame(lines: lines, fontSize: size)
+        CVPixelBufferLockBaseAddress(source, [])
+        let base = CVPixelBufferGetBaseAddress(source)!.assumingMemoryBound(to: UInt8.self)
+        let count = CVPixelBufferGetBytesPerRow(source) * CVPixelBufferGetHeight(source)
+        for index in 0..<count where index % 4 != 3 { base[index] = UInt8(Double(base[index]) * 0.22) }
+        CVPixelBufferUnlockBaseAddress(source, [])
+        return source
+    }
+
+    func testBrightnessSeparatesDarkFromLitFrames() {
+        let lit = frame(lines: ["MH 12 AB 1234"], fontSize: 60)
+        let dark = darkFrame(["MH 12 AB 1234"], size: 60)
+        XCTAssertGreaterThan(NightVision.averageBrightness(lit), NightVision.brightAbove)
+        XCTAssertLessThan(NightVision.averageBrightness(dark), NightVision.darkBelow)
+    }
+
+    func testBrighteningLiftsADarkFrame() {
+        let dark = darkFrame(["MH 12 AB 1234"], size: 60)
+        let lifted = NightVision.brighten(dark)
+        XCTAssertGreaterThan(NightVision.averageBrightness(lifted), NightVision.averageBrightness(dark) * 1.8)
+    }
+
+    func testReadsADarkPlateAfterBrightening() {
+        let dark = darkFrame(["MH 12 AB 1234"], size: 60)
+        XCTAssertEqual(PlateScanner().scan(NightVision.brighten(dark)), ["MH12AB1234"])
+    }
+
+    func testDarknessTrackerNeedsTwoReadingsAndHasHysteresis() {
+        var tracker = DarknessTracker()
+        XCTAssertNil(tracker.update(0.1))
+        XCTAssertEqual(tracker.update(0.1), true)
+        XCTAssertNil(tracker.update(0.25))
+        XCTAssertNil(tracker.update(0.25))
+        XCTAssertNil(tracker.update(0.4))
+        XCTAssertEqual(tracker.update(0.4), false)
+    }
 }

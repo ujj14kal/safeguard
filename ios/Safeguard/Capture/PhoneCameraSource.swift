@@ -80,6 +80,34 @@ final class PhoneCameraSource: NSObject, FrameSource {
         }
     }
 
+    var hasTorch: Bool { device?.hasTorch ?? false }
+
+    func setNight(_ on: Bool) {
+        guard let device, (try? device.lockForConfiguration()) != nil else { return }
+        defer { device.unlockForConfiguration() }
+        if device.isLowLightBoostSupported {
+            device.automaticallyEnablesLowLightBoostWhenAvailable = true
+        }
+        if device.isExposureModeSupported(.continuousAutoExposure) {
+            device.exposureMode = .continuousAutoExposure
+        }
+        let bias = on ? min(1.2, device.maxExposureTargetBias) : 0
+        device.setExposureTargetBias(bias, completionHandler: nil)
+        if device.activeFormat.isVideoHDRSupported {
+            device.automaticallyAdjustsVideoHDREnabled = true
+        }
+    }
+
+    func setTorch(_ on: Bool) {
+        guard let device, device.hasTorch, (try? device.lockForConfiguration()) != nil else { return }
+        defer { device.unlockForConfiguration() }
+        if on {
+            try? device.setTorchModeOn(level: 0.6)
+        } else {
+            device.torchMode = .off
+        }
+    }
+
     var maxZoom: CGFloat {
         guard let device else { return 1 }
         return min(device.maxAvailableVideoZoomFactor, 6)

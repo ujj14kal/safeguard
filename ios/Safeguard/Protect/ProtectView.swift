@@ -224,7 +224,7 @@ struct ProtectView: View {
         .padding()
     }
 
-    private var zoomBar: some View {
+    @ViewBuilder private var zoomBar: some View {
         HStack(spacing: DS.Spacing.small) {
             ForEach([1, 2, 3], id: \.self) { step in
                 if CGFloat(step) <= model.maxZoom {
@@ -251,6 +251,25 @@ struct ProtectView: View {
             }
             .toggleStyle(.button)
             .tint(DS.Colors.accent)
+        }
+        .padding(.horizontal, DS.Spacing.small)
+        .padding(.vertical, 4)
+        .safeguardPanel()
+        HStack(spacing: DS.Spacing.small) {
+            Toggle(isOn: $model.nightAssistEnabled) {
+                Label("Night assist", systemImage: model.isDark ? "moon.stars.fill" : "moon.stars")
+                    .font(.footnote)
+            }
+            .toggleStyle(.button)
+            .tint(DS.Colors.accent)
+            if model.hasTorch {
+                Toggle(isOn: Binding(get: { model.torchOn }, set: { model.setTorch($0) })) {
+                    Label("Light", systemImage: model.torchOn ? "flashlight.on.fill" : "flashlight.off.fill")
+                        .font(.footnote)
+                }
+                .toggleStyle(.button)
+                .tint(DS.Colors.accent)
+            }
         }
         .padding(.horizontal, DS.Spacing.small)
         .padding(.vertical, 4)

@@ -9360,6 +9360,54 @@
           }
         }
       }
+    },
+    "Night assist": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Night assist"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "नाइट असिस्ट"
+          }
+        }
+      }
+    },
+    "Light": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Light"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "रोशनी"
+          }
+        }
+      }
+    },
+    "Low light: night assist is on": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Low light: night assist is on"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कम रोशनी: नाइट असिस्ट चालू है"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

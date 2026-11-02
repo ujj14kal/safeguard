@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		7C9D982E7B60E17959CBA3F8 /* NightVision.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9569E6D7F4AF768F87D5590F /* NightVision.swift */; };
+		09ECBB0E2016AD7140B33D25 /* NightVision.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9569E6D7F4AF768F87D5590F /* NightVision.swift */; };
 		D4D043C775E35880FC00B22D /* PlateScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3B687A049B5B9E7791A0E8C /* PlateScanner.swift */; };
 		D37CF08BFD44B59E2D63C74D /* PlateScannerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D324D578570E581A896291CC /* PlateScannerTests.swift */; };
 		D49BB6A479BAC37FEFD7BE6F /* NameSpotter.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33E61C301C913EA68428B8F /* NameSpotter.swift */; };
@@ -212,6 +214,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		9569E6D7F4AF768F87D5590F /* NightVision.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NightVision.swift; sourceTree = "<group>"; };
 		D324D578570E581A896291CC /* PlateScannerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlateScannerTests.swift; sourceTree = "<group>"; };
 		D3CA48B251BA3CB51517E1B7 /* NameSpotterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NameSpotterTests.swift; sourceTree = "<group>"; };
 		D33E61C301C913EA68428B8F /* NameSpotter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NameSpotter.swift; sourceTree = "<group>"; };
@@ -512,6 +515,7 @@
 			isa = PBXGroup;
 			children = (
 				D3B687A049B5B9E7791A0E8C /* PlateScanner.swift */,
+				9569E6D7F4AF768F87D5590F /* NightVision.swift */,
 				D39AF4E20C2CA91B0C14FE02 /* PlateText.swift */,
 				D3AA48741B5CCBBCA91B37A8 /* UnwantedGestureCounter.swift */,
 				D3535E2B9271729BAE77DC1E /* MediaPipeCueEngine.swift */,
@@ -769,6 +773,7 @@
 				D3E3FF467C47287A9D065662 /* NameSpotter.swift in Sources */,
 				D3B03B2CDB77DE7F5FCEB137 /* EvidenceLog.swift in Sources */,
 				D3A3D0F0343E8F434EAF4EA1 /* PlateScanner.swift in Sources */,
+				7C9D982E7B60E17959CBA3F8 /* NightVision.swift in Sources */,
 				D3A5C67312796DDA72707563 /* PlateText.swift in Sources */,
 				D3780A4F0F813074557747B8 /* DeviceToken.swift in Sources */,
 				D39469BD09733DA2546BA383 /* SafeArrivalCard.swift in Sources */,
@@ -876,6 +881,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D4D043C775E35880FC00B22D /* PlateScanner.swift in Sources */,
+				09ECBB0E2016AD7140B33D25 /* NightVision.swift in Sources */,
 				D37CF08BFD44B59E2D63C74D /* PlateScannerTests.swift in Sources */,
 				D49BB6A479BAC37FEFD7BE6F /* NameSpotter.swift in Sources */,
 				D36CE9B2704F84458846FEFF /* NameSpotterTests.swift in Sources */,
