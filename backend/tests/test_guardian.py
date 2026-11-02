@@ -679,3 +679,28 @@ def test_a_guardian_never_sees_another_persons_recordings(api):
     other = _as_person(api, someone_else, session="sos-ccccccc2", guardian_code=code_b)
     assert _listed(api, code_a) == {mine} and _listed(api, code_b) == {other}
     assert api.get(f"/guardian/api/incidents/{other}", headers={"X-Guardian-Code": code_a}).status_code == 404
+
+
+def test_recordings_made_before_ownership_existed_are_adopted_by_name_and_link(api):
+    samantha = main.make_device_token()
+    old_code, new_code_ = new_code(api), new_code(api)
+    legacy = [
+        start(api, session="sos-ddddddd1", wearer_name="Samantha", guardian_code=old_code)["id"],
+        start(api, session="sos-ddddddd2", wearer_name="Samantha")["id"],
+    ]
+    stranger = start(api, session="sos-ddddddd3", wearer_name="Priya", guardian_code=old_code)["id"]
+    _as_person(api, samantha, session="sos-ddddddd4", guardian_code=new_code_)
+    listed = _listed(api, new_code_)
+    assert set(legacy) <= listed
+    assert stranger not in listed
+
+
+def test_recordings_of_a_person_are_kept_as_long_as_guardian_recordings(api):
+    samantha = main.make_device_token()
+    code = new_code(api)
+    first = _as_person(api, samantha, session="sos-eeeeeee1", guardian_code=code)
+    incident = main.get_incidents().get(first)
+    assert incident.owner
+    incident.status, incident.ended_at = "ended", time.time() - 7 * 3600
+    incident.guardian_code = ""
+    assert not main.get_incidents().expired(incident)

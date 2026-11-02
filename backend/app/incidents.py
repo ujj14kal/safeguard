@@ -96,7 +96,10 @@ class IncidentStore:
     def expired(self, incident) -> bool:
         now = self._clock()
         if incident.status == "ended":
-            keep = self._guardian_ttl_after_end_s if incident.guardian_code else self._ttl_after_end_s
+            keep = (
+                self._guardian_ttl_after_end_s
+                if incident.guardian_code or incident.owner else self._ttl_after_end_s
+            )
             return now - incident.ended_at > keep
         return now - incident.created_at > self._max_active_s
 
@@ -268,9 +271,21 @@ class IncidentStore:
         return incident
 
     def adopt(self, guardian_code, owner):
+        mine = [i for i in self._by_id.values() if i.owner == owner]
+        tokens = {i.share_token for i in mine if i.mode != "watch"}
+        names = {
+            i.wearer_name.strip().lower() for i in mine
+            if i.wearer_name.strip().lower() not in ("", "someone")
+        }
         changed = False
         for incident in self._by_id.values():
-            if incident.guardian_code == guardian_code and not incident.owner:
+            if incident.owner:
+                continue
+            if (
+                incident.guardian_code == guardian_code
+                or incident.share_token in tokens
+                or incident.wearer_name.strip().lower() in names
+            ):
                 incident.owner = owner
                 changed = True
         if changed:
