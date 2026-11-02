@@ -750,3 +750,48 @@ def test_restore_attaches_every_recording_of_a_person_to_the_current_code(api):
     token = main.make_device_token()
     _as_person(api, token, session="sos-ggggggg4", guardian_code=later_code)
     assert len(_listed(api, later_code)) == 3
+
+
+def _api_items(api, code, **params):
+    res = api.get("/guardian/api/incidents", params=params, headers={"X-Guardian-Code": code})
+    assert res.status_code == 200, res.text
+    return res.json()
+
+
+def test_guardian_list_pages_filters_by_date_and_searches_evidence(api):
+    code = new_code(api)
+    ids = [start(api, session=f"sos-hhhhhhh{n}", guardian_code=code)["id"] for n in range(5)]
+    now = time.time()
+    for n, incident_id in enumerate(ids):
+        main.get_incidents().get(incident_id).created_at = now - n * 86400
+    main.get_incidents().upsert_items(ids[0], [
+        {"type": "name", "text": "Ujjwal", "rating": "possible", "t": now, "count": 1},
+        {"type": "plate", "text": "HR 98 B 3696", "rating": "strongly possible", "t": now, "count": 2},
+    ])
+    main.get_incidents().upsert_items(ids[1], [
+        {"type": "name", "text": "Deepika", "rating": "possible", "t": now, "count": 1},
+    ])
+    main.get_incidents().add_transcript(ids[2], [{"t": now, "text": "please come with me"}])
+
+    page = _api_items(api, code, per_page=2)
+    assert page["total"] == 5 and page["pages"] == 3 and len(page["incidents"]) == 2
+    assert [i["id"] for i in page["incidents"]] == ids[:2]
+    assert _api_items(api, code, per_page=2, page=3)["incidents"][0]["id"] == ids[4]
+    assert _api_items(api, code, per_page=2, page=99)["page"] == 3
+
+    week = _api_items(api, code, since=now - 2.5 * 86400)
+    assert {i["id"] for i in week["incidents"]} == set(ids[:3])
+    assert {i["id"] for i in _api_items(api, code, until=now - 2.5 * 86400)["incidents"]} == set(ids[3:])
+
+    assert {i["id"] for i in _api_items(api, code, has="evidence")["incidents"]} == set(ids[:2])
+    assert {i["id"] for i in _api_items(api, code, has="none")["incidents"]} == set(ids[2:])
+    assert [i["id"] for i in _api_items(api, code, has="plates")["incidents"]] == [ids[0]]
+    assert [i["id"] for i in _api_items(api, code, has="names")["incidents"]] == ids[:2]
+
+    found = _api_items(api, code, q="ujjwal")
+    assert [i["id"] for i in found["incidents"]] == [ids[0]]
+    assert found["incidents"][0]["hits"] == ["Name: Ujjwal"]
+    assert found["incidents"][0]["evidence"] == {"names": 1, "plates": 1, "gestures": 0}
+    assert [i["id"] for i in _api_items(api, code, q="come with")["incidents"]] == [ids[2]]
+    assert [i["id"] for i in _api_items(api, code, q="hr 98 3696")["incidents"]] == [ids[0]]
+    assert _api_items(api, code, q="nobody here")["total"] == 0

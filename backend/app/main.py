@@ -1740,16 +1740,86 @@ def guardian_alerts(
     }
 
 
+_KIND_LABEL = {"sos": "SOS", "live": "Live stream", "watch": "Protection session"}
+
+
+def _search_hits(incident, terms: list[str]) -> list[str] | None:
+    fields = [("Kind", _KIND_LABEL.get(incident.mode, "SOS")), ("Name", incident.wearer_name)]
+    fields += [(item["type"].capitalize(), item["text"]) for item in incident.items]
+    fields += [("Said", line["text"]) for line in incident.transcript]
+    haystack = " ".join(text.lower() for _, text in fields)
+    if not all(term in haystack for term in terms):
+        return None
+    hits = []
+    for label, text in fields:
+        if any(term in text.lower() for term in terms):
+            hits.append(f"{label}: {text[:90]}")
+        if len(hits) == 3:
+            break
+    return hits
+
+
+def _evidence_counts(incident) -> dict:
+    counts = {"names": 0, "plates": 0, "gestures": 0}
+    for item in incident.items:
+        key = {"name": "names", "plate": "plates", "gesture": "gestures"}.get(item["type"])
+        if key:
+            counts[key] += 1
+    return counts
+
+
+def _has_evidence(incident, wanted: str) -> bool:
+    counts = _evidence_counts(incident)
+    if wanted == "evidence":
+        return any(counts.values())
+    if wanted == "none":
+        return not any(counts.values())
+    if wanted in counts:
+        return counts[wanted] > 0
+    return True
+
+
 @app.get("/guardian/api/incidents")
 def guardian_incidents(
-    request: Request, x_guardian_code: str | None = Header(default=None)
+    request: Request,
+    x_guardian_code: str | None = Header(default=None),
+    page: int = 1,
+    per_page: int = 10,
+    since: float | None = None,
+    until: float | None = None,
+    q: str = "",
+    kind: str = "",
+    has: str = "",
 ) -> dict:
     code = _guardian_from_header(request, x_guardian_code)
-    items = [
-        _guardian_summary(i)
-        for i in get_incidents().for_guardian(code, get_owner_links().code_of)
-    ]
-    return {"incidents": items}
+    per_page = max(1, min(per_page, 50))
+    terms = [t for t in " ".join(q.lower().split())[:80].split(" ") if t]
+    matched = []
+    for incident in get_incidents().for_guardian(code, get_owner_links().code_of):
+        if since is not None and incident.created_at < since:
+            continue
+        if until is not None and incident.created_at > until:
+            continue
+        if kind in _KIND_LABEL and incident.mode != kind:
+            continue
+        if not _has_evidence(incident, has):
+            continue
+        hits = _search_hits(incident, terms) if terms else []
+        if hits is None:
+            continue
+        matched.append((incident, hits))
+    total = len(matched)
+    pages = max(1, -(-total // per_page))
+    page = max(1, min(page, pages))
+    start = (page - 1) * per_page
+    items = []
+    for incident, hits in matched[start:start + per_page]:
+        summary = _guardian_summary(incident)
+        summary["evidence"] = _evidence_counts(incident)
+        if terms:
+            summary["hits"] = hits
+        items.append(summary)
+    return {"incidents": items, "total": total, "page": page, "pages": pages, "per_page": per_page}
 
 
 @app.get("/guardian/api/incidents/{incident_id}")

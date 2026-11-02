@@ -317,6 +317,18 @@ _GUARDIAN_PAGE = """<!DOCTYPE html>
   #chatLog .ai { background:#120d18; border:1px solid rgba(255,255,255,.1); margin-right:12px; }
   #chatInput { width:100%; min-height:52px; padding:10px; border-radius:10px; font-size:14px; margin-top:8px;
                border:1px solid rgba(255,255,255,.15); background:#0c0911; color:var(--text); font-family:inherit; }
+  .filters { margin-bottom:10px; }
+  .filters input[type=search], .filters input[type=date], .filters select {
+    padding:9px 10px; border-radius:10px; font-size:14px; border:1px solid rgba(255,255,255,.15);
+    background:#0c0911; color:var(--text); font-family:inherit; }
+  .filters input[type=search] { width:100%; box-sizing:border-box; }
+  .frow { display:flex; flex-wrap:wrap; gap:8px 12px; align-items:center; margin:8px 0; font-size:13px; color:var(--muted); }
+  .frow label { display:flex; align-items:center; gap:6px; }
+  .chip.on { background:var(--accent, #9b6bff); color:#0c0911; border-color:transparent; }
+  .hit { color:var(--muted); font-size:12px; margin-top:3px; }
+  .tags { display:flex; flex-wrap:wrap; gap:5px; margin-top:5px; }
+  .tags .tag { margin:0; }
+  .pager { display:flex; justify-content:space-between; align-items:center; margin-top:12px; gap:10px; }
   .ask { margin-top:8px; padding:10px; border-radius:12px; background:#120d18; }
   .ask textarea { width:100%; min-height:52px; padding:10px; border-radius:10px; font-size:14px;
                   border:1px solid rgba(255,255,255,.15); background:#0c0911; color:var(--text);
@@ -359,7 +371,21 @@ _GUARDIAN_PAGE = """<!DOCTYPE html>
     <div class="card hidden" id="alertCard"><h2>SOS alerts on Telegram</h2>
       <p class="sub" id="alertText"></p>
       <a class="btn" id="alertLink" target="_blank" rel="noopener">Get alerts on Telegram</a></div>
-    <div class="card"><h2>Incidents</h2><div id="items"></div></div>
+    <div class="card"><h2>Incidents</h2>
+      <div class="filters">
+        <input id="fSearch" type="search" maxlength="80" placeholder="Search names, plates, words said">
+        <div class="frow">
+          <label>From <input id="fFrom" type="date"></label>
+          <label>To <input id="fTo" type="date"></label>
+          <label>Show <select id="fSize"><option>10</option><option>20</option><option>50</option></select></label>
+          <button class="alt chip" id="fClear">Clear filters</button>
+        </div>
+        <div class="chips" id="fDates"></div>
+        <div class="chips" id="fHas"></div>
+      </div>
+      <div id="items"></div>
+      <div class="pager"><button class="alt chip" id="pPrev">&larr; Newer</button><span id="pInfo" class="muted"></span><button class="alt chip" id="pNext">Older &rarr;</button></div>
+    </div>
   </section>
 
   <section id="detail" class="hidden">
@@ -579,27 +605,95 @@ async function loadAlerts() {
   } catch (e) { $("alertCard").classList.add("hidden"); }
 }
 
+const listState = {page: 1, q: "", from: "", to: "", has: "", size: 10};
+const HAS_CHIPS = [["", "All"], ["evidence", "Has evidence"], ["none", "No evidence"],
+  ["names", "Names heard"], ["plates", "Plates seen"], ["gestures", "Gestures"]];
+const DATE_CHIPS = [["today", "Today"], ["7", "Last 7 days"], ["30", "Last 30 days"], ["all", "All time"]];
+let searchTimer = null;
+
+function isoDay(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+
+function drawChips() {
+  $("fHas").innerHTML = HAS_CHIPS.map(([v, l]) =>
+    '<button class="chip alt' + (listState.has === v ? " on" : "") + '" data-has="' + v + '">' + l + '</button>').join("");
+  $("fHas").querySelectorAll("button").forEach((b) => { b.onclick = () => { listState.has = b.dataset.has; listState.page = 1; loadList(); }; });
+  $("fDates").innerHTML = DATE_CHIPS.map(([v, l]) => '<button class="chip alt" data-d="' + v + '">' + l + '</button>').join("");
+  $("fDates").querySelectorAll("button").forEach((b) => {
+    b.onclick = () => {
+      const v = b.dataset.d, now = new Date();
+      listState.to = v === "all" ? "" : isoDay(now);
+      listState.from = v === "all" ? "" : isoDay(new Date(now.getTime() - (v === "today" ? 0 : Number(v) * 86400000)));
+      $("fFrom").value = listState.from; $("fTo").value = listState.to;
+      listState.page = 1; loadList();
+    };
+  });
+}
+
+function listQuery() {
+  const p = new URLSearchParams({page: listState.page, per_page: listState.size});
+  if (listState.q) p.set("q", listState.q);
+  if (listState.has) p.set("has", listState.has);
+  if (listState.from) p.set("since", new Date(listState.from + "T00:00:00").getTime() / 1000);
+  if (listState.to) p.set("until", new Date(listState.to + "T23:59:59").getTime() / 1000);
+  return p.toString();
+}
+
+function evidenceTags(e) {
+  if (!e) return "";
+  const bits = [];
+  if (e.names) bits.push('<span class="tag name">' + e.names + (e.names === 1 ? " name" : " names") + '</span>');
+  if (e.plates) bits.push('<span class="tag plate">' + e.plates + (e.plates === 1 ? " plate" : " plates") + '</span>');
+  if (e.gestures) bits.push('<span class="tag gesture">' + e.gestures + (e.gestures === 1 ? " gesture" : " gestures") + '</span>');
+  return bits.length ? '<div class="tags">' + bits.join("") + '</div>' : '<div class="hit">No evidence log</div>';
+}
+
 async function loadList() {
   loadAlerts();
-  const data = await api("/guardian/api/incidents");
+  drawChips();
+  const data = await api("/guardian/api/incidents?" + listQuery());
+  listState.page = data.page;
   const box = $("items");
   box.innerHTML = "";
+  const filtered = listState.q || listState.has || listState.from || listState.to;
   if (!data.incidents.length) {
-    box.innerHTML = '<p class="sub">No recordings yet. When the person you protect starts a stream or an SOS, it appears here.</p>';
+    box.innerHTML = '<p class="sub">' + (filtered
+      ? "No recordings match these filters."
+      : "No recordings yet. When the person you protect starts a stream or an SOS, it appears here.") + '</p>';
   }
   for (const i of data.incidents) {
     const row = document.createElement("div");
     row.className = "item";
     const live = i.status === "active";
-    row.innerHTML = '<div><b>' + modeLabel(i.mode) + ' · ' + escapeHtml(i.wearer_name) +
-      '</b><span>' + fmtDate(i.started_at) + ' · ' + fmtDur(i.started_at, i.ended_at) + '</span></div>' +
+    const hits = (i.hits || []).map((h) => '<div class="hit">' + escapeHtml(h) + '</div>').join("");
+    row.innerHTML = '<div><b>' + modeLabel(i.mode) + ' \u00b7 ' + escapeHtml(i.wearer_name) +
+      '</b><span>' + fmtDate(i.started_at) + ' \u00b7 ' + fmtDur(i.started_at, i.ended_at) + '</span>' + evidenceTags(i.evidence) + hits + '</div>' +
       '<div style="text-align:right"><span class="pill ' + (live ? "live" : "") + '">' + (live ? "LIVE NOW" : "ended") +
-      '</span><br><span>' + (i.continuous ? 'continuous recording · ' : i.videos + ' video · ' + i.audios + ' audio · ') + fmtSize(i.bytes) + '</span></div>';
+      '</span><br><span>' + (i.continuous ? 'continuous recording \u00b7 ' : i.videos + ' video \u00b7 ' + i.audios + ' audio \u00b7 ') + fmtSize(i.bytes) + '</span></div>';
     row.onclick = () => openIncident(i.id);
     box.appendChild(row);
   }
+  $("pInfo").textContent = data.total
+    ? "Page " + data.page + " of " + data.pages + " \u00b7 " + data.total + (data.total === 1 ? " recording" : " recordings")
+    : "";
+  $("pPrev").disabled = data.page <= 1;
+  $("pNext").disabled = data.page >= data.pages;
   show("list");
 }
+
+$("fSearch").oninput = () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => { listState.q = $("fSearch").value.trim(); listState.page = 1; loadList().catch(() => {}); }, 350);
+};
+$("fFrom").onchange = () => { listState.from = $("fFrom").value; listState.page = 1; loadList().catch(() => {}); };
+$("fTo").onchange = () => { listState.to = $("fTo").value; listState.page = 1; loadList().catch(() => {}); };
+$("fSize").onchange = () => { listState.size = Number($("fSize").value); listState.page = 1; loadList().catch(() => {}); };
+$("fClear").onclick = () => {
+  Object.assign(listState, {page: 1, q: "", from: "", to: "", has: ""});
+  $("fSearch").value = ""; $("fFrom").value = ""; $("fTo").value = "";
+  loadList().catch(() => {});
+};
+$("pPrev").onclick = () => { listState.page = Math.max(1, listState.page - 1); loadList().catch(() => {}); };
+$("pNext").onclick = () => { listState.page += 1; loadList().catch(() => {}); };
 
 function modeLabel(m) { return m === "live" ? "Live stream" : m === "watch" ? "Protection session" : "SOS"; }
 
